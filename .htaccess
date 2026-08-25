@@ -1,0 +1,117 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # ═══════════════════════════════════════════════════════════════
+    # 1. Pasar header Authorization a PHP (necesario para API Bearer)
+    # ═══════════════════════════════════════════════════════════════
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # ═══════════════════════════════════════════════════════════════
+    # 2. BLOQUEO DE CARPETAS SENSIBLES (antes que cualquier otra regla)
+    # ═══════════════════════════════════════════════════════════════
+    RewriteRule ^(config|app|views|storage|db|vendor|\.git|\.env)/ - [F,L]
+
+    # ═══════════════════════════════════════════════════════════════
+    # 3. BLOQUEO DE ARCHIVOS SENSIBLES
+    # ═══════════════════════════════════════════════════════════════
+    <FilesMatch "\.(env|sql|log|md|ini|conf|bak|backup|git|gitignore|yml|yaml|json|lock|sh|bat)$">
+        <IfVersion < 2.4>
+            Order Deny,Allow
+            Deny from all
+        </IfVersion>
+        <IfVersion >= 2.4>
+            Require all denied
+        </IfVersion>
+    </FilesMatch>
+
+    # Ocultar archivos que empiezan por punto (.htaccess, .htpasswd, etc.)
+    RewriteRule (^\.|/\.) - [F,L]
+
+    # ═══════════════════════════════════════════════════════════════
+    # 4. PROTECCIÓN CONTRA INYECCIONES EN QUERY STRING
+    # ═══════════════════════════════════════════════════════════════
+    RewriteCond %{QUERY_STRING} base64_encode[^(]*\([^)]*\) [OR]
+    RewriteCond %{QUERY_STRING} (<|%3C)([^s]*s)+cript.*(>|%3E) [NC,OR]
+    RewriteCond %{QUERY_STRING} GLOBALS(=|\[|\%[0-9A-Z]{0,2}) [OR]
+    RewriteCond %{QUERY_STRING} _REQUEST(=|\[|\%[0-9A-Z]{0,2})
+    RewriteRule ^ - [F,L]
+
+    # Bloquear métodos HTTP no utilizados
+    RewriteCond %{REQUEST_METHOD} ^(TRACE|DELETE|TRACK|DEBUG|CONNECT)$ [NC]
+    RewriteRule ^ - [F,L]
+
+    # ═══════════════════════════════════════════════════════════════
+    # 5. REDIRECCIÓN PARA ELIMINAR /public/ DE LA URL
+    #    Si alguien accede a https://dominio.com/public/foo → redirige a /foo
+    # ═══════════════════════════════════════════════════════════════
+    RewriteCond %{THE_REQUEST} /public/([^\s?]*) [NC]
+    RewriteRule ^ %1 [L,NE,R=301]
+
+    # ═══════════════════════════════════════════════════════════════
+    # 6. REESCRITURA INTERNA HACIA /public/
+    #    Todo lo que no empiece por public/ se reescribe a public/
+    # ═══════════════════════════════════════════════════════════════
+    RewriteRule ^((?!public/).*)$ public/$1 [L,NC]
+
+</IfModule>
+
+# ═══════════════════════════════════════════════════════════════════
+# HEADERS DE SEGURIDAD
+# ═══════════════════════════════════════════════════════════════════
+<IfModule mod_headers.c>
+    # Prevenir clickjacking
+    Header always set X-Frame-Options "SAMEORIGIN"
+
+    # Prevenir MIME-type sniffing
+    Header always set X-Content-Type-Options "nosniff"
+
+    # Protección XSS (navegadores legacy)
+    Header always set X-XSS-Protection "1; mode=block"
+
+    # Referrer Policy
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+
+    # Permissions Policy (restringir features del navegador)
+    Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+
+    # Eliminar header Server (oculta versión de Apache)
+    Header unset Server
+    Header always unset X-Powered-By
+    Header always unset X-AspNet-Version
+</IfModule>
+
+# ═══════════════════════════════════════════════════════════════════
+# DESHABILITAR LISTADO DE DIRECTORIOS
+# ═══════════════════════════════════════════════════════════════════
+Options -Indexes
+
+# ═══════════════════════════════════════════════════════════════════
+# DESHABILITAR FIRMA DEL SERVIDOR
+# ═══════════════════════════════════════════════════════════════════
+ServerSignature Off
+
+# ═══════════════════════════════════════════════════════════════════
+# COMPRESIÓN GZIP (mejora rendimiento)
+# ═══════════════════════════════════════════════════════════════════
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css
+    AddOutputFilterByType DEFLATE application/javascript application/json
+    AddOutputFilterByType DEFLATE application/xml application/xhtml+xml
+    AddOutputFilterByType DEFLATE image/svg+xml
+</IfModule>
+
+# ═══════════════════════════════════════════════════════════════════
+# CACHÉ DEL NAVEGADOR PARA ASSETS ESTÁTICOS
+# ═══════════════════════════════════════════════════════════════════
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/gif "access plus 1 month"
+    ExpiresByType image/webp "access plus 1 month"
+    ExpiresByType image/svg+xml "access plus 1 month"
+    ExpiresByType text/css "access plus 1 week"
+    ExpiresByType application/javascript "access plus 1 week"
+    ExpiresByType application/x-font-woff2 "access plus 1 year"
+</IfModule>

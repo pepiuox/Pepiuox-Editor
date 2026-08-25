@@ -1,0 +1,2 @@
+﻿#,Método,Ruta,Controlador,Permiso
+19,GET,/admin,DashboardController::index,—

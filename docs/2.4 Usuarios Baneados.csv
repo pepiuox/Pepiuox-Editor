@@ -1,0 +1,10 @@
+﻿#,Método,Ruta,Controlador,Permiso
+30,GET,/admin/users/banned,BannedUsersController::index,users.ban
+31,GET,/admin/users/banned/history,BannedUsersController::globalHistory,users.view.ban_history
+32,GET,/admin/users/banned/search,BannedUsersController::searchUsers,users.ban
+33,POST,/admin/users/banned/ban,BannedUsersController::ban,users.ban
+34,POST,/admin/users/banned/bulk-ban,BannedUsersController::bulkBan,users.ban
+35,POST,/admin/users/banned/bulk-unban,BannedUsersController::bulkUnban,users.ban
+36,POST,/admin/users/banned/{id}/unban,BannedUsersController::unban,users.ban
+37,POST,/admin/users/banned/{id}/extend,BannedUsersController::extend,users.ban
+38,GET,/admin/users/banned/{id}/history,BannedUsersController::history,users.view.ban_history

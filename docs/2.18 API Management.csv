@@ -1,0 +1,10 @@
+﻿#,Método,Ruta,Controlador,Permiso
+114,GET,/admin/api,ApiManageController::index,api.manage
+115,GET,/admin/api/create,ApiManageController::create,api.manage
+116,POST,/admin/api,ApiManageController::store,api.manage
+117,GET,/admin/api/{id},ApiManageController::show,api.manage
+118,POST,/admin/api/{id},ApiManageController::update,api.manage
+119,POST,/admin/api/{id}/delete,ApiManageController::delete,api.manage
+120,GET,/admin/api/{id}/regenerate,ApiManageController::regenerate,api.manage
+121,POST,/admin/api/{id}/tokens,ApiManageController::createToken,api.manage
+122,POST,/admin/api/{id}/tokens/{tid}/revoke,ApiManageController::revokeToken,api.manage

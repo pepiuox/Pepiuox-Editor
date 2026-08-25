@@ -1,0 +1,4 @@
+﻿#,Método,Ruta,Controlador,Permiso
+126,GET,/admin/analytics,AnalyticsController::index,analytics.view
+127,GET,/admin/analytics/export,AnalyticsController::export,analytics.view
+128,GET,/admin/analytics/api,AnalyticsController::apiSummary,analytics.view

@@ -1,0 +1,4 @@
+﻿#,Método,Ruta,Controlador,Permiso
+94,GET,/admin/2fa,TwoFactorController::setup,—
+95,POST,/admin/2fa/verify,TwoFactorController::verify,—
+96,POST,/admin/2fa/disable,TwoFactorController::disable,—

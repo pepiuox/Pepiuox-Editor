@@ -1,0 +1,4 @@
+﻿#,Método,Ruta,Controlador,Permiso
+123,GET,/admin/translations,TranslationsController::index,translations.manage
+124,POST,/admin/translations/save,TranslationsController::save,translations.manage
+125,POST,/admin/translations/add,TranslationsController::add,translations.manage

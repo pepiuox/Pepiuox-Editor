@@ -1,0 +1,6 @@
+﻿#,Método,Ruta,Controlador,Permiso
+129,GET,/admin/audit,AuditController::index,audit.view
+130,GET,/admin/audit/activity,ActivityLogsController::index,audit.view
+131,GET,/admin/audit/activity/export,ActivityLogsController::export,audit.view
+132,POST,/admin/audit/activity/clean,ActivityLogsController::clean,audit.view
+133,GET,/admin/audit/activity/{id},ActivityLogsController::show,audit.view

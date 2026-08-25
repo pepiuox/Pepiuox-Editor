@@ -1,0 +1,4 @@
+﻿#,Método,Ruta,Controlador,Permiso
+103,GET,/admin/cache,CacheController::index,cache.manage
+104,POST,/admin/cache/clear,CacheController::clear,cache.manage
+105,POST,/admin/cache/regenerate,CacheController::regenerate,cache.manage

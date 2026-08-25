@@ -1,0 +1,5 @@
+﻿#,Método,Ruta,Controlador,Permiso
+52,GET,/admin/pages/{id}/versions,VersionsController::index,pages.view
+53,GET,/admin/pages/{id}/versions/{vid}/preview,VersionsController::preview,pages.view
+54,POST,/admin/pages/{id}/versions/{vid}/restore,VersionsController::restore,pages.restore
+55,POST,/admin/pages/{id}/versions/{vid}/delete,VersionsController::delete,pages.delete

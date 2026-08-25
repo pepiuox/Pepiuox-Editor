@@ -1,0 +1,8 @@
+﻿#,Método,Ruta,Controlador,Permiso
+45,GET,/admin/pages,PagesController::index,pages.view
+46,GET,/admin/pages/create,PagesController::create,pages.create
+47,POST,/admin/pages,PagesController::store,pages.create
+48,GET,/admin/pages/{id}/edit,PagesController::edit,pages.edit
+49,POST,/admin/pages/{id},PagesController::update,pages.edit
+50,POST,/admin/pages/{id}/delete,PagesController::delete,pages.delete
+51,POST,/admin/pages/{id}/autosave,PagesController::autosave,pages.edit

@@ -1,0 +1,3 @@
+﻿#,Método,Ruta,Controlador,Descripción
+140,GET,/cron/backup,BackupsController::cron,Backup programado
+141,GET,/cron/process-expired-bans,BannedUsersController::processExpired,Desbanear expirados

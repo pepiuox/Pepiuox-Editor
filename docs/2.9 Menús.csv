@@ -1,0 +1,6 @@
+﻿#,Método,Ruta,Controlador,Permiso
+63,GET,/admin/menus,MenusController::index,menus.manage
+64,POST,/admin/menus,MenusController::store,menus.manage
+65,POST,/admin/menus/reorder,MenusController::reorder,menus.manage
+66,POST,/admin/menus/{id},MenusController::update,menus.manage
+67,POST,/admin/menus/{id}/delete,MenusController::delete,menus.manage

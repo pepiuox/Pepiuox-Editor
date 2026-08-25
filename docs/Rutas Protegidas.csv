@@ -1,0 +1,5 @@
+﻿Ruta,Límite,Ventana,Identificador
+/login (POST),5 intentos,1 minuto,IP
+/forgot (POST),3 intentos,1 hora,IP
+/reset (POST),5 intentos,1 hora,IP
+/2fa/challenge/verify (POST),5 intentos,1 minuto,IP

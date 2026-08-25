@@ -1,0 +1,3 @@
+﻿#,Método,Ruta,Controlador,Permiso
+106,GET,/admin/settings,SettingsController::index,settings.manage
+107,POST,/admin/settings/update,SettingsController::update,settings.manage

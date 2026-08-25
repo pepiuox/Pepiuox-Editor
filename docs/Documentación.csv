@@ -1,0 +1,8 @@
+﻿Sección,Contenido
+Convenciones,"Métodos HTTP, parámetros, símbolos de auth"
+Rutas Públicas,14 rutas documentadas
+API REST,4 endpoints con scopes
+Panel Admin,121 rutas organizadas en 22 módulos
+Cron,2 endpoints programados
+Middlewares,3 middlewares documentados
+Estadísticas,Resumen por métodos y módulos

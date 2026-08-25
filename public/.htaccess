@@ -1,0 +1,24 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Base relativa a la carpeta public
+    RewriteBase /public/
+
+    # 1. Permitir el header Authorization para la API REST
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # 2. Si el archivo o directorio existe físicamente (CSS, JS, imágenes), servirlo directamente
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # 3. Si no existe, enviar TODA la petición al front controller (index.php)
+    # QSA mantiene los parámetros GET (?foo=bar)
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+# Protección adicional de archivos sensibles dentro de /public/
+<FilesMatch "\.(env|sql|log|md|ini|conf|bak|git)$">
+    Require all denied
+</FilesMatch>

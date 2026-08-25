@@ -1,0 +1,7 @@
+﻿#,Método,Ruta,Controlador,Permiso
+108,GET,/admin/backups,BackupsController::index,backups.manage
+109,POST,/admin/backups/create,BackupsController::create,backups.manage
+110,POST,/admin/backups/schedule,BackupsController::schedule,backups.manage
+111,GET,/admin/backups/{id}/download,BackupsController::download,backups.manage
+112,POST,/admin/backups/{id}/restore,BackupsController::restore,backups.restore
+113,POST,/admin/backups/{id}/delete,BackupsController::delete,backups.manage

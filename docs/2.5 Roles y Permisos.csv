@@ -1,0 +1,7 @@
+﻿#,Método,Ruta,Controlador,Permiso
+39,GET,/admin/roles,RolesController::index,roles.view
+40,GET,/admin/roles/create,RolesController::create,roles.create
+41,POST,/admin/roles,RolesController::store,roles.create
+42,GET,/admin/roles/{id}/edit,RolesController::edit,roles.edit
+43,POST,/admin/roles/{id},RolesController::update,roles.edit
+44,POST,/admin/roles/{id}/delete,RolesController::delete,roles.delete

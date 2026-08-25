@@ -1,0 +1,8 @@
+﻿#,Método,Ruta,Controlador,Permiso
+80,GET,/admin/files,FilesController::index,files.view
+81,POST,/admin/files/upload,FilesController::upload,files.upload
+82,POST,/admin/files/wysiwyg-upload,FilesController::wysiwygUpload,files.upload
+83,GET,/admin/files/{id}/download,FilesController::download,files.view
+84,GET,/admin/files/{id}/share,FilesController::shareView,files.share
+85,POST,/admin/files/{id}/share,FilesController::share,files.share
+86,POST,/admin/files/{id}/delete,FilesController::delete,files.delete

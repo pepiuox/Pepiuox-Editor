@@ -1,0 +1,7 @@
+﻿#,Método,Ruta,Controlador,Permiso
+134,GET,/admin/security/dashboard,SecurityDashboardController::index,security.dashboard
+135,GET,/admin/security/dashboard/realtime,SecurityDashboardController::realtime,security.dashboard
+136,GET,/admin/security/login-attempts,LoginAttemptsController::index,audit.view
+137,POST,/admin/security/login-attempts/block,LoginAttemptsController::blockIp,security.ban_users
+138,POST,/admin/security/login-attempts/clean,LoginAttemptsController::cleanAttempts,audit.view
+139,POST,/admin/security/login-attempts/{id}/unblock,LoginAttemptsController::unblockIp,security.ban_users

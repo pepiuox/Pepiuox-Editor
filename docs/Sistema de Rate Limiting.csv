@@ -1,0 +1,5 @@
+﻿Componente,Archivo,Descripción
+Servicio,app/Services/RateLimiter.php,Lógica de rate limiting
+Middleware,app/Middleware/RateLimitMiddleware.php,Integración con router
+Vista,views/security/dashboard.php,Estadísticas en tiempo real
+Cron,/cron/cleanup-rate-limits,Limpieza automática

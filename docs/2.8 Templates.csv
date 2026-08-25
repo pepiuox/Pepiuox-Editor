@@ -1,0 +1,8 @@
+﻿#,Método,Ruta,Controlador,Permiso
+56,GET,/admin/templates,TemplatesController::index,templates.view
+57,GET,/admin/templates/create,TemplatesController::create,templates.create
+58,POST,/admin/templates,TemplatesController::store,templates.create
+59,GET,/admin/templates/{id}/edit,TemplatesController::edit,templates.edit
+60,POST,/admin/templates/{id},TemplatesController::update,templates.edit
+61,POST,/admin/templates/{id}/delete,TemplatesController::delete,templates.delete
+62,POST,/admin/templates/{id}/duplicate,TemplatesController::duplicate,templates.create

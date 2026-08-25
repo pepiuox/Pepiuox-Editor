@@ -1,0 +1,8 @@
+﻿#,Método,Ruta,Controlador,Permiso
+87,GET,/admin/components,ComponentsController::index,components.manage
+88,GET,/admin/components/api,ComponentsController::apiList,components.manage
+89,GET,/admin/components/create,ComponentsController::create,components.manage
+90,POST,/admin/components,ComponentsController::store,components.manage
+91,GET,/admin/components/{id}/edit,ComponentsController::edit,components.manage
+92,POST,/admin/components/{id},ComponentsController::update,components.manage
+93,POST,/admin/components/{id}/delete,ComponentsController::delete,components.manage

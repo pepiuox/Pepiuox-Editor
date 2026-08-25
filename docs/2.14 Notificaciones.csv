@@ -1,0 +1,7 @@
+﻿#,Método,Ruta,Controlador,Permiso
+97,GET,/admin/notifications,NotificationsController::index,notifications.manage
+98,GET,/admin/notifications/list,NotificationsController::list,notifications.manage
+99,POST,/admin/notifications/mark-all,NotificationsController::markAllRead,notifications.manage
+100,POST,/admin/notifications/clear,NotificationsController::clearAll,notifications.manage
+101,POST,/admin/notifications/{id}/read,NotificationsController::markRead,notifications.manage
+102,POST,/admin/notifications/{id}/delete,NotificationsController::delete,notifications.manage

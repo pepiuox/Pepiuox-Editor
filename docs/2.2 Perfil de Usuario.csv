@@ -1,0 +1,5 @@
+﻿#,Método,Ruta,Controlador,Permiso
+20,GET,/admin/profile,ProfileController::index,—
+21,POST,/admin/profile,ProfileController::update,profile.edit
+22,POST,/admin/profile/password,ProfileController::changePassword,—
+23,POST,/admin/profile/sessions/close,AuthController::closeOtherSessions,—

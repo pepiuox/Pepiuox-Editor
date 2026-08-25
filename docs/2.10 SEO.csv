@@ -1,0 +1,13 @@
+﻿#,Método,Ruta,Controlador,Permiso
+68,GET,/admin/seo,SeoController::index,seo.manage
+69,GET,/admin/seo/global,SeoController::global,seo.global
+70,POST,/admin/seo/global/save,SeoController::globalSave,seo.global
+71,GET,/admin/seo/redirects,SeoController::redirects,redirects.manage
+72,POST,/admin/seo/redirects/store,SeoController::redirectStore,redirects.manage
+73,POST,/admin/seo/redirects/{id}/delete,SeoController::redirectDelete,redirects.manage
+74,POST,/admin/seo/sitemap/regenerate,SeoController::regenerateSitemap,seo.manage
+75,GET,/admin/seo/{id}/analyze,SeoController::analyze,seo.manage
+76,GET,/admin/seo/{id}/competitor,SeoController::competitor,seo.manage
+77,GET,/admin/seo/{id}/meta-generator,SeoController::metaGenerator,seo.manage
+78,POST,/admin/seo/{id}/generate-meta,SeoController::generateMeta,seo.manage
+79,POST,/admin/seo/{id}/apply-meta,SeoController::applyMeta,seo.manage

@@ -1,0 +1,7 @@
+﻿#,Método,Ruta,Controlador,Permiso
+24,GET,/admin/users,UsersController::index,users.view
+25,GET,/admin/users/create,UsersController::create,users.create
+26,POST,/admin/users,UsersController::store,users.create
+27,GET,/admin/users/{id}/edit,UsersController::edit,users.edit
+28,POST,/admin/users/{id},UsersController::update,users.edit
+29,POST,/admin/users/{id}/delete,UsersController::delete,users.delete
