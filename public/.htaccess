@@ -1,24 +1,52 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    
-    # Base relativa a la carpeta public
-    RewriteBase /public/
+    RewriteBase /
 
-    # 1. Permitir el header Authorization para la API REST
-    RewriteCond %{HTTP:Authorization} .
+    # Pasar header Authorization a PHP
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
-    # 2. Si el archivo o directorio existe físicamente (CSS, JS, imágenes), servirlo directamente
+    # ═══════════════════════════════════════════════════════════════
+    # PROTECCIÓN DE CARPETAS SENSIBLES
+    # ═══════════════════════════════════════════════════════════════
+    RewriteRule ^(config|app|views|storage|db)/ - [F,L]
+
+    # ═══════════════════════════════════════════════════════════════
+    # PROTECCIÓN CONTRA INYECCIONES
+    # ═══════════════════════════════════════════════════════════════
+    RewriteCond %{QUERY_STRING} base64_encode[^(]*\([^)]*\) [OR]
+    RewriteCond %{QUERY_STRING} (<|%3C)([^s]*s)+cript.*(>|%3E) [NC,OR]
+    RewriteCond %{QUERY_STRING} GLOBALS(=|\[|\%[0-9A-Z]{0,2}) [OR]
+    RewriteCond %{QUERY_STRING} _REQUEST(=|\[|\%[0-9A-Z]{0,2})
+    RewriteRule ^ - [F,L]
+
+    # ═══════════════════════════════════════════════════════════════
+    # ARCHIVOS ESTÁTICOS (servir directamente)
+    # ═══════════════════════════════════════════════════════════════
     RewriteCond %{REQUEST_FILENAME} -f [OR]
     RewriteCond %{REQUEST_FILENAME} -d
     RewriteRule ^ - [L]
 
-    # 3. Si no existe, enviar TODA la petición al front controller (index.php)
-    # QSA mantiene los parámetros GET (?foo=bar)
-    RewriteRule ^ index.php [QSA,L]
+    # ═══════════════════════════════════════════════════════════════
+    # RUTAS PÚBLICAS ESPECIALES
+    # ═══════════════════════════════════════════════════════════════
+    RewriteRule ^sitemap\.xml$ public/index.php [L]
+    RewriteRule ^robots\.txt$ public/index.php [L]
+
+    # ═══════════════════════════════════════════════════════════════
+    # TODAS LAS DEMÁS RUTAS → index.php
+    # ═══════════════════════════════════════════════════════════════
+    RewriteRule ^ public/index.php [QSA,L]
 </IfModule>
 
-# Protección adicional de archivos sensibles dentro de /public/
-<FilesMatch "\.(env|sql|log|md|ini|conf|bak|git)$">
-    Require all denied
-</FilesMatch>
+# ═══════════════════════════════════════════════════════════════════
+# HEADERS DE SEGURIDAD
+# ═══════════════════════════════════════════════════════════════════
+<IfModule mod_headers.c>
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Deshabilitar listado de directorios
+# Options -Indexes

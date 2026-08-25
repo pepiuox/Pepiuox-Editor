@@ -18,10 +18,10 @@ class AuditService
                 "INSERT INTO activity_log 
                     (user_id, action, description, ip_address, user_agent, 
                      request_method, request_url, old_data, new_data)
-                 VALUES (?,?,?,?,?,?,?,?,?)",
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 [
-                    Auth::id(), 
-                    $action, 
+                    Auth::id(),
+                    $action,
                     $description,
                     $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0',
                     $_SERVER['HTTP_USER_AGENT'] ?? '',

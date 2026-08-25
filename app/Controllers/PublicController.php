@@ -1,62 +1,63 @@
 <?php
 namespace App\Controllers;
+
 use App\Core\{Request, Response, Database};
-use App\Models\Page;
-use App\Services\PageService;
+use App\Services\PageRenderer;
 
 class PublicController
 {
+    /**
+     * Muestra la página de inicio
+     */
     public function home(Request $req): void
     {
-        $page = Page::home();
+        $renderer = new PageRenderer();
+        $page = $renderer->getHomePage();
+        
         if (!$page) {
-            // Si no hay home, mostrar primera publicada
-            $page = Database::fetch("SELECT * FROM pages WHERE status='published' ORDER BY id ASC LIMIT 1");
+            Response::abort(404, 'No hay página de inicio configurada');
         }
-        if (!$page) Response::abort(404, 'No hay páginas publicadas');
-        $this->render($page);
+        
+        $this->renderPage($page, $renderer);
     }
 
+    /**
+     * Muestra una página pública por slug
+     */
     public function show(Request $req, array $params): void
     {
         $slug = $params['slug'] ?? '';
-
-        // 1. Redirecciones
-        $redir = Database::fetch(
-            "SELECT * FROM redirects WHERE from_path = ? AND is_active = 1",
-            ['/' . ltrim($slug, '/')]
-        );
-        if ($redir) {
-            Database::execute("UPDATE redirects SET hits = hits + 1 WHERE id = ?", [$redir['id']]);
-            Response::redirect($redir['to_path'], (int)$redir['status_code']);
+        $renderer = new PageRenderer();
+        $page = $renderer->getPageBySlug($slug);
+        
+        if (!$page) {
+            Response::abort(404, 'Página no encontrada');
         }
-
-        // 2. Página
-        $page = Page::findBySlug($slug);
-        if (!$page) Response::abort(404, 'Página no encontrada');
-        if ($page['status'] !== 'published' || !$page['is_published']) {
-            Response::abort(404, 'Página no disponible');
-        }
-
-        // 3. Programada
-        if (!empty($page['publish_at']) && strtotime($page['publish_at']) > time()) {
-            Response::abort(404, 'Página aún no publicada');
-        }
-
-        $this->render($page);
+        
+        $this->renderPage($page, $renderer);
     }
 
-    private function render(array $page): void
+    /**
+     * Renderiza una página con el layout público
+     */
+    private function renderPage(array $page, PageRenderer $renderer): void
     {
-        $html = PageService::render($page);
-        Response::render($html);
+        // Obtener menú
+        $menu = $renderer->getMenu();
+        
+        // Renderizar contenido
+        $content = $renderer->buildPageHtml($page);
+        
+        // Renderizar layout completo
+        Response::render(View::render('public.layout', compact('page', 'menu', 'content')));
     }
 
-    /** Sitemap.xml */
+    /**
+     * Genera sitemap.xml
+     */
     public function sitemap(Request $req): void
     {
         $xml = \App\Services\SitemapService::getXml();
-        http_response_code(200);
         header('Content-Type: application/xml; charset=utf-8');
         echo $xml;
         exit;

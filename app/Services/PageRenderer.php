@@ -3,15 +3,6 @@ namespace App\Services;
 
 use App\Core\Database;
 
-/**
- * PageRenderer - Servicio para renderizar páginas públicas
- * 
- * Funcionalidades:
- * - Carga páginas desde la base de datos
- * - Renderiza menús multinivel
- * - Maneja caché de páginas
- * - Genera URLs amigables
- */
 class PageRenderer
 {
     private int $startpage = 1;
@@ -41,53 +32,6 @@ class PageRenderer
              WHERE slug = ? AND is_published = ? AND status = ?",
             [$slug, $this->is_published, $this->status]
         );
-    }
-
-    /**
-     * Obtiene el contenido completo de una página por ID
-     */
-    public function getPageContent(int $id): ?array
-    {
-        return Database::fetch(
-            "SELECT id, title, slug, description, content_html, content_css, 
-                    content_php, content_js, status, meta_title, meta_description
-             FROM pages WHERE id = ?",
-            [$id]
-        );
-    }
-
-    /**
-     * Verifica si una página existe y está publicada
-     */
-    public function pageExists(string $slug): bool
-    {
-        $result = Database::fetch(
-            "SELECT COUNT(*) AS count FROM pages 
-             WHERE slug = ? AND status = ?",
-            [$slug, $this->status]
-        );
-        return ($result['count'] ?? 0) > 0;
-    }
-
-    /**
-     * Genera una URL segura para una página
-     */
-    public function generatePageUrl(string $slug): string
-    {
-        $baseUrl = rtrim(BASE_URL ?? '', '/');
-        $safeSlug = $this->sanitizeSlug($slug);
-        return $baseUrl . '/' . $safeSlug;
-    }
-
-    /**
-     * Sanitiza un slug para uso en URLs
-     */
-    public function sanitizeSlug(string $slug): string
-    {
-        $slug = strtolower(trim($slug));
-        $slug = preg_replace('/[^a-z0-9\-]/', '-', $slug);
-        $slug = preg_replace('/-+/', '-', $slug);
-        return trim($slug, '-');
     }
 
     /**
@@ -174,7 +118,6 @@ class PageRenderer
                 : '';
 
             if ($level === 0) {
-                // Nivel principal
                 if ($hasChildren) {
                     $html .= '<li class="nav-item dropdown has-submenu">';
                     $html .= '<div class="nav-link nav-link-parent">';
@@ -197,7 +140,6 @@ class PageRenderer
                     $html .= '</li>';
                 }
             } else {
-                // Submenús
                 if ($hasChildren) {
                     $html .= '<li class="dropdown-submenu has-submenu">';
                     $html .= '<div class="dropdown-item dropdown-item-parent">';
@@ -226,60 +168,37 @@ class PageRenderer
     }
 
     /**
-     * Obtiene el título SEO de una página
-     */
-    public function getPageSeoTitle(array $page): string
-    {
-        if (!empty($page['meta_title'])) {
-            return $page['meta_title'];
-        }
-        
-        $siteName = SettingService::get('general', 'site_name', 'PePiuoX Maker');
-        return ($page['title'] ?? 'Página') . ' · ' . $siteName;
-    }
-
-    /**
-     * Obtiene la descripción SEO de una página
-     */
-    public function getPageSeoDescription(array $page): string
-    {
-        if (!empty($page['meta_description'])) {
-            return $page['meta_description'];
-        }
-        
-        return $page['description'] ?? '';
-    }
-
-    /**
      * Construye el HTML completo de una página
      */
     public function buildPageHtml(array $page): string
     {
-        $title = htmlspecialchars($this->getPageSeoTitle($page), ENT_QUOTES, 'UTF-8');
-        $description = htmlspecialchars($this->getPageSeoDescription($page), ENT_QUOTES, 'UTF-8');
-        $css = $page['content_css'] ?? '';
-        $html = $page['content_html'] ?? '';
-        $js = $page['content_js'] ?? '';
+        $title = htmlspecialchars($page['title'], ENT_QUOTES, 'UTF-8');
+        $desc = htmlspecialchars($page['description'] ?? '', ENT_QUOTES, 'UTF-8');
+        $slug = $this->sanitizeSlug($page['slug']);
+        $css = (string)($page['content_css'] ?? '');
+        $html = (string)($page['content_html'] ?? '');
+        $js = (string)($page['content_js'] ?? '');
 
-        // Evitar cierre prematuro de script
+        // Evita cierre prematuro del bloque <script>
         $js = str_replace('</script>', '<\/script>', $js);
 
         return <<<HTML
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{$title}</title>
-    <meta name="description" content="{$description}">
-    <meta name="generator" content="PePiuoX Maker">
+<div class="page-content" data-page-id="{$page['id']}" data-page-slug="{$slug}">
     <style>{$css}</style>
-</head>
-<body data-page-id="{$page['id']}" data-page-slug="{$page['slug']}">
-{$html}
-<script>{$js}</script>
-</body>
-</html>
+    {$html}
+    <script>{$js}</script>
+</div>
 HTML;
+    }
+
+    /**
+     * Sanitiza un slug
+     */
+    private function sanitizeSlug(string $slug): string
+    {
+        $slug = strtolower(trim($slug));
+        $slug = preg_replace('/[^a-z0-9\-]/', '-', $slug);
+        $slug = preg_replace('/-+/', '-', $slug);
+        return trim($slug, '-') ?: 'pagina-' . time();
     }
 }

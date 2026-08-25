@@ -3,7 +3,7 @@ namespace App\Controllers;
 
 use App\Core\{Request, Response, View, Session, CSRF, Database, Auth};
 use App\Models\{Page, Template, MetaTag};
-use App\Services\{PageService, AuditService, CacheService, SitemapService};
+use App\Services\{PageService, AuditService};
 
 class PagesController
 {
@@ -59,7 +59,7 @@ class PagesController
         AuditService::log('page_created', "Página creada: {$data['title']}", 'pages', $id);
 
         Session::flash('flash.success', 'Página creada correctamente.');
-        Response::redirect(url("admin/pages/$id/edit"));
+        Response::redirect(url("admin/pages/$id/builder"));
     }
 
     public function edit(Request $req, array $params): void
@@ -74,49 +74,18 @@ class PagesController
         Response::render(View::render('pages.edit', compact('page', 'templates', 'pages', 'seo')));
     }
 
-    /**
-     * Builder visual avanzado (GrapesJS + CodeMirror)
-     */
-    public function builder(Request $req, array $params): void
-    {
-        $id = (int)$params['id'];
-        $page = Page::find($id);
-        if (!$page) Response::abort(404, 'Página no encontrada');
-
-        if (!Auth::can('pages.edit')) {
-            Session::flash('flash.error', 'No tienes permisos para usar el builder.');
-            Response::redirect(url('admin/pages'));
-        }
-
-        $templates = Template::allActive();
-        $existingAssets = $this->getExistingAssets();
-        $seo = MetaTag::forPage($id);
-
-        Response::render(View::render('pages.builder', compact(
-            'page', 'templates', 'existingAssets', 'seo'
-        )));
-    }
-
-    /**
-     * Actualizar página (soporta AJAX desde el builder)
-     */
     public function update(Request $req, array $params): void
     {
         CSRF::guard();
         $id = (int)$params['id'];
         $page = Page::find($id);
-        if (!$page) {
-            if ($req->isAjax()) {
-                Response::json(['success' => false, 'message' => 'Página no encontrada'], 404);
-            }
-            Response::abort(404);
-        }
+        if (!$page) Response::abort(404);
 
         $mode = $req->post('mode', 'code');
 
         $data = [
-            'template_id'  => $req->post('template_id') ?: ($page['template_id'] ?? null),
-            'parent_id'    => $req->post('parent_id') ?: ($page['parent_id'] ?? null),
+            'template_id'  => $req->post('template_id') ?: null,
+            'parent_id'    => $req->post('parent_id') ?: null,
             'title'        => $req->post('title', $page['title']),
             'slug'         => $req->post('slug', $page['slug']),
             'description'  => $req->post('description', $page['description']),
@@ -131,10 +100,6 @@ class PagesController
             $data['grapesjs_data'] = $req->post('grapesjs_data');
             $data['content_html'] = $req->post('content_html', $page['content_html']);
             $data['content_css'] = $req->post('content_css', $page['content_css']);
-            $data['content_js'] = $req->post('content_js', $page['content_js']);
-            $data['content_php'] = Auth::can('pages.edit') 
-                ? $req->post('content_php', $page['content_php']) 
-                : $page['content_php'];
         } else {
             $data['content_html'] = $req->post('content_html', $page['content_html']);
             $data['content_css'] = $req->post('content_css', $page['content_css']);
@@ -155,17 +120,8 @@ class PagesController
         $this->saveSeo($id, $req);
         AuditService::log('page_updated', "Página actualizada: {$data['title']}", 'pages', $id);
 
-        // ⚠️ CLAVE: Si es AJAX, devolver JSON (NO hacer redirect)
         if ($req->isAjax()) {
-            Response::json([
-                'success' => true,
-                'message' => 'Guardado correctamente',
-                'data' => [
-                    'id' => $id,
-                    'slug' => $data['slug'],
-                    'status' => $data['status'],
-                ]
-            ]);
+            Response::json(['success' => true, 'message' => 'Guardado correctamente']);
         }
 
         Session::flash('flash.success', 'Página guardada.');
@@ -177,14 +133,9 @@ class PagesController
         CSRF::guard();
         $id = (int)$params['id'];
         Page::delete($id);
-        CacheService::invalidatePage($id);
-        SitemapService::generate();
+        \App\Services\CacheService::invalidatePage($id);
+        \App\Services\SitemapService::generate();
         AuditService::log('page_deleted', "Página eliminada ID $id", 'pages', $id);
-        
-        if ($req->isAjax()) {
-            Response::json(['success' => true, 'message' => 'Página eliminada']);
-        }
-        
         Session::flash('flash.success', 'Página eliminada.');
         Response::redirect(url('admin/pages'));
     }
@@ -193,13 +144,13 @@ class PagesController
     {
         CSRF::guard();
         $id = (int)$params['id'];
-        
         Database::execute(
             "DELETE FROM page_autosave WHERE page_id = ? AND user_id = ?",
             [$id, Auth::id()]
         );
         Database::insert(
-            "INSERT INTO page_autosave (page_id, user_id, content_html, content_css, content_js, content_php, grapesjs_data)
+            "INSERT INTO page_autosave 
+                (page_id, user_id, content_html, content_css, content_js, content_php, grapesjs_data)
              VALUES (?,?,?,?,?,?,?)",
             [
                 $id, Auth::id(),
@@ -213,198 +164,225 @@ class PagesController
         Response::json(['success' => true, 'message' => 'Autoguardado']);
     }
 
-    /**
-     * Endpoint AJAX para subir imágenes desde el Asset Manager de GrapesJS
-     */
-    /**
- * Endpoint AJAX para subir imágenes desde el Asset Manager de GrapesJS
- * CORREGIDO: Sube directamente a uploads/ raíz (sin subcarpetas por fecha)
- */
-public function uploadAsset(Request $req): void
-{
-    if (!Auth::can('pages.edit')) {
-        Response::json(['success' => false, 'errors' => ['Sin permisos']], 403);
+    public function getAutosave(Request $req, array $params): void
+    {
+        $id = (int)$params['id'];
+        $autosave = Database::fetch(
+            "SELECT * FROM page_autosave 
+             WHERE page_id = ? AND user_id = ? 
+             ORDER BY created_at DESC LIMIT 1",
+            [$id, Auth::id()]
+        );
+
+        if (!$autosave) {
+            Response::json(['success' => true, 'data' => null]);
+            return;
+        }
+
+        Response::json([
+            'success' => true,
+            'data' => [
+                'id' => (int)$autosave['id'],
+                'content_html' => $autosave['content_html'],
+                'content_css' => $autosave['content_css'],
+                'content_js' => $autosave['content_js'],
+                'content_php' => $autosave['content_php'],
+                'grapesjs_data' => $autosave['grapesjs_data'],
+                'created_at' => $autosave['created_at'],
+                'age_seconds' => time() - strtotime($autosave['created_at']),
+            ]
+        ]);
     }
 
-    $files = $_FILES['files'] ?? null;
-    if (!$files) {
-        Response::json(['success' => false, 'errors' => ['No se recibieron archivos']]);
+    public function clearAutosave(Request $req, array $params): void
+    {
+        $id = (int)$params['id'];
+        Database::execute(
+            "DELETE FROM page_autosave WHERE page_id = ? AND user_id = ?",
+            [$id, Auth::id()]
+        );
+        Response::json(['success' => true]);
     }
 
-    $uploaded = [];
-    $errors = [];
-    $names = (array)$files['name'];
+    public function builder(Request $req, array $params): void
+    {
+        $id = (int)$params['id'];
+        $page = Page::find($id);
+        if (!$page) Response::abort(404, 'Página no encontrada');
 
-    for ($i = 0; $i < count($names); $i++) {
-        $single = [
-            'name' => $names[$i],
-            'type' => is_array($files['type']) ? $files['type'][$i] : $files['type'],
-            'tmp_name' => is_array($files['tmp_name']) ? $files['tmp_name'][$i] : $files['tmp_name'],
-            'error' => is_array($files['error']) ? $files['error'][$i] : $files['error'],
-            'size' => is_array($files['size']) ? $files['size'][$i] : $files['size'],
-        ];
-
-        if ($single['error'] !== UPLOAD_ERR_OK) {
-            $errors[] = 'Error al subir: ' . $single['name'];
-            continue;
+        if (!Auth::can('pages.edit')) {
+            Session::flash('flash.error', 'No tienes permisos para editar páginas.');
+            Response::redirect(url('admin/pages'));
         }
 
-        $ext = strtolower(pathinfo($single['name'], PATHINFO_EXTENSION));
-        $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
-        if (!in_array($ext, $allowed, true)) {
-            $errors[] = 'Tipo no permitido: ' . $single['name'];
-            continue;
+        $templates = Template::allActive();
+        $existingAssets = $this->getExistingAssets();
+        $seo = MetaTag::forPage($id);
+
+        Response::render(View::render('pages.builder', compact(
+            'page', 'templates', 'existingAssets', 'seo'
+        )));
+    }
+
+    public function uploadAsset(Request $req): void
+    {
+        if (!Auth::can('pages.edit')) {
+            Response::json(['success' => false, 'errors' => ['Sin permisos']], 403);
         }
 
-        if ($single['size'] > 5 * 1024 * 1024) {
-            $errors[] = 'Archivo demasiado grande (máx 5MB): ' . $single['name'];
-            continue;
+        $files = $_FILES['files'] ?? null;
+        if (!$files) {
+            Response::json(['success' => false, 'errors' => ['No se recibieron archivos']]);
         }
 
-        // Validar MIME real
-        $finfo = new \finfo(FILEINFO_MIME_TYPE);
-        $mime = $finfo->file($single['tmp_name']);
-        if (!str_starts_with($mime, 'image/')) {
-            $errors[] = 'MIME inválido: ' . $single['name'];
-            continue;
-        }
+        $uploaded = [];
+        $errors = [];
+        $names = (array)$files['name'];
 
-        // ═══════════════════════════════════════════════════════════════
-        // CORREGIDO: Subir directamente a uploads/ raíz
-        // ═══════════════════════════════════════════════════════════════
-        $dir = UPLOADS_PATH; // ← SIN subcarpetas por fecha
-        if (!is_dir($dir)) {
-            @mkdir($dir, 0775, true);
-        }
+        for ($i = 0; $i < count($names); $i++) {
+            $single = [
+                'name' => $names[$i],
+                'type' => is_array($files['type']) ? $files['type'][$i] : $files['type'],
+                'tmp_name' => is_array($files['tmp_name']) ? $files['tmp_name'][$i] : $files['tmp_name'],
+                'error' => is_array($files['error']) ? $files['error'][$i] : $files['error'],
+                'size' => is_array($files['size']) ? $files['size'][$i] : $files['size'],
+            ];
 
-        // Generar nombre único para evitar colisiones
-        $filename = bin2hex(random_bytes(16)) . '.' . $ext;
-        $dest = $dir . '/' . $filename;
+            if ($single['error'] !== UPLOAD_ERR_OK) {
+                $errors[] = 'Error al subir: ' . $single['name'];
+                continue;
+            }
 
-        if (!move_uploaded_file($single['tmp_name'], $dest)) {
-            $errors[] = 'No se pudo mover: ' . $single['name'];
-            continue;
-        }
+            $ext = strtolower(pathinfo($single['name'], PATHINFO_EXTENSION));
+            $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+            if (!in_array($ext, $allowed, true)) {
+                $errors[] = 'Tipo no permitido: ' . $single['name'];
+                continue;
+            }
 
-        // Obtener dimensiones
-        $width = 0;
-        $height = 0;
-        if ($ext === 'svg') {
-            $svgContent = @file_get_contents($dest);
-            if ($svgContent && preg_match('/viewBox=["\']([^"\']+)["\']/', $svgContent, $matches)) {
-                $viewBox = explode(' ', $matches[1]);
-                if (count($viewBox) === 4) {
-                    $width = (int)$viewBox[2];
-                    $height = (int)$viewBox[3];
+            if ($single['size'] > 5 * 1024 * 1024) {
+                $errors[] = 'Archivo demasiado grande (máx 5MB): ' . $single['name'];
+                continue;
+            }
+
+            $finfo = new \finfo(FILEINFO_MIME_TYPE);
+            $mime = $finfo->file($single['tmp_name']);
+            if (!str_starts_with($mime, 'image/')) {
+                $errors[] = 'MIME inválido: ' . $single['name'];
+                continue;
+            }
+
+            $yearMonth = date('Y/m');
+            $dir = UPLOADS_PATH . '/' . $yearMonth;
+            if (!is_dir($dir)) @mkdir($dir, 0775, true);
+
+            $filename = bin2hex(random_bytes(16)) . '.' . $ext;
+            $dest = $dir . '/' . $filename;
+
+            if (!move_uploaded_file($single['tmp_name'], $dest)) {
+                $errors[] = 'No se pudo mover: ' . $single['name'];
+                continue;
+            }
+
+            $width = 0;
+            $height = 0;
+            if ($ext === 'svg') {
+                $svgContent = @file_get_contents($dest);
+                if ($svgContent && preg_match('/viewBox=["\']([^"\']+)["\']/', $svgContent, $matches)) {
+                    $viewBox = explode(' ', $matches[1]);
+                    if (count($viewBox) === 4) {
+                        $width = (int)$viewBox[2];
+                        $height = (int)$viewBox[3];
+                    }
+                }
+            } else {
+                $imgInfo = @getimagesize($dest);
+                if ($imgInfo) {
+                    $width = $imgInfo[0];
+                    $height = $imgInfo[1];
                 }
             }
-        } else {
-            $imgInfo = @getimagesize($dest);
-            if ($imgInfo) {
-                $width = $imgInfo[0];
-                $height = $imgInfo[1];
-            }
+
+            $relPath = $yearMonth . '/' . $filename;
+            $publicUrl = url('uploads/' . $relPath);
+
+            $uploaded[] = [
+                'src' => $publicUrl,
+                'name' => $single['name'],
+                'type' => 'image',
+                'width' => $width,
+                'height' => $height,
+                'size' => $single['size'],
+                'uploaded_at' => date('Y-m-d H:i:s'),
+            ];
         }
 
-        // Ruta relativa para la URL pública
-        $relPath = $filename; // ← Solo el nombre del archivo
-        $publicUrl = url('uploads/' . $relPath);
-
-        $uploaded[] = [
-            'src' => $publicUrl,
-            'name' => $single['name'],
-            'type' => 'image',
-            'width' => $width,
-            'height' => $height,
-            'size' => $single['size'],
-            'uploaded_at' => date('Y-m-d H:i:s'),
-        ];
+        Response::json([
+            'success' => true,
+            'data' => $uploaded,
+            'errors' => $errors,
+        ]);
     }
 
-    Response::json([
-        'success' => true,
-        'data' => $uploaded,
-        'errors' => $errors,
-    ]);
-}
-
-/**
- * Endpoint AJAX para obtener assets existentes
- * CORREGIDO: Busca en uploads/ raíz
- */
-public function getAssets(Request $req): void
-{
-    Response::json(['success' => true, 'data' => $this->getExistingAssets()]);
-}
-
-/**
- * Obtiene la lista de imágenes subidas
- * CORREGIDO: Busca en uploads/ raíz (sin subcarpetas)
- */
-private function getExistingAssets(): array
-{
-    $uploadDir = UPLOADS_PATH; // ←uploads/ raíz
-    $assets = [];
-    
-    if (!is_dir($uploadDir)) {
-        @mkdir($uploadDir, 0775, true);
-        return $assets;
+    public function getAssets(Request $req): void
+    {
+        Response::json(['success' => true, 'data' => $this->getExistingAssets()]);
     }
 
-    $allowedExt = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+    private function getExistingAssets(): array
+    {
+        $uploadDir = UPLOADS_PATH;
+        $assets = [];
+        if (!is_dir($uploadDir)) return $assets;
 
-    // Escanear solo archivos en la raíz (no recursivo)
-    $files = @scandir($uploadDir);
-    if ($files === false) {
-        return $assets;
-    }
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($uploadDir, \RecursiveDirectoryIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::SELF_FIRST
+        );
 
-    foreach ($files as $file) {
-        if ($file === '.' || $file === '..') continue;
-        
-        $filePath = $uploadDir . '/' . $file;
-        if (!is_file($filePath)) continue;
+        $allowedExt = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
 
-        $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
-        if (!in_array($ext, $allowedExt, true)) continue;
+        foreach ($iterator as $file) {
+            if ($file->isDir()) continue;
+            $ext = strtolower($file->getExtension());
+            if (!in_array($ext, $allowedExt, true)) continue;
 
-        $publicUrl = url('uploads/' . $file);
+            $relativePath = str_replace($uploadDir . '/', '', $file->getPathname());
+            $publicUrl = url('uploads/' . $relativePath);
 
-        $width = 0;
-        $height = 0;
-        if ($ext === 'svg') {
-            $svgContent = @file_get_contents($filePath);
-            if ($svgContent && preg_match('/viewBox=["\']([^"\']+)["\']/', $svgContent, $matches)) {
-                $viewBox = explode(' ', $matches[1]);
-                if (count($viewBox) === 4) {
-                    $width = (int)$viewBox[2];
-                    $height = (int)$viewBox[3];
+            $width = 0;
+            $height = 0;
+            if ($ext === 'svg') {
+                $svgContent = @file_get_contents($file->getPathname());
+                if ($svgContent && preg_match('/viewBox=["\']([^"\']+)["\']/', $svgContent, $matches)) {
+                    $viewBox = explode(' ', $matches[1]);
+                    if (count($viewBox) === 4) {
+                        $width = (int)$viewBox[2];
+                        $height = (int)$viewBox[3];
+                    }
+                }
+            } else {
+                $imgInfo = @getimagesize($file->getPathname());
+                if ($imgInfo) {
+                    $width = $imgInfo[0];
+                    $height = $imgInfo[1];
                 }
             }
-        } else {
-            $imgInfo = @getimagesize($filePath);
-            if ($imgInfo) {
-                $width = $imgInfo[0];
-                $height = $imgInfo[1];
-            }
+
+            $assets[] = [
+                'src' => $publicUrl,
+                'name' => $file->getFilename(),
+                'type' => 'image',
+                'width' => $width,
+                'height' => $height,
+                'size' => $file->getSize(),
+                'uploaded_at' => date('Y-m-d H:i:s', $file->getMTime()),
+            ];
         }
 
-        $assets[] = [
-            'src' => $publicUrl,
-            'name' => $file,
-            'type' => 'image',
-            'width' => $width,
-            'height' => $height,
-            'size' => filesize($filePath),
-            'uploaded_at' => date('Y-m-d H:i:s', filemtime($filePath)),
-        ];
+        usort($assets, fn($a, $b) => strtotime($b['uploaded_at']) - strtotime($a['uploaded_at']));
+        return $assets;
     }
-
-    // Ordenar por fecha descendente
-    usort($assets, fn($a, $b) => strtotime($b['uploaded_at']) - strtotime($a['uploaded_at']));
-    
-    return $assets;
-}
 
     private function saveSeo(int $pageId, Request $req): void
     {
@@ -434,48 +412,4 @@ private function getExistingAssets(): array
             ],
         ]);
     }
-    /**
- * Obtiene el último autosave de una página para el usuario actual.
- */
-public function getAutosave(Request $req, array $params): void
-{
-    $id = (int)$params['id'];
-    $autosave = Database::fetch(
-        "SELECT * FROM page_autosave WHERE page_id = ? AND user_id = ? ORDER BY created_at DESC LIMIT 1",
-        [$id, Auth::id()]
-    );
-
-    if (!$autosave) {
-        Response::json(['success' => true, 'data' => null]);
-        return;
-    }
-
-    Response::json([
-        'success' => true,
-        'data' => [
-            'id' => (int)$autosave['id'],
-            'content_html' => $autosave['content_html'],
-            'content_css' => $autosave['content_css'],
-            'content_js' => $autosave['content_js'],
-            'content_php' => $autosave['content_php'],
-            'grapesjs_data' => $autosave['grapesjs_data'],
-            'created_at' => $autosave['created_at'],
-            'age_seconds' => time() - strtotime($autosave['created_at']),
-        ]
-    ]);
-}
-
-/**
- * Elimina el autosave de una página (se llama tras guardar exitosamente).
- */
-public function clearAutosave(Request $req, array $params): void
-{
-    $id = (int)$params['id'];
-    Database::execute(
-        "DELETE FROM page_autosave WHERE page_id = ? AND user_id = ?",
-        [$id, Auth::id()]
-    );
-    Response::json(['success' => true]);
-}
-
 }
