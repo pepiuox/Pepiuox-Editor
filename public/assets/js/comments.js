@@ -1,6 +1,6 @@
 /**
  * ═══════════════════════════════════════════════════════════════
- * SISTEMA DE COMENTARIOS EN COMPONENTES — PePiuoX Maker
+ * SISTEMA DE COMENTARIOS EN COMPONENTES — PePiuoX Editor
  * ═══════════════════════════════════════════════════════════════
  */
 class CommentsManager {

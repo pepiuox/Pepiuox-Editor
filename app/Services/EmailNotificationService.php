@@ -321,7 +321,7 @@ class EmailNotificationService
 
         return self::send(
             $user['email'],
-            '👋 Bienvenido a ' . SettingService::get('general', 'site_name', 'PePiuoX Maker'),
+            '👋 Bienvenido a ' . SettingService::get('general', 'site_name', 'PePiuoX Editor'),
             $html
         );
     }

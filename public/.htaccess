@@ -1,41 +1,34 @@
+# ═══════════════════════════════════════════════════════════════════
+# PePiuoX Editor - Configuración Apache
+# ═══════════════════════════════════════════════════════════════════
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteBase /
-
-    # Pasar header Authorization a PHP
+    
+    # ═══ PASAR HEADER AUTHORIZATION A PHP ═══
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
-
-    # ═══════════════════════════════════════════════════════════════
-    # PROTECCIÓN DE CARPETAS SENSIBLES
-    # ═══════════════════════════════════════════════════════════════
+    
+    # ═══ PROTEGER CARPETAS SENSIBLES ═══
     RewriteRule ^(config|app|views|storage|db)/ - [F,L]
-
-    # ═══════════════════════════════════════════════════════════════
-    # PROTECCIÓN CONTRA INYECCIONES
-    # ═══════════════════════════════════════════════════════════════
+    
+    # ═══ PROTECCIÓN CONTRA INYECCIONES ═══
     RewriteCond %{QUERY_STRING} base64_encode[^(]*\([^)]*\) [OR]
     RewriteCond %{QUERY_STRING} (<|%3C)([^s]*s)+cript.*(>|%3E) [NC,OR]
     RewriteCond %{QUERY_STRING} GLOBALS(=|\[|\%[0-9A-Z]{0,2}) [OR]
     RewriteCond %{QUERY_STRING} _REQUEST(=|\[|\%[0-9A-Z]{0,2})
     RewriteRule ^ - [F,L]
-
-    # ═══════════════════════════════════════════════════════════════
-    # ARCHIVOS ESTÁTICOS (servir directamente)
-    # ═══════════════════════════════════════════════════════════════
+    
+    # ═══ ARCHIVOS ESTÁTICOS (servir directamente) ═══
     RewriteCond %{REQUEST_FILENAME} -f [OR]
     RewriteCond %{REQUEST_FILENAME} -d
     RewriteRule ^ - [L]
-
-    # ═══════════════════════════════════════════════════════════════
-    # RUTAS PÚBLICAS ESPECIALES
-    # ═══════════════════════════════════════════════════════════════
-    RewriteRule ^sitemap\.xml$ public/index.php [L]
-    RewriteRule ^robots\.txt$ public/index.php [L]
-
-    # ═══════════════════════════════════════════════════════════════
-    # TODAS LAS DEMÁS RUTAS → index.php
-    # ═══════════════════════════════════════════════════════════════
-    RewriteRule ^ public/index.php [QSA,L]
+    
+    # ═══ RUTAS ESPECIALES ═══
+    RewriteRule ^sitemap\.xml$ index.php [L]
+    RewriteRule ^robots\.txt$ index.php [L]
+    
+    # ═══ TODAS LAS DEMÁS RUTAS → index.php ═══
+    RewriteRule ^ index.php [QSA,L]
 </IfModule>
 
 # ═══════════════════════════════════════════════════════════════════
@@ -48,5 +41,14 @@
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>
 
-# Deshabilitar listado de directorios
-# Options -Indexes
+# ═══════════════════════════════════════════════════════════════════
+# DESHABILITAR LISTADO DE DIRECTORIOS
+# ═══════════════════════════════════════════════════════════════════
+Options -Indexes
+
+# ═══════════════════════════════════════════════════════════════════
+# PROTEGER ARCHIVOS SENSIBLES
+# ═══════════════════════════════════════════════════════════════════
+<FilesMatch "\.(env|sql|log|md|ini|conf|bak|git|gitignore|yml|yaml)$">
+    Require all denied
+</FilesMatch>

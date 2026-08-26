@@ -1,4 +1,4 @@
-# PePiuoX Maker — Instalación
+# PePiuoX Editor — Instalación
 
 ## Requisitos
 - PHP 8.1+ con extensiones: pdo_mysql, mbstring, json, openssl

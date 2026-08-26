@@ -10,7 +10,7 @@ $pageUrl = $baseUrl . '/' . ltrim($page['slug'], '/');
 $title = $seo['basic']['title'] ?? $page['title'];
 $desc = $seo['basic']['description'] ?? $page['description'] ?? '';
 $ogImage = $seo['og']['image'] ?? '';
-$siteName = \App\Services\SettingService::get('general', 'site_name', 'PePiuoX Maker');
+$siteName = \App\Services\SettingService::get('general', 'site_name', 'PePiuoX Editor');
 ?>
 
 <div class="row g-4">

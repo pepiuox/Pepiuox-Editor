@@ -39,7 +39,7 @@ class MailService
 
         // 3. Fallback: mail() nativo
         $from = $cfg['mail']['from'] ?? 'no-reply@local.test';
-        $fromName = $cfg['mail']['from_name'] ?? 'PePiuoX Maker';
+        $fromName = $cfg['mail']['from_name'] ?? 'PePiuoX Editor';
         
         $headers = [
             "MIME-Version: 1.0",
@@ -78,7 +78,7 @@ class MailService
             $write("DATA"); $read();
             
             $from = $m['from'];
-            $fromName = $m['from_name'] ?? 'PePiuoX Maker';
+            $fromName = $m['from_name'] ?? 'PePiuoX Editor';
             
             $write("From: $fromName <$from>");
             $write("To: $to");

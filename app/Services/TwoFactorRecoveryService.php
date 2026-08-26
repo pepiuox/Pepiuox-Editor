@@ -267,7 +267,7 @@ class TwoFactorRecoveryService
      */
     private static function buildRecoveryUsedEmail(array $user, string $ip, int $remaining): string
     {
-        $siteName = SettingService::get('general', 'site_name', 'PePiuoX Maker');
+        $siteName = SettingService::get('general', 'site_name', 'PePiuoX Editor');
         $userName = htmlspecialchars($user['full_name'] ?? $user['username']);
         $profileUrl = (require CONFIG_PATH . '/config.php')['app_url'] . '/admin/profile';
         

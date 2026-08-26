@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<title>Instalación · PePiuoX Maker</title>
+<title>Instalación · PePiuoX Editor</title>
 <link rel="stylesheet" href="assets/css/maker.css">
 </head>
 <body>

@@ -127,7 +127,7 @@ class SeoService
     public static function jsonLd(array $page, array $seo): string
     {
         $cfg = require CONFIG_PATH . '/config.php';
-        $siteName = SettingService::get('general', 'site_name', 'PePiuoX Maker');
+        $siteName = SettingService::get('general', 'site_name', 'PePiuoX Editor');
         $baseUrl = rtrim($cfg['app_url'] ?? BASE_URL, '/');
 
         $data = [

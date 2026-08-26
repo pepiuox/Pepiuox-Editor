@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS `activity_log` (
   CONSTRAINT `fk_activity_log_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Volcando datos para la tabla web_editor_db.activity_log: ~9 rows (aproximadamente)
+-- Volcando datos para la tabla web_editor_db.activity_log: ~11 rows (aproximadamente)
 INSERT INTO `activity_log` (`id`, `user_id`, `action`, `description`, `ip_address`, `user_agent`, `request_method`, `request_url`, `old_data`, `new_data`, `created_at`) VALUES
 	(1, 2, 'user_updated', 'Usuario actualizado: admin', NULL, NULL, 'PUT', '/admin/users/update', '{"username": "admin", "email": "admin@webeditor.com", "role": "editor"}', '{"username": "admin", "email": "admin@webeditor.com", "role": "manager"}', '2026-07-25 19:21:36'),
 	(2, 2, 'user_updated', 'Usuario actualizado: manager', NULL, NULL, 'PUT', '/admin/users/update', '{"username": "admin", "email": "admin@webeditor.com", "role": "Manager"}', '{"username": "manager", "email": "admin@webeditor.com", "role": "Manager"}', '2026-08-06 00:37:44'),
@@ -50,7 +50,11 @@ INSERT INTO `activity_log` (`id`, `user_id`, `action`, `description`, `ip_addres
 	(6, 1, 'login', 'Inicio de sesión', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0', 'POST', '/login', NULL, NULL, '2026-08-24 06:49:21'),
 	(7, 1, 'login', 'Inicio de sesión', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0', 'POST', '/login', NULL, NULL, '2026-08-24 15:05:54'),
 	(8, 1, 'login_success', 'Login exitoso: pepiuox', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0', 'POST', '/public/login', NULL, NULL, '2026-08-25 02:18:34'),
-	(9, 1, 'page_updated', 'Página actualizada: vistas', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0', 'POST', '/public/admin/pages/6', NULL, NULL, '2026-08-25 03:03:43');
+	(9, 1, 'page_updated', 'Página actualizada: vistas', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0', 'POST', '/public/admin/pages/6', NULL, NULL, '2026-08-25 03:03:43'),
+	(10, 1, 'login_success', 'Login exitoso: pepiuox', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0', 'POST', '/public/login', NULL, NULL, '2026-08-25 04:27:09'),
+	(11, 1, 'page_updated', 'Página actualizada: Portafolio', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0', 'POST', '/public/admin/pages/4', NULL, NULL, '2026-08-25 05:01:19'),
+	(12, NULL, 'login_failed', 'Login fallido para: admin', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0', 'POST', '/public/login', NULL, NULL, '2026-08-26 05:40:53'),
+	(13, 1, 'login_success', 'Login exitoso: pepiuox', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0', 'POST', '/public/login', NULL, NULL, '2026-08-26 05:41:02');
 
 -- Volcando estructura para tabla web_editor_db.activity_logs
 CREATE TABLE IF NOT EXISTS `activity_logs` (
@@ -65,95 +69,6 @@ CREATE TABLE IF NOT EXISTS `activity_logs` (
   KEY `user_id` (`user_id`),
   CONSTRAINT `activity_logs_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
-
--- Volcando datos para la tabla web_editor_db.activity_logs: ~86 rows (aproximadamente)
-INSERT INTO `activity_logs` (`id`, `user_id`, `action`, `details`, `ip_address`, `user_agent`, `created_at`) VALUES
-	(1, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2025-12-20 03:16:29'),
-	(2, 1, 'change_role', 'Cambió rol de usuario ID: 2 a manager', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2025-12-20 05:07:49'),
-	(3, 1, 'logout', 'Cierre de sesión', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2025-12-21 16:59:13'),
-	(4, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2025-12-24 00:39:11'),
-	(5, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2025-12-24 01:09:01'),
-	(6, 1, 'logout', 'Cierre de sesión', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2025-12-24 01:12:30'),
-	(7, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2025-12-24 01:13:15'),
-	(8, 1, 'logout', 'Cierre de sesión', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2025-12-24 01:16:44'),
-	(9, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2025-12-24 01:22:13'),
-	(10, 1, 'logout', 'Cierre de sesión', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2025-12-24 01:22:24'),
-	(11, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2025-12-24 04:21:05'),
-	(12, 1, 'logout', 'Cierre de sesión', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2025-12-24 04:21:13'),
-	(13, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2025-12-24 04:28:37'),
-	(14, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2025-12-24 04:33:18'),
-	(15, 1, 'logout', 'Cierre de sesión', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2025-12-24 05:39:29'),
-	(16, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2025-12-24 06:17:43'),
-	(17, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2025-12-26 16:06:26'),
-	(18, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2025-12-26 17:41:41'),
-	(21, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2025-12-27 02:11:14'),
-	(22, 1, 'logout', 'Cierre de sesión', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2025-12-27 03:18:11'),
-	(23, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2025-12-27 03:18:30'),
-	(24, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2025-12-27 05:10:25'),
-	(25, 1, 'logout', 'Cierre de sesión', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2025-12-27 15:15:11'),
-	(26, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2025-12-27 15:30:43'),
-	(27, 1, 'logout', 'Cierre de sesión', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2025-12-27 15:41:31'),
-	(28, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2025-12-27 15:41:57'),
-	(29, 1, 'logout', 'Cierre de sesión', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2025-12-28 00:54:33'),
-	(30, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2026-01-02 06:09:14'),
-	(31, 1, 'logout', 'Cierre de sesión', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2026-01-02 06:13:33'),
-	(32, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2026-01-03 22:10:25'),
-	(33, 1, 'logout', 'Cierre de sesión', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2026-01-08 21:16:27'),
-	(34, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-08 16:23:18'),
-	(35, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-11 14:29:46'),
-	(36, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-11 21:24:15'),
-	(37, 1, 'logout', 'Cierre de sesión', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-11 22:37:18'),
-	(38, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-11 22:41:58'),
-	(39, 1, 'logout', 'Cierre de sesión', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-11 22:42:03'),
-	(40, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-13 02:21:30'),
-	(41, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-14 01:26:40'),
-	(42, 1, 'logout', 'Cierre de sesión', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-14 01:31:52'),
-	(43, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-14 01:51:23'),
-	(44, 1, 'logout', 'Cierre de sesión', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-14 02:25:04'),
-	(45, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-14 02:41:02'),
-	(46, 1, 'logout', 'Cierre de sesión', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-14 02:43:02'),
-	(47, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-14 02:45:45'),
-	(48, 1, 'logout', 'Cierre de sesión', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-14 02:51:33'),
-	(49, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-14 02:58:54'),
-	(50, 1, 'logout', 'Cierre de sesión', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-14 03:03:23'),
-	(51, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-14 16:23:49'),
-	(52, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-15 01:48:27'),
-	(53, 1, 'logout', 'Cierre de sesión', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-15 01:49:59'),
-	(54, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-15 01:54:06'),
-	(55, 1, 'login', 'Usuario inició sesión', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-15 06:21:53'),
-	(56, 1, 'export', 'Exportó datos a PDF', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-15 06:22:02'),
-	(57, 1, 'update', 'Actualizó su perfil', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-15 06:22:07'),
-	(58, 1, 'logout', 'Cierre de sesión', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-16 23:17:22'),
-	(59, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-16 23:17:56'),
-	(60, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-20 16:15:39'),
-	(61, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:152.0) Gecko/20100101 Firefox/152.0', '2026-05-21 02:41:51'),
-	(62, 1, 'logout', 'Cierre de sesión', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:152.0) Gecko/20100101 Firefox/152.0', '2026-05-21 02:43:02'),
-	(63, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:152.0) Gecko/20100101 Firefox/152.0', '2026-05-21 02:44:49'),
-	(64, 1, 'logout', 'Cierre de sesión', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:152.0) Gecko/20100101 Firefox/152.0', '2026-05-21 02:52:00'),
-	(65, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:152.0) Gecko/20100101 Firefox/152.0', '2026-05-21 03:47:52'),
-	(66, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:152.0) Gecko/20100101 Firefox/152.0', '2026-05-24 05:21:57'),
-	(67, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:152.0) Gecko/20100101 Firefox/152.0', '2026-05-29 17:08:52'),
-	(68, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:152.0) Gecko/20100101 Firefox/152.0', '2026-06-03 02:47:36'),
-	(69, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:152.0) Gecko/20100101 Firefox/152.0', '2026-06-06 17:07:02'),
-	(70, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:152.0) Gecko/20100101 Firefox/152.0', '2026-06-09 02:38:18'),
-	(71, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:152.0) Gecko/20100101 Firefox/152.0', '2026-06-12 02:44:07'),
-	(72, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:153.0) Gecko/20100101 Firefox/153.0', '2026-06-20 21:55:20'),
-	(73, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:154.0) Gecko/20100101 Firefox/154.0', '2026-07-24 16:16:55'),
-	(74, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:154.0) Gecko/20100101 Firefox/154.0', '2026-07-25 17:48:39'),
-	(75, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:154.0) Gecko/20100101 Firefox/154.0', '2026-07-26 18:54:17'),
-	(76, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:154.0) Gecko/20100101 Firefox/154.0', '2026-07-28 02:48:09'),
-	(77, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:154.0) Gecko/20100101 Firefox/154.0', '2026-08-01 05:57:57'),
-	(78, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:154.0) Gecko/20100101 Firefox/154.0', '2026-08-05 04:13:41'),
-	(79, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:154.0) Gecko/20100101 Firefox/154.0', '2026-08-07 03:11:12'),
-	(80, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:154.0) Gecko/20100101 Firefox/154.0', '2026-08-07 17:22:49'),
-	(81, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:154.0) Gecko/20100101 Firefox/154.0', '2026-08-08 03:14:43'),
-	(82, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:154.0) Gecko/20100101 Firefox/154.0', '2026-08-09 21:42:03'),
-	(83, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:154.0) Gecko/20100101 Firefox/154.0', '2026-08-10 18:37:17'),
-	(84, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:154.0) Gecko/20100101 Firefox/154.0', '2026-08-11 17:01:43'),
-	(85, 1, 'logout', 'Cierre de sesión', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:154.0) Gecko/20100101 Firefox/154.0', '2026-08-12 03:14:36'),
-	(86, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:154.0) Gecko/20100101 Firefox/154.0', '2026-08-12 03:36:09'),
-	(87, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:154.0) Gecko/20100101 Firefox/154.0', '2026-08-14 01:47:34'),
-	(88, 1, 'login', 'Inicio de sesión exitoso', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0', '2026-08-24 00:14:23');
 
 -- Volcando estructura para tabla web_editor_db.analytics_events
 CREATE TABLE IF NOT EXISTS `analytics_events` (
@@ -303,7 +218,7 @@ CREATE TABLE IF NOT EXISTS `backup_schedule` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
--- Volcando datos para la tabla web_editor_db.backup_schedule: ~1 rows (aproximadamente)
+-- Volcando datos para la tabla web_editor_db.backup_schedule: ~0 rows (aproximadamente)
 INSERT INTO `backup_schedule` (`id`, `name`, `type`, `frequency`, `retention_days`, `compression`, `include_files`, `include_database`, `is_active`, `last_run`, `next_run`, `created_at`, `updated_at`) VALUES
 	(1, 'Backup diario automático', 'full', 'daily', 30, 'gzip', 1, 1, 1, NULL, NULL, '2026-08-24 04:01:29', '2026-08-24 04:01:29');
 
@@ -386,9 +301,9 @@ CREATE TABLE IF NOT EXISTS `cache_settings` (
   UNIQUE KEY `cache_key` (`cache_key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
--- Volcando datos para la tabla web_editor_db.cache_settings: ~1 rows (aproximadamente)
+-- Volcando datos para la tabla web_editor_db.cache_settings: ~0 rows (aproximadamente)
 INSERT INTO `cache_settings` (`id`, `cache_key`, `cache_value`, `expires_at`, `created_at`, `updated_at`) VALUES
-	(1, 'rate_limit:login:f528764d624db129b32c21fbca0cb8d6', '{"attempts":1,"window_end":1787624374}', '2026-08-24 21:19:34', '2026-08-24 18:18:34', '2026-08-25 02:18:34');
+	(1, 'rate_limit:login:f528764d624db129b32c21fbca0cb8d6', '{"attempts":2,"window_end":1787722913}', '2026-08-26 00:41:53', '2026-08-24 18:18:34', '2026-08-26 05:41:02');
 
 -- Volcando estructura para evento web_editor_db.cleanup_old_backups
 DELIMITER //
@@ -487,6 +402,69 @@ CREATE TABLE IF NOT EXISTS `collaboration_sessions` (
 
 -- Volcando datos para la tabla web_editor_db.collaboration_sessions: ~0 rows (aproximadamente)
 
+-- Volcando estructura para tabla web_editor_db.comment_mentions
+CREATE TABLE IF NOT EXISTS `comment_mentions` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `comment_id` int(11) NOT NULL,
+  `reply_id` int(11) DEFAULT NULL,
+  `mentioned_user_id` int(11) NOT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_mentioned` (`mentioned_user_id`,`comment_id`),
+  KEY `fk_mention_comment` (`comment_id`),
+  KEY `fk_mention_reply` (`reply_id`),
+  CONSTRAINT `fk_mention_comment` FOREIGN KEY (`comment_id`) REFERENCES `component_comments` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_mention_reply` FOREIGN KEY (`reply_id`) REFERENCES `comment_replies` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_mention_user` FOREIGN KEY (`mentioned_user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+
+-- Volcando datos para la tabla web_editor_db.comment_mentions: ~0 rows (aproximadamente)
+
+-- Volcando estructura para tabla web_editor_db.comment_replies
+CREATE TABLE IF NOT EXISTS `comment_replies` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `comment_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `message` text NOT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_comment` (`comment_id`),
+  KEY `idx_user` (`user_id`),
+  CONSTRAINT `fk_reply_comment` FOREIGN KEY (`comment_id`) REFERENCES `component_comments` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_reply_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+
+-- Volcando datos para la tabla web_editor_db.comment_replies: ~0 rows (aproximadamente)
+
+-- Volcando estructura para tabla web_editor_db.component_comments
+CREATE TABLE IF NOT EXISTS `component_comments` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `page_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `component_selector` varchar(500) DEFAULT NULL COMMENT 'CSS selector del componente',
+  `component_id` varchar(100) DEFAULT NULL COMMENT 'ID interno de GrapesJS',
+  `position_x` decimal(8,2) NOT NULL DEFAULT 0.00 COMMENT 'Posición X en el canvas',
+  `position_y` decimal(8,2) NOT NULL DEFAULT 0.00 COMMENT 'Posición Y en el canvas',
+  `message` text NOT NULL,
+  `status` enum('open','resolved','closed') DEFAULT 'open',
+  `priority` enum('low','medium','high','urgent') DEFAULT 'medium',
+  `resolved_at` datetime DEFAULT NULL,
+  `resolved_by` int(11) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_page_status` (`page_id`,`status`),
+  KEY `idx_user` (`user_id`),
+  KEY `idx_component` (`page_id`,`component_id`),
+  KEY `fk_comment_resolved` (`resolved_by`),
+  CONSTRAINT `fk_comment_page` FOREIGN KEY (`page_id`) REFERENCES `pages` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_comment_resolved` FOREIGN KEY (`resolved_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_comment_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+
+-- Volcando datos para la tabla web_editor_db.component_comments: ~0 rows (aproximadamente)
+
 -- Volcando estructura para tabla web_editor_db.components
 CREATE TABLE IF NOT EXISTS `components` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -566,7 +544,7 @@ CREATE TABLE IF NOT EXISTS `daily_stats` (
   KEY `idx_active_users` (`active_users`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Volcando datos para la tabla web_editor_db.daily_stats: ~1 rows (aproximadamente)
+-- Volcando datos para la tabla web_editor_db.daily_stats: ~0 rows (aproximadamente)
 INSERT INTO `daily_stats` (`id`, `stat_date`, `total_users`, `new_users`, `active_users`, `total_logins`, `unique_logins`, `failed_logins`, `created_at`, `updated_at`) VALUES
 	(1, '2026-05-17', 2, 0, 0, 0, 0, 0, '2026-05-17 05:45:21', '2026-05-17 05:45:21');
 
@@ -705,131 +683,6 @@ CREATE TABLE IF NOT EXISTS `login_attempts` (
   KEY `idx_ip_time` (`ip_address`,`attempt_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
--- Volcando datos para la tabla web_editor_db.login_attempts: ~95 rows (aproximadamente)
-INSERT INTO `login_attempts` (`id`, `username`, `ip_address`, `successful`, `attempt_time`, `user_agent`) VALUES
-	(1, 'pepiuox', '127.0.0.1', 0, '2025-12-24 04:16:11', NULL),
-	(2, 'pepiuox@yandex.com', '127.0.0.1', 0, '2025-12-24 04:16:55', NULL),
-	(3, 'pepiuox@yandex.com', '127.0.0.1', 0, '2025-12-24 04:17:57', NULL),
-	(4, 'pepiuox@yandex.com', '127.0.0.1', 0, '2025-12-24 04:19:15', NULL),
-	(5, 'pepiuox@yandex.com', '127.0.0.1', 0, '2025-12-24 04:28:37', NULL),
-	(6, 'pepiuox@yandex.com', '127.0.0.1', 0, '2025-12-27 15:21:30', NULL),
-	(7, 'pepiuox@yandex.com', '127.0.0.1', 0, '2025-12-27 15:30:43', NULL),
-	(8, 'pepiuox@yandex.com', '127.0.0.1', 0, '2025-12-27 15:41:57', NULL),
-	(9, 'pepiuox@yandex.com', '127.0.0.1', 1, '2025-12-27 15:41:57', NULL),
-	(10, 'admin', '127.0.0.1', 0, '2026-01-02 06:09:00', NULL),
-	(11, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-01-02 06:09:14', NULL),
-	(12, 'pepiuox@yandex.com', '127.0.0.1', 1, '2026-01-02 06:09:14', NULL),
-	(13, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-01-03 22:10:25', NULL),
-	(14, 'pepiuox@yandex.com', '127.0.0.1', 1, '2026-01-03 22:10:25', NULL),
-	(15, 'contact@pepiuox.net', '127.0.0.1', 0, '2026-05-02 22:17:58', NULL),
-	(16, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-05-02 22:19:11', NULL),
-	(17, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-05-02 22:19:21', NULL),
-	(18, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-05-02 22:21:05', NULL),
-	(19, 'admin_user', '127.0.0.1', 0, '2026-05-04 17:36:18', NULL),
-	(20, 'admin@webeditor.com', '127.0.0.1', 0, '2026-05-08 16:20:10', NULL),
-	(21, 'admin@webeditor.com', '127.0.0.1', 0, '2026-05-08 16:20:19', NULL),
-	(22, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-05-11 14:29:45', NULL),
-	(23, 'pepiuox@yandex.com', '127.0.0.1', 1, '2026-05-11 14:29:45', NULL),
-	(24, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-05-11 21:24:15', NULL),
-	(25, 'pepiuox@yandex.com', '127.0.0.1', 1, '2026-05-11 21:24:15', NULL),
-	(26, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-05-11 22:41:58', NULL),
-	(27, 'pepiuox@yandex.com', '127.0.0.1', 1, '2026-05-11 22:41:58', NULL),
-	(28, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-05-13 02:21:30', NULL),
-	(29, 'pepiuox@yandex.com', '127.0.0.1', 1, '2026-05-13 02:21:30', NULL),
-	(30, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-05-14 02:58:54', NULL),
-	(31, 'pepiuox@yandex.com', '127.0.0.1', 1, '2026-05-14 02:58:54', NULL),
-	(32, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-05-14 16:23:49', NULL),
-	(33, 'pepiuox@yandex.com', '127.0.0.1', 1, '2026-05-14 16:23:49', NULL),
-	(34, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-05-15 01:48:27', NULL),
-	(35, 'pepiuox@yandex.com', '127.0.0.1', 1, '2026-05-15 01:48:27', NULL),
-	(36, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-05-15 01:54:06', NULL),
-	(37, 'pepiuox@yandex.com', '127.0.0.1', 1, '2026-05-15 01:54:06', NULL),
-	(38, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-05-16 23:17:56', NULL),
-	(39, 'pepiuox@yandex.com', '127.0.0.1', 1, '2026-05-16 23:17:56', NULL),
-	(40, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-05-20 16:15:38', NULL),
-	(41, 'pepiuox@yandex.com', '127.0.0.1', 1, '2026-05-20 16:15:39', NULL),
-	(42, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-05-21 02:41:50', NULL),
-	(43, 'pepiuox@yandex.com', '127.0.0.1', 1, '2026-05-21 02:41:50', NULL),
-	(44, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-05-21 02:44:49', NULL),
-	(45, 'pepiuox@yandex.com', '127.0.0.1', 1, '2026-05-21 02:44:49', NULL),
-	(46, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-05-21 03:47:52', NULL),
-	(47, 'pepiuox@yandex.com', '127.0.0.1', 1, '2026-05-21 03:47:52', NULL),
-	(48, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-05-24 05:21:33', NULL),
-	(49, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-05-24 05:21:56', NULL),
-	(50, 'pepiuox@yandex.com', '127.0.0.1', 1, '2026-05-24 05:21:57', NULL),
-	(51, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-05-29 17:08:51', NULL),
-	(52, 'pepiuox@yandex.com', '127.0.0.1', 1, '2026-05-29 17:08:51', NULL),
-	(53, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-06-03 02:47:35', NULL),
-	(54, 'pepiuox@yandex.com', '127.0.0.1', 1, '2026-06-03 02:47:36', NULL),
-	(55, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-06-06 17:07:02', NULL),
-	(56, 'pepiuox@yandex.com', '127.0.0.1', 1, '2026-06-06 17:07:02', NULL),
-	(57, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-06-09 02:38:18', NULL),
-	(58, 'pepiuox@yandex.com', '127.0.0.1', 1, '2026-06-09 02:38:18', NULL),
-	(59, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-06-12 02:44:07', NULL),
-	(60, 'pepiuox@yandex.com', '127.0.0.1', 1, '2026-06-12 02:44:07', NULL),
-	(61, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-06-20 21:54:54', NULL),
-	(62, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-06-20 21:55:19', NULL),
-	(63, 'pepiuox@yandex.com', '127.0.0.1', 1, '2026-06-20 21:55:20', NULL),
-	(64, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-07-24 16:16:55', NULL),
-	(65, 'pepiuox@yandex.com', '127.0.0.1', 1, '2026-07-24 16:16:55', NULL),
-	(66, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-07-25 17:48:39', NULL),
-	(67, 'pepiuox@yandex.com', '127.0.0.1', 1, '2026-07-25 17:48:39', NULL),
-	(68, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-07-26 18:54:16', NULL),
-	(69, 'pepiuox@yandex.com', '127.0.0.1', 1, '2026-07-26 18:54:16', NULL),
-	(70, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-07-28 02:48:09', NULL),
-	(71, 'pepiuox@yandex.com', '127.0.0.1', 1, '2026-07-28 02:48:09', NULL),
-	(72, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-08-01 05:57:57', NULL),
-	(73, 'pepiuox@yandex.com', '127.0.0.1', 1, '2026-08-01 05:57:57', NULL),
-	(74, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-08-05 04:13:40', NULL),
-	(75, 'pepiuox@yandex.com', '127.0.0.1', 1, '2026-08-05 04:13:41', NULL),
-	(76, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-08-07 03:11:12', NULL),
-	(77, 'pepiuox@yandex.com', '127.0.0.1', 1, '2026-08-07 03:11:12', NULL),
-	(78, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-08-07 17:22:49', NULL),
-	(79, 'pepiuox@yandex.com', '127.0.0.1', 1, '2026-08-07 17:22:49', NULL),
-	(80, 'pepiuox@yadex.com', '127.0.0.1', 0, '2026-08-08 03:14:29', NULL),
-	(81, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-08-08 03:14:43', NULL),
-	(82, 'pepiuox@yandex.com', '127.0.0.1', 1, '2026-08-08 03:14:43', NULL),
-	(83, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-08-09 21:42:02', NULL),
-	(84, 'pepiuox@yandex.com', '127.0.0.1', 1, '2026-08-09 21:42:03', NULL),
-	(85, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-08-10 18:37:17', NULL),
-	(86, 'pepiuox@yandex.com', '127.0.0.1', 1, '2026-08-10 18:37:17', NULL),
-	(87, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-08-11 17:01:42', NULL),
-	(88, 'pepiuox@yandex.com', '127.0.0.1', 1, '2026-08-11 17:01:43', NULL),
-	(89, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-08-12 03:36:09', NULL),
-	(90, 'pepiuox@yandex.com', '127.0.0.1', 1, '2026-08-12 03:36:09', NULL),
-	(91, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-08-14 01:47:34', NULL),
-	(92, 'pepiuox@yandex.com', '127.0.0.1', 1, '2026-08-14 01:47:34', NULL),
-	(93, 'pepiuox@yandex.com', '127.0.0.1', 0, '2026-08-24 00:14:23', NULL),
-	(94, 'pepiuox@yandex.com', '127.0.0.1', 1, '2026-08-24 00:14:23', NULL),
-	(95, 'pepiuox', '127.0.0.1', 0, '2026-08-24 21:14:51', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0');
-
--- Volcando estructura para tabla web_editor_db.menu
-CREATE TABLE IF NOT EXISTS `menu` (
-  `id` int(11) NOT NULL,
-  `user_id` int(11) NOT NULL DEFAULT 1,
-  `title` varchar(255) NOT NULL,
-  `slug` varchar(255) NOT NULL,
-  `order` int(11) NOT NULL DEFAULT 0,
-  `sort` int(11) NOT NULL DEFAULT 0,
-  `parent_id` int(11) DEFAULT NULL,
-  `status` enum('draft','published','archived') DEFAULT 'draft',
-  `created_at` timestamp NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`id`),
-  KEY `parent_id` (`parent_id`),
-  KEY `order_idx` (`order`),
-  KEY `user_id` (`user_id`) USING BTREE,
-  CONSTRAINT `FKpage_menu` FOREIGN KEY (`id`) REFERENCES `pages` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
-
--- Volcando datos para la tabla web_editor_db.menu: ~6 rows (aproximadamente)
-INSERT INTO `menu` (`id`, `user_id`, `title`, `slug`, `order`, `sort`, `parent_id`, `status`, `created_at`) VALUES
-	(1, 1, 'Inicio', 'inicio', 2, 0, NULL, 'published', '2026-05-12 00:47:39'),
-	(2, 1, 'Quienes somos', 'quienes-somos', 1, 0, 3, 'published', '2026-05-12 00:48:58'),
-	(3, 1, 'Proyectos', 'proyectos', 3, 0, NULL, 'published', '2026-05-12 00:49:20'),
-	(4, 1, 'Portafolio', 'portafolio', 1, 0, NULL, 'published', '2026-05-12 00:50:02'),
-	(5, 1, 'Demo Web', 'demo-web', 0, 0, NULL, 'published', '2026-05-12 00:50:26'),
-	(6, 1, 'Vistas', 'vistas', 4, 0, NULL, 'published', '2026-05-12 00:50:46');
-
 -- Volcando estructura para tabla web_editor_db.menus
 CREATE TABLE IF NOT EXISTS `menus` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -861,7 +714,7 @@ CREATE TABLE IF NOT EXISTS `meta_tags` (
   CONSTRAINT `1` FOREIGN KEY (`page_id`) REFERENCES `pages` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
--- Volcando datos para la tabla web_editor_db.meta_tags: ~23 rows (aproximadamente)
+-- Volcando datos para la tabla web_editor_db.meta_tags: ~24 rows (aproximadamente)
 INSERT INTO `meta_tags` (`id`, `page_id`, `tag_type`, `tag_name`, `tag_value`, `is_active`, `sort_order`) VALUES
 	(1, 1, 'basic', 'title', 'Página de Inicio - Mi Sitio Web', 1, 1),
 	(2, 1, 'basic', 'description', 'Bienvenido a nuestro sitio web principal.', 1, 2),
@@ -885,7 +738,10 @@ INSERT INTO `meta_tags` (`id`, `page_id`, `tag_type`, `tag_name`, `tag_value`, `
 	(20, 1, 'twitter', 'twitter:creator', '@JoseMantilla', 1, 20),
 	(21, 6, 'basic', 'robots', 'index,follow', 1, 0),
 	(22, 6, 'og', 'type', 'website', 1, 0),
-	(23, 6, 'twitter', 'card', 'summary_large_image', 1, 0);
+	(23, 6, 'twitter', 'card', 'summary_large_image', 1, 0),
+	(24, 4, 'basic', 'robots', 'index,follow', 1, 0),
+	(25, 4, 'og', 'type', 'website', 1, 0),
+	(26, 4, 'twitter', 'card', 'summary_large_image', 1, 0);
 
 -- Volcando estructura para tabla web_editor_db.notifications
 CREATE TABLE IF NOT EXISTS `notifications` (
@@ -938,8 +794,6 @@ CREATE TABLE IF NOT EXISTS `page_cache` (
   CONSTRAINT `page_cache_ibfk_1` FOREIGN KEY (`page_id`) REFERENCES `pages` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
--- Volcando datos para la tabla web_editor_db.page_cache: ~0 rows (aproximadamente)
-
 -- Volcando estructura para tabla web_editor_db.page_menu
 CREATE TABLE IF NOT EXISTS `page_menu` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -970,9 +824,9 @@ CREATE TABLE IF NOT EXISTS `page_menu` (
 -- Volcando datos para la tabla web_editor_db.page_menu: ~6 rows (aproximadamente)
 INSERT INTO `page_menu` (`id`, `page_id`, `title`, `slug`, `url`, `icon`, `order`, `sort`, `parent_id`, `level`, `is_published`, `menu_group`, `status`, `target`, `created_at`, `updated_at`) VALUES
 	(1, 1, 'Inicio', 'inicio', NULL, NULL, 0, 0, NULL, 0, 1, 'main', 'published', '_self', '2026-06-04 02:50:47', '2026-08-05 23:11:13'),
-	(2, 2, 'quienes somos', 'quienes-somos', '/portafolio/quienes-somos', '', 1, 1, NULL, 0, 1, 'main', 'published', '_self', '2026-06-04 02:52:23', '2026-08-10 23:01:56'),
-	(3, 3, 'proyectos', 'proyectos', NULL, NULL, 0, 0, 6, 0, 1, 'main', 'published', '_self', '2026-06-04 02:52:17', '2026-08-10 23:01:50'),
-	(4, 4, 'Portafolio', 'portafolio', NULL, NULL, 0, 0, 2, 0, 1, 'main', 'published', '_self', '2026-06-04 02:51:12', '2026-08-10 23:01:56'),
+	(2, 2, 'quienes somos', 'quienes-somos', '', '', 1, 1, NULL, 0, 1, 'main', 'published', '_self', '2026-06-04 02:52:23', '2026-08-25 06:06:05'),
+	(3, 3, 'proyectos', 'proyectos', NULL, NULL, 0, 0, 2, 0, 1, 'main', 'published', '_self', '2026-06-04 02:52:17', '2026-08-25 06:06:21'),
+	(4, 4, 'Portafolio', 'portafolio', NULL, NULL, 0, 0, 1, 0, 1, 'main', 'published', '_self', '2026-06-04 02:51:12', '2026-08-25 06:07:15'),
 	(5, 5, 'demo web', 'demo-web', NULL, NULL, 3, 3, NULL, 0, 1, 'main', 'published', '_self', '2026-06-04 03:35:24', '2026-08-10 23:01:56'),
 	(6, 6, 'vistas', 'vistas', NULL, NULL, 2, 2, NULL, 0, 1, 'main', 'published', '_self', '2026-06-04 03:35:30', '2026-08-10 23:01:56');
 
@@ -990,10 +844,12 @@ CREATE TABLE IF NOT EXISTS `page_statistics` (
   CONSTRAINT `page_statistics_ibfk_1` FOREIGN KEY (`page_id`) REFERENCES `pages` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
--- Volcando datos para la tabla web_editor_db.page_statistics: ~2 rows (aproximadamente)
+-- Volcando datos para la tabla web_editor_db.page_statistics: ~3 rows (aproximadamente)
 INSERT INTO `page_statistics` (`id`, `page_id`, `visits`, `version`, `last_visit`, `created_at`, `updated_at`) VALUES
 	(1, 6, 2, '2.0', '2026-08-25 02:44:26', '2026-08-24 16:35:07', '2026-08-25 03:03:43'),
-	(2, 1, 2, '1.0', '2026-08-25 00:13:17', '2026-08-24 21:13:57', '2026-08-25 00:13:17');
+	(2, 1, 4, '1.0', '2026-08-25 05:11:57', '2026-08-24 21:13:57', '2026-08-25 05:11:57'),
+	(7, 5, 1, '1.0', NULL, '2026-08-25 05:13:41', '2026-08-25 05:13:41'),
+	(8, 3, 1, '1.0', NULL, '2026-08-25 05:13:52', '2026-08-25 05:13:52');
 
 -- Volcando estructura para tabla web_editor_db.page_versions
 CREATE TABLE IF NOT EXISTS `page_versions` (
@@ -1015,7 +871,7 @@ CREATE TABLE IF NOT EXISTS `page_versions` (
   CONSTRAINT `page_versions_ibfk_2` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
--- Volcando datos para la tabla web_editor_db.page_versions: ~24 rows (aproximadamente)
+-- Volcando datos para la tabla web_editor_db.page_versions: ~21 rows (aproximadamente)
 INSERT INTO `page_versions` (`id`, `page_id`, `version_number`, `title`, `content_html`, `content_css`, `content_php`, `content_js`, `created_at`, `created_by`, `note`) VALUES
 	(1, 1, 1, '', '', '', '', NULL, '2025-12-19 23:38:44', 1, NULL),
 	(2, 2, 1, '', '<div class="contact-form"><h2>Contáctanos</h2><form><input type="text" placeholder="Nombre"><input type="email" placeholder="Email"><textarea placeholder="Mensaje"></textarea><button type="submit">Enviar</button></form></div>', '.contact-form { padding: 20px; }', '', NULL, '2025-12-19 23:49:39', 1, NULL),
@@ -1040,7 +896,8 @@ INSERT INTO `page_versions` (`id`, `page_id`, `version_number`, `title`, `conten
 	(21, 5, 5, '', '<body><div id="ilqi" class="gjs-row"><div id="iilg" class="gjs-cell"><div id="ijgai">Hello there</div></div></div><div id="iklj" class="gjs-row"><div id="ithp" class="gjs-cell"><div id="iak9">Insert your text here</div></div><div class="gjs-cell"><div id="i0c9f">Insert your text here</div></div></div></body>', '* { box-sizing: border-box; } body {margin: 0;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}.gjs-row{display:table;padding-top:10px;padding-right:10px;padding-bottom:10px;padding-left:10px;width:100%;}.gjs-cell{width:8%;display:table-cell;height:75px;}#iak9{padding-top:10px;padding-right:10px;padding-bottom:10px;padding-left:10px;}#i0c9f{padding-top:10px;padding-right:10px;padding-bottom:10px;padding-left:10px;}#ijgai{padding-top:10px;padding-right:10px;padding-bottom:10px;padding-left:10px;}@media (max-width: 768px){.gjs-cell{width:100%;display:block;}}', '', NULL, '2026-05-11 21:38:10', 1, NULL),
 	(22, 6, 3, '', '<body><div id="ii4l"><h1 id="ibc2">Bienvenido al Editor Avanzado</h1><p id="ibqk">Arrastra componentes desde la barra lateral izquierda y comienza a crear</p><button type="button" class="btn btn-light btn-lg">Comenzar</button></div><div id="ijrbh" class="gjs-row"><div id="iwvnv" class="gjs-cell"><h1>Título Principal</h1></div><div id="ij03m" class="gjs-cell"><h1>Título Principal</h1></div></div><div class="team-section"><div class="row g-4"><div class="col-md-4"><div class="team-card"><img src="https://randomuser.me/api/portraits/men/32.jpg" alt="Miembro" class="team-img"/><div class="team-info"><h5>Juan Pérez</h5><p class="text-muted">CEO &amp; Fundador</p><div class="team-social"><a href="#"><i class="fab fa-linkedin"></i></a><a href="#"><i class="fab fa-twitter"></i></a><a href="#"><i class="fab fa-github"></i></a></div></div></div></div><div class="col-md-4"><div class="team-card"><img src="https://randomuser.me/api/portraits/women/68.jpg" alt="Miembro" class="team-img"/><div class="team-info"><h5>María García</h5><p class="text-muted">Directora Creativa</p><div class="team-social"><a href="#"><i class="fab fa-linkedin"></i></a><a href="#"><i class="fab fa-behance"></i></a><a href="#"><i class="fab fa-dribbble"></i></a></div></div></div></div><div class="col-md-4"><div class="team-card"><img src="https://randomuser.me/api/portraits/men/75.jpg" alt="Miembro" class="team-img"/><div class="team-info"><h5>Carlos López</h5><p class="text-muted">Lead Developer</p><div class="team-social"><a href="#"><i class="fab fa-linkedin"></i></a><a href="#"><i class="fab fa-github"></i></a><a href="#"><i class="fab fa-stack-overflow"></i></a></div></div></div></div></div></div></body>', '* { box-sizing: border-box; } body {margin: 0;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif;line-height:1.6;}img{max-width:100%;height:auto;}.gjs-row{display:table;padding-top:10px;padding-right:10px;padding-bottom:10px;padding-left:10px;width:100%;}.gjs-cell{width:8%;display:table-cell;height:75px;}.team-card{text-align:center;background-color:white;background-position-x:0%;background-position-y:0%;background-repeat:repeat;background-attachment:scroll;background-image:none;background-size:auto;background-origin:padding-box;background-clip:border-box;border-top-left-radius:15px;border-top-right-radius:15px;border-bottom-right-radius:15px;border-bottom-left-radius:15px;overflow-x:hidden;overflow-y:hidden;box-shadow:rgba(0, 0, 0, 0.1) 0px 5px 20px;transition-property:all;transition-duration:0.3s;transition-timing-function:ease;transition-delay:0s;transition-behavior:normal;}.team-card:hover{transform:translateY(-10px);box-shadow:rgba(0, 0, 0, 0.15) 0px 8px 25px;}.team-img{width:100%;height:250px;object-fit:cover;}.team-info{padding-top:20px;padding-right:20px;padding-bottom:20px;padding-left:20px;}.team-social{margin-top:15px;}.team-social a{color:rgb(102, 102, 102);margin-top:0px;margin-right:8px;margin-bottom:0px;margin-left:8px;font-size:18px;transition-property:color;transition-duration:0.3s;transition-timing-function:ease;transition-delay:0s;transition-behavior:normal;}.team-social a:hover{color:rgb(0, 123, 255);}@media (max-width: 1200px){#iwvnv{width:30%;}#ij03m{width:70%;}}@media (max-width: 768px){.gjs-cell{width:100%;display:block;}}', '', '', '2026-08-04 01:48:19', 1, NULL),
 	(23, 6, 4, '', '<body><div id="ii4l"><h1 id="ibc2">Bienvenido al Editor Avanzado</h1><p id="ibqk">Arrastra componentes desde la barra lateral izquierda y comienza a crear</p><button type="button" class="btn btn-light btn-lg">Comenzar</button></div><div id="ijrbh" class="gjs-row"><div id="iwvnv" class="gjs-cell"><h1>Título Principal</h1></div><div id="ij03m" class="gjs-cell"><h1>Título Principal</h1></div></div><div class="team-section"><div class="row g-4"><div class="col-md-4"><div class="team-card"><img src="https://randomuser.me/api/portraits/men/32.jpg" alt="Miembro" class="team-img"/><div class="team-info"><h5>Juan Pérez</h5><p class="text-muted">CEO &amp; Fundador</p><div class="team-social"><a href="#"><i class="fab fa-linkedin"></i></a><a href="#"><i class="fab fa-twitter"></i></a><a href="#"><i class="fab fa-github"></i></a></div></div></div></div><div class="col-md-4"><div class="team-card"><img src="https://randomuser.me/api/portraits/women/68.jpg" alt="Miembro" class="team-img"/><div class="team-info"><h5>María García</h5><p class="text-muted">Directora Creativa</p><div class="team-social"><a href="#"><i class="fab fa-linkedin"></i></a><a href="#"><i class="fab fa-behance"></i></a><a href="#"><i class="fab fa-dribbble"></i></a></div></div></div></div><div class="col-md-4"><div class="team-card"><img src="https://randomuser.me/api/portraits/men/75.jpg" alt="Miembro" class="team-img"/><div class="team-info"><h5>Carlos López</h5><p class="text-muted">Lead Developer</p><div class="team-social"><a href="#"><i class="fab fa-linkedin"></i></a><a href="#"><i class="fab fa-github"></i></a><a href="#"><i class="fab fa-stack-overflow"></i></a></div></div></div></div></div></div></body>', '* { box-sizing: border-box; } body {margin: 0;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif;line-height:1.6;}img{max-width:100%;height:auto;}.gjs-row{display:table;padding-top:10px;padding-right:10px;padding-bottom:10px;padding-left:10px;width:100%;}.gjs-cell{width:8%;display:table-cell;height:75px;}.team-card{text-align:center;background-color:white;background-position-x:0%;background-position-y:0%;background-repeat:repeat;background-attachment:scroll;background-image:none;background-size:auto;background-origin:padding-box;background-clip:border-box;border-top-left-radius:15px;border-top-right-radius:15px;border-bottom-right-radius:15px;border-bottom-left-radius:15px;overflow-x:hidden;overflow-y:hidden;box-shadow:rgba(0, 0, 0, 0.1) 0px 5px 20px;transition-property:all;transition-duration:0.3s;transition-timing-function:ease;transition-delay:0s;transition-behavior:normal;}.team-card:hover{transform:translateY(-10px);box-shadow:rgba(0, 0, 0, 0.15) 0px 8px 25px;}.team-img{width:100%;height:250px;object-fit:cover;}.team-info{padding-top:20px;padding-right:20px;padding-bottom:20px;padding-left:20px;}.team-social{margin-top:15px;}.team-social a{color:rgb(102, 102, 102);margin-top:0px;margin-right:8px;margin-bottom:0px;margin-left:8px;font-size:18px;transition-property:color;transition-duration:0.3s;transition-timing-function:ease;transition-delay:0s;transition-behavior:normal;}.team-social a:hover{color:rgb(0, 123, 255);}@media (max-width: 1200px){#iwvnv{width:30%;}#ij03m{width:70%;}}@media (max-width: 768px){.gjs-cell{width:100%;display:block;}}', '', '', '2026-08-04 01:49:19', 1, NULL),
-	(24, 6, 5, 'vistas', '<body><div id="ibhfh" class="gjs-row"><div class="gjs-cell"><div id="i4is4">Insert your text here</div><img id="i144m" src="http://localhost:130/uploads/pirkahome_room_16_92.jpeg"/></div><div class="gjs-cell"><div id="iiqyx">Insert your text here</div><img id="ix9xj" src="http://localhost:130/uploads/plano-casa-campo.jpg"/></div><div class="gjs-cell"><div id="inmt9">Insert your text here</div><img id="i8dp6" src="http://localhost:170/public/uploads/1f8af182bf1a5b5621058447ccbe6c2f.png"/></div></div></body>', '* { box-sizing: border-box; } body {margin: 0;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}.gjs-row{display:table;padding-top:10px;padding-right:10px;padding-bottom:10px;padding-left:10px;width:100%;}.gjs-cell{width:8%;display:table-cell;height:75px;}#i4is4{padding-top:10px;padding-right:10px;padding-bottom:10px;padding-left:10px;}#iiqyx{padding-top:10px;padding-right:10px;padding-bottom:10px;padding-left:10px;}#inmt9{padding-top:10px;padding-right:10px;padding-bottom:10px;padding-left:10px;}#ix9xj{color:black;width:191px;height:188px;}#i144m{color:black;width:169px;height:170px;}#i8dp6{color:black;}@media (max-width: 768px){.gjs-cell{width:100%;display:block;}}', '', 'var imagesload = images;', '2026-08-25 03:03:43', 1, 'Edición desde builder visual');
+	(24, 6, 5, 'vistas', '<body><div id="ibhfh" class="gjs-row"><div class="gjs-cell"><div id="i4is4">Insert your text here</div><img id="i144m" src="http://localhost:130/uploads/pirkahome_room_16_92.jpeg"/></div><div class="gjs-cell"><div id="iiqyx">Insert your text here</div><img id="ix9xj" src="http://localhost:130/uploads/plano-casa-campo.jpg"/></div><div class="gjs-cell"><div id="inmt9">Insert your text here</div><img id="i8dp6" src="http://localhost:170/public/uploads/1f8af182bf1a5b5621058447ccbe6c2f.png"/></div></div></body>', '* { box-sizing: border-box; } body {margin: 0;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}.gjs-row{display:table;padding-top:10px;padding-right:10px;padding-bottom:10px;padding-left:10px;width:100%;}.gjs-cell{width:8%;display:table-cell;height:75px;}#i4is4{padding-top:10px;padding-right:10px;padding-bottom:10px;padding-left:10px;}#iiqyx{padding-top:10px;padding-right:10px;padding-bottom:10px;padding-left:10px;}#inmt9{padding-top:10px;padding-right:10px;padding-bottom:10px;padding-left:10px;}#ix9xj{color:black;width:191px;height:188px;}#i144m{color:black;width:169px;height:170px;}#i8dp6{color:black;}@media (max-width: 768px){.gjs-cell{width:100%;display:block;}}', '', 'var imagesload = images;', '2026-08-25 03:03:43', 1, 'Edición desde builder visual'),
+	(25, 4, 3, 'Portafolio', '<body><div id="ibhfh" class="gjs-row"><div class="gjs-cell"><div id="i4is4">Insert your text here</div><img id="idnbs" src="http://localhost:130/uploads/img_6a72adaed150b7.31479953.png"/></div><div class="gjs-cell" id="izii"><div id="iiqyx">Insert your text here</div><img id="i0s1a" src="http://localhost:170/public/uploads/pirkahome_bed_venge.jpeg"/></div><div class="gjs-cell"><div id="inmt9">Insert your text here</div></div></div></body>', '* { box-sizing: border-box; } body {margin: 0;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}.gjs-row{display:table;padding-top:10px;padding-right:10px;padding-bottom:10px;padding-left:10px;width:100%;}.gjs-cell{width:8%;display:table-cell;height:75px;}#i4is4{padding-top:10px;padding-right:10px;padding-bottom:10px;padding-left:10px;}#iiqyx{padding-top:10px;padding-right:10px;padding-bottom:10px;padding-left:10px;}#inmt9{padding-top:10px;padding-right:10px;padding-bottom:10px;padding-left:10px;}#idnbs{color:black;width:132px;height:133px;}#i0s1a{color:black;}@media (max-width: 768px){.gjs-cell{width:100%;display:block;}}', '', 'var imagesload = images;', '2026-08-25 05:01:19', 1, 'Edición desde builder visual');
 
 -- Volcando estructura para tabla web_editor_db.pages
 CREATE TABLE IF NOT EXISTS `pages` (
@@ -1081,7 +938,7 @@ INSERT INTO `pages` (`id`, `user_id`, `template_id`, `parent_id`, `title`, `slug
 	(1, 1, 1, NULL, 'Inicio', 'inicio', '', NULL, '<body><div class="gjs-row" id="ibhfh"><div class="gjs-cell"><div id="i4is4">Insert your text here</div><img id="idnbs" src="http://localhost:130/uploads/img_6a72adaed150b7.31479953.png"/></div><div class="gjs-cell"><div id="iiqyx">Insert your text here</div></div><div class="gjs-cell"><div id="inmt9">Insert your text here</div></div></div></body>', '* { box-sizing: border-box; } body {margin: 0;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}.gjs-row{display:table;padding-top:10px;padding-right:10px;padding-bottom:10px;padding-left:10px;width:100%;}.gjs-cell{width:8%;display:table-cell;height:75px;}#i4is4{padding:10px;}#iiqyx{padding:10px;}#inmt9{padding:10px;}#idnbs{color:black;width:132px;height:133px;}@media (max-width: 768px){.gjs-cell{width:100%;display:block;}}', '', 'var imagesload = images;', NULL, 1, 1, NULL, 'published', '2025-12-19 23:38:44', '2026-08-24 05:24:54'),
 	(2, 1, 1, NULL, 'quienes somos', 'quienes-somos', 'contenido de quienes somos', NULL, '<body><div id="ibhfh" class="gjs-row"><div class="gjs-cell"><div id="i4is4">Insert your text here</div><img id="idnbs" src="http://localhost:130/uploads/img_6a72adaed150b7.31479953.png"/></div><div class="gjs-cell"><div id="iiqyx">Insert your text here</div><img id="is1ly" src="http://localhost:130/uploads/Screenshot 2026-08-09 005401.png"/></div><div class="gjs-cell"><div id="inmt9">Insert your text here</div><img id="i8r7j" src="http://localhost:130/uploads/newroom3_wall_3_14.jpeg"/></div></div></body>', '* { box-sizing: border-box; } body {margin: 0;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}.gjs-row{display:table;padding-top:10px;padding-right:10px;padding-bottom:10px;padding-left:10px;width:100%;}.gjs-cell{width:8%;display:table-cell;height:75px;}#i4is4{padding-top:10px;padding-right:10px;padding-bottom:10px;padding-left:10px;}#iiqyx{padding-top:10px;padding-right:10px;padding-bottom:10px;padding-left:10px;}#inmt9{padding-top:10px;padding-right:10px;padding-bottom:10px;padding-left:10px;}#idnbs{color:black;width:132px;height:133px;}#is1ly{color:black;width:130px;height:130px;}#i8r7j{color:black;width:131px;height:132px;}@media (max-width: 768px){.gjs-cell{width:100%;display:block;}}', '', 'var imagesload = images;', NULL, 0, 1, NULL, 'published', '2025-12-19 23:49:39', '2026-08-24 05:25:00'),
 	(3, 1, 1, NULL, 'proyectos', 'proyectos', '', NULL, '<body><div class="gjs-row" id="ibhfh"><div class="gjs-cell"><div id="i4is4">Insert your text here</div><img id="idnbs" src="http://localhost:130/uploads/img_6a72adaed150b7.31479953.png"/></div><div class="gjs-cell"><div id="iiqyx">Insert your text here</div></div><div class="gjs-cell"><div id="inmt9">Insert your text here</div></div></div></body>', '* { box-sizing: border-box; } body {margin: 0;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}.gjs-row{display:table;padding-top:10px;padding-right:10px;padding-bottom:10px;padding-left:10px;width:100%;}.gjs-cell{width:8%;display:table-cell;height:75px;}#i4is4{padding:10px;}#iiqyx{padding:10px;}#inmt9{padding:10px;}#idnbs{color:black;width:132px;height:133px;}@media (max-width: 768px){.gjs-cell{width:100%;display:block;}}', '', 'var imagesload = images;', NULL, 0, 1, NULL, 'published', '2025-12-22 03:47:02', '2026-08-24 05:25:03'),
-	(4, 1, 1, NULL, 'Portafolio', 'portafolio', '', NULL, '<body><div class="gjs-row" id="ibhfh"><div class="gjs-cell"><div id="i4is4">Insert your text here</div><img id="idnbs" src="http://localhost:130/uploads/img_6a72adaed150b7.31479953.png"/></div><div class="gjs-cell"><div id="iiqyx">Insert your text here</div></div><div class="gjs-cell"><div id="inmt9">Insert your text here</div></div></div></body>', '* { box-sizing: border-box; } body {margin: 0;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}.gjs-row{display:table;padding-top:10px;padding-right:10px;padding-bottom:10px;padding-left:10px;width:100%;}.gjs-cell{width:8%;display:table-cell;height:75px;}#i4is4{padding:10px;}#iiqyx{padding:10px;}#inmt9{padding:10px;}#idnbs{color:black;width:132px;height:133px;}@media (max-width: 768px){.gjs-cell{width:100%;display:block;}}', '', 'var imagesload = images;', NULL, 0, 1, NULL, 'published', '2025-12-24 00:49:40', '2026-08-24 05:25:08'),
+	(4, 1, 1, NULL, 'Portafolio', 'portafolio', '', NULL, '<body><div id="ibhfh" class="gjs-row"><div class="gjs-cell"><div id="i4is4">Insert your text here</div><img id="idnbs" src="http://localhost:130/uploads/img_6a72adaed150b7.31479953.png"/></div><div class="gjs-cell" id="izii"><div id="iiqyx">Insert your text here</div><img id="i0s1a" src="http://localhost:170/public/uploads/pirkahome_bed_venge.jpeg"/></div><div class="gjs-cell"><div id="inmt9">Insert your text here</div></div></div></body>', '* { box-sizing: border-box; } body {margin: 0;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}.gjs-row{display:table;padding-top:10px;padding-right:10px;padding-bottom:10px;padding-left:10px;width:100%;}.gjs-cell{width:8%;display:table-cell;height:75px;}#i4is4{padding-top:10px;padding-right:10px;padding-bottom:10px;padding-left:10px;}#iiqyx{padding-top:10px;padding-right:10px;padding-bottom:10px;padding-left:10px;}#inmt9{padding-top:10px;padding-right:10px;padding-bottom:10px;padding-left:10px;}#idnbs{color:black;width:132px;height:133px;}#i0s1a{color:black;}@media (max-width: 768px){.gjs-cell{width:100%;display:block;}}', '', 'var imagesload = images;', '{"assets":[{"type":"image","src":"http://localhost:170/public/uploads/1f8af182bf1a5b5621058447ccbe6c2f.png","unitDim":"px","height":627,"width":1038,"name":"1f8af182bf1a5b5621058447ccbe6c2f.png","size":95890,"uploaded_at":"2026-08-25 05:03:31"},{"type":"image","src":"http://localhost:170/public/uploads/Screenshot 2026-08-09 005401.png","unitDim":"px","height":882,"width":1482,"name":"Screenshot 2026-08-09 005401.png","size":921027,"uploaded_at":"2026-08-10 01:05:56"},{"type":"image","src":"http://localhost:170/public/uploads/Screenshot_2026-08-09_005753.png","unitDim":"px","height":883,"width":1172,"name":"Screenshot_2026-08-09_005753.png","size":434299,"uploaded_at":"2026-08-10 00:32:59"},{"type":"image","src":"http://localhost:170/public/uploads/newroom3_wall_3_14.jpeg","unitDim":"px","height":512,"width":512,"name":"newroom3_wall_3_14.jpeg","size":68667,"uploaded_at":"2026-08-05 08:19:38"},{"type":"image","src":"http://localhost:170/public/uploads/pirkahome_room_16_92.jpeg","unitDim":"px","height":512,"width":512,"name":"pirkahome_room_16_92.jpeg","size":48078,"uploaded_at":"2026-08-05 08:18:21"},{"type":"image","src":"http://localhost:170/public/uploads/pirkahome_bed_venge.jpeg","unitDim":"px","height":256,"width":256,"name":"pirkahome_bed_venge.jpeg","size":21060,"uploaded_at":"2026-08-05 08:06:40"},{"type":"image","src":"http://localhost:170/public/uploads/Planos-de-casas-de-campo-7.jpg","unitDim":"px","height":573,"width":969,"name":"Planos-de-casas-de-campo-7.jpg","size":148403,"uploaded_at":"2026-08-05 08:05:34"},{"type":"image","src":"http://localhost:170/public/uploads/plano-casa-campo.jpg","unitDim":"px","height":986,"width":1005,"name":"plano-casa-campo.jpg","size":97242,"uploaded_at":"2026-08-05 07:55:14"},{"type":"image","src":"http://localhost:170/public/uploads/pirkahome.png","unitDim":"px","height":188,"width":400,"name":"pirkahome.png","size":32731,"uploaded_at":"2026-08-05 07:04:22"},{"type":"image","src":"http://localhost:170/public/uploads/contact-sheet.jpg","unitDim":"px","height":300,"width":792,"name":"contact-sheet.jpg","size":126925,"uploaded_at":"2026-08-05 06:55:00"},{"type":"image","src":"http://localhost:170/public/uploads/img_6a72adaed150b7.31479953.png","unitDim":"px","height":564,"width":564,"name":"img_6a72adaed150b7.31479953.png","size":684460,"uploaded_at":"2026-08-05 05:27:42"}],"styles":[{"selectors":[],"selectorsAdd":"*","style":{"box-sizing":"border-box"}},{"selectors":[],"selectorsAdd":"body","style":{"margin-top":"0px","margin-right":"0px","margin-bottom":"0px","margin-left":"0px"}},{"selectors":[],"selectorsAdd":"*","style":{"box-sizing":"border-box"}},{"selectors":[],"selectorsAdd":"body","style":{"margin-top":"0px","margin-right":"0px","margin-bottom":"0px","margin-left":"0px"}},{"selectors":[{"name":"gjs-row","private":1}],"style":{"display":"table","padding-top":"10px","padding-right":"10px","padding-bottom":"10px","padding-left":"10px","width":"100%"}},{"selectors":[{"name":"gjs-cell","private":1}],"style":{"width":"8%","display":"table-cell","height":"75px"}},{"selectors":["#i4is4"],"style":{"padding-top":"10px","padding-right":"10px","padding-bottom":"10px","padding-left":"10px"}},{"selectors":["#iiqyx"],"style":{"padding-top":"10px","padding-right":"10px","padding-bottom":"10px","padding-left":"10px"}},{"selectors":["#inmt9"],"style":{"padding-top":"10px","padding-right":"10px","padding-bottom":"10px","padding-left":"10px"}},{"selectors":["#idnbs"],"style":{"color":"black","width":"132px","height":"133px"}},{"selectors":[{"name":"gjs-cell","private":1}],"style":{"width":"100%","display":"block"},"mediaText":"(max-width: 768px)","atRuleType":"media"},{"selectors":["#i0s1a"],"style":{"color":"black"}}],"pages":[{"frames":[{"component":{"type":"wrapper","stylable":["background","background-color","background-image","background-repeat","background-attachment","background-position","background-size"],"components":[{"classes":[{"name":"gjs-row","private":1}],"attributes":{"id":"ibhfh"},"components":[{"classes":[{"name":"gjs-cell","private":1}],"components":[{"type":"text","attributes":{"id":"i4is4"},"components":[{"type":"textnode","content":"Insert your text here"}]},{"type":"image","resizable":{"ratioDefault":1},"attributes":{"id":"idnbs","src":"http://localhost:130/uploads/img_6a72adaed150b7.31479953.png"}}]},{"classes":[{"name":"gjs-cell","private":1}],"attributes":{"id":"izii"},"components":[{"type":"text","attributes":{"id":"iiqyx"},"components":[{"type":"textnode","content":"Insert your text here"}]},{"type":"image","resizable":{"ratioDefault":1},"attributes":{"id":"i0s1a","src":"http://localhost:170/public/uploads/pirkahome_bed_venge.jpeg"}}]},{"classes":[{"name":"gjs-cell","private":1}],"components":[{"type":"text","attributes":{"id":"inmt9"},"components":[{"type":"textnode","content":"Insert your text here"}]}]}]}]},"id":"r8q0QkCZmw7QteDi"}],"id":"2K5WfFDywm2YHNXb"}]}', 0, 0, NULL, 'published', '2025-12-24 00:49:40', '2026-08-25 05:01:19'),
 	(5, 1, 1, NULL, 'demo web', 'demo-web', '', NULL, '<body><div class="gjs-row" id="ibhfh"><div class="gjs-cell"><div id="i4is4">Insert your text here</div><img id="idnbs" src="http://localhost:130/uploads/img_6a72adaed150b7.31479953.png"/></div><div class="gjs-cell"><div id="iiqyx">Insert your text here</div></div><div class="gjs-cell"><div id="inmt9">Insert your text here</div></div></div></body>', '* { box-sizing: border-box; } body {margin: 0;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}.gjs-row{display:table;padding-top:10px;padding-right:10px;padding-bottom:10px;padding-left:10px;width:100%;}.gjs-cell{width:8%;display:table-cell;height:75px;}#i4is4{padding:10px;}#iiqyx{padding:10px;}#inmt9{padding:10px;}#idnbs{color:black;width:132px;height:133px;}@media (max-width: 768px){.gjs-cell{width:100%;display:block;}}', '', 'var imagesload = images;', NULL, 0, 1, NULL, 'published', '2025-12-27 19:45:29', '2026-08-24 05:25:12'),
 	(6, 1, 1, NULL, 'vistas', 'vistas', '', NULL, '<body><div id="ibhfh" class="gjs-row"><div class="gjs-cell"><div id="i4is4">Insert your text here</div><img id="i144m" src="http://localhost:130/uploads/pirkahome_room_16_92.jpeg"/></div><div class="gjs-cell"><div id="iiqyx">Insert your text here</div><img id="ix9xj" src="http://localhost:130/uploads/plano-casa-campo.jpg"/></div><div class="gjs-cell"><div id="inmt9">Insert your text here</div><img id="i8dp6" src="http://localhost:170/public/uploads/1f8af182bf1a5b5621058447ccbe6c2f.png"/></div></div></body>', '* { box-sizing: border-box; } body {margin: 0;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}.gjs-row{display:table;padding-top:10px;padding-right:10px;padding-bottom:10px;padding-left:10px;width:100%;}.gjs-cell{width:8%;display:table-cell;height:75px;}#i4is4{padding-top:10px;padding-right:10px;padding-bottom:10px;padding-left:10px;}#iiqyx{padding-top:10px;padding-right:10px;padding-bottom:10px;padding-left:10px;}#inmt9{padding-top:10px;padding-right:10px;padding-bottom:10px;padding-left:10px;}#ix9xj{color:black;width:191px;height:188px;}#i144m{color:black;width:169px;height:170px;}#i8dp6{color:black;}@media (max-width: 768px){.gjs-cell{width:100%;display:block;}}', '', 'var imagesload = images;', '{"assets":[{"type":"image","src":"http://localhost:170/public/uploads/1f8af182bf1a5b5621058447ccbe6c2f.png","unitDim":"px","height":627,"width":1038,"name":"Screenshot 2026-08-21 001654.png"}],"styles":[{"selectors":[],"selectorsAdd":"*","style":{"box-sizing":"border-box"}},{"selectors":[],"selectorsAdd":"body","style":{"margin-top":"0px","margin-right":"0px","margin-bottom":"0px","margin-left":"0px"}},{"selectors":[],"selectorsAdd":"*","style":{"box-sizing":"border-box"}},{"selectors":[],"selectorsAdd":"body","style":{"margin-top":"0px","margin-right":"0px","margin-bottom":"0px","margin-left":"0px"}},{"selectors":[],"selectorsAdd":"*","style":{"box-sizing":"border-box"}},{"selectors":[],"selectorsAdd":"body","style":{"margin-top":"0px","margin-right":"0px","margin-bottom":"0px","margin-left":"0px"}},{"selectors":[],"selectorsAdd":"*","style":{"box-sizing":"border-box"}},{"selectors":[],"selectorsAdd":"body","style":{"margin-top":"0px","margin-right":"0px","margin-bottom":"0px","margin-left":"0px"}},{"selectors":[],"selectorsAdd":"*","style":{"box-sizing":"border-box"}},{"selectors":[],"selectorsAdd":"body","style":{"margin-top":"0px","margin-right":"0px","margin-bottom":"0px","margin-left":"0px"}},{"selectors":[],"selectorsAdd":"*","style":{"box-sizing":"border-box"}},{"selectors":[],"selectorsAdd":"body","style":{"margin-top":"0px","margin-right":"0px","margin-bottom":"0px","margin-left":"0px"}},{"selectors":[],"selectorsAdd":"*","style":{"box-sizing":"border-box"}},{"selectors":[],"selectorsAdd":"body","style":{"margin-top":"0px","margin-right":"0px","margin-bottom":"0px","margin-left":"0px"}},{"selectors":[],"selectorsAdd":"*","style":{"box-sizing":"border-box"}},{"selectors":[],"selectorsAdd":"body","style":{"margin-top":"0px","margin-right":"0px","margin-bottom":"0px","margin-left":"0px"}},{"selectors":[],"selectorsAdd":"*","style":{"box-sizing":"border-box"}},{"selectors":[],"selectorsAdd":"body","style":{"margin-top":"0px","margin-right":"0px","margin-bottom":"0px","margin-left":"0px"}},{"selectors":[],"selectorsAdd":"*","style":{"box-sizing":"border-box"}},{"selectors":[],"selectorsAdd":"body","style":{"margin-top":"0px","margin-right":"0px","margin-bottom":"0px","margin-left":"0px"}},{"selectors":[],"selectorsAdd":"*","style":{"box-sizing":"border-box"}},{"selectors":[],"selectorsAdd":"body","style":{"margin-top":"0px","margin-right":"0px","margin-bottom":"0px","margin-left":"0px"}},{"selectors":[{"name":"gjs-row","private":1}],"style":{"display":"table","padding-top":"10px","padding-right":"10px","padding-bottom":"10px","padding-left":"10px","width":"100%"}},{"selectors":[{"name":"gjs-cell","private":1}],"style":{"width":"8%","display":"table-cell","height":"75px"}},{"selectors":["#i4is4"],"style":{"padding-top":"10px","padding-right":"10px","padding-bottom":"10px","padding-left":"10px"}},{"selectors":["#iiqyx"],"style":{"padding-top":"10px","padding-right":"10px","padding-bottom":"10px","padding-left":"10px"}},{"selectors":["#inmt9"],"style":{"padding-top":"10px","padding-right":"10px","padding-bottom":"10px","padding-left":"10px"}},{"selectors":["#ix9xj"],"style":{"color":"black","width":"191px","height":"188px"}},{"selectors":["#i144m"],"style":{"color":"black","width":"169px","height":"170px"}},{"selectors":["#i8dp6"],"style":{"color":"black"}},{"selectors":[{"name":"gjs-cell","private":1}],"style":{"width":"100%","display":"block"},"mediaText":"(max-width: 768px)","atRuleType":"media"}],"pages":[{"frames":[{"component":{"type":"wrapper","stylable":["background","background-color","background-image","background-repeat","background-attachment","background-position","background-size"],"components":[{"classes":[{"name":"gjs-row","private":1}],"attributes":{"id":"ibhfh"},"components":[{"classes":[{"name":"gjs-cell","private":1}],"components":[{"type":"text","attributes":{"id":"i4is4"},"components":[{"type":"textnode","content":"Insert your text here"}]},{"type":"image","resizable":{"ratioDefault":1},"attributes":{"id":"i144m","src":"http://localhost:130/uploads/pirkahome_room_16_92.jpeg"}}]},{"classes":[{"name":"gjs-cell","private":1}],"components":[{"type":"text","attributes":{"id":"iiqyx"},"components":[{"type":"textnode","content":"Insert your text here"}]},{"type":"image","resizable":{"ratioDefault":1},"attributes":{"id":"ix9xj","src":"http://localhost:130/uploads/plano-casa-campo.jpg"}}]},{"classes":[{"name":"gjs-cell","private":1}],"components":[{"type":"text","attributes":{"id":"inmt9"},"components":[{"type":"textnode","content":"Insert your text here"}]},{"type":"image","resizable":{"ratioDefault":1},"attributes":{"id":"i8dp6","src":"http://localhost:170/public/uploads/1f8af182bf1a5b5621058447ccbe6c2f.png"}}]}]}]},"id":"1R3fd1u9N5XYcZoy"}],"id":"1n5gDdvnNpubwRWs"}]}', 0, 0, NULL, 'published', '2026-05-08 16:33:40', '2026-08-25 03:03:43');
 
@@ -1228,7 +1085,7 @@ CREATE TABLE IF NOT EXISTS `templates` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
--- Volcando datos para la tabla web_editor_db.templates: ~11 rows (aproximadamente)
+-- Volcando datos para la tabla web_editor_db.templates: ~8 rows (aproximadamente)
 INSERT INTO `templates` (`id`, `name`, `description`, `content_html`, `content_css`, `content_php`, `content_js`, `grapesjs_data`, `is_system_template`, `is_active`, `is_default`, `created_by`, `created_at`) VALUES
 	(1, 'Landing Page', 'Plantilla para página de inicio moderna', '<div class="container"><h1>Bienvenido</h1><p>Contenido de ejemplo</p></div>', 'body { font-family: Arial; }', '<?php', NULL, NULL, 1, 1, 1, NULL, '2025-12-19 22:52:33'),
 	(2, 'Blog Post', 'Plantilla para artículos de blog', '<article><div class="content"><h1>Título del Artículo</h1></div></article>', 'article { max-width: 800px; margin: 0 auto; }', '<?php\r\necho \'hello\';\r\n?>', 'document.addEventListener(\'DOMContentLoaded\', () => {\r\n    const boton = document.getElementById(\'btnSaludo\');\r\n    const contenedorMensaje = document.getElementById(\'mensaje\');\r\n\r\n    boton.addEventListener(\'click\', () => {\r\n        // Ejemplo de interactividad simple\r\n        contenedorMensaje.innerHTML = `\r\n            <div class="alerta">\r\n                <p>¡Hola! JavaScript está funcionando correctamente.</p>\r\n            </div>\r\n        `;\r\n        console.log("El usuario hizo clic en el botón.");\r\n    });\r\n});', NULL, 1, 1, 1, NULL, '2025-12-19 22:52:33'),
@@ -1465,54 +1322,6 @@ CREATE TABLE IF NOT EXISTS `user_activities` (
   CONSTRAINT `user_activities_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
--- Volcando datos para la tabla web_editor_db.user_activities: ~45 rows (aproximadamente)
-INSERT INTO `user_activities` (`id`, `user_id`, `activity_type`, `description`, `ip_address`, `user_agent`, `created_at`) VALUES
-	(1, 1, 'view_activities', 'Administrador visualizó el registro de actividades', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2025-12-27 15:14:47'),
-	(2, 1, 'view_activities', 'Administrador visualizó el registro de actividades', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2025-12-27 15:41:27'),
-	(3, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2025-12-27 15:41:57'),
-	(4, 1, 'view_activities', 'Administrador visualizó el registro de actividades', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2025-12-27 15:41:57'),
-	(5, 1, 'view_activities', 'Administrador visualizó el registro de actividades', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2025-12-27 15:44:01'),
-	(6, 1, 'view_activities', 'Administrador visualizó el registro de actividades', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2025-12-27 15:47:23'),
-	(7, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2026-01-02 06:09:14'),
-	(8, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', '2026-01-03 22:10:25'),
-	(9, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-11 14:29:45'),
-	(10, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-11 21:24:15'),
-	(11, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-11 22:41:58'),
-	(12, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-13 02:21:30'),
-	(13, 1, 'view_activities', 'Administrador visualizó el registro de actividades', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-14 02:22:30'),
-	(14, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-14 02:58:54'),
-	(15, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-14 16:23:49'),
-	(16, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-15 01:48:27'),
-	(17, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-15 01:54:06'),
-	(18, 1, 'view_activities', 'Administrador visualizó el registro de actividades', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-16 16:12:09'),
-	(19, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-16 23:17:56'),
-	(20, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0', '2026-05-20 16:15:39'),
-	(21, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:152.0) Gecko/20100101 Firefox/152.0', '2026-05-21 02:41:50'),
-	(22, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:152.0) Gecko/20100101 Firefox/152.0', '2026-05-21 02:44:49'),
-	(23, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:152.0) Gecko/20100101 Firefox/152.0', '2026-05-21 03:47:52'),
-	(24, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:152.0) Gecko/20100101 Firefox/152.0', '2026-05-24 05:21:57'),
-	(25, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:152.0) Gecko/20100101 Firefox/152.0', '2026-05-29 17:08:51'),
-	(26, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:152.0) Gecko/20100101 Firefox/152.0', '2026-06-03 02:47:36'),
-	(27, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:152.0) Gecko/20100101 Firefox/152.0', '2026-06-06 17:07:02'),
-	(28, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:152.0) Gecko/20100101 Firefox/152.0', '2026-06-09 02:38:18'),
-	(29, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:152.0) Gecko/20100101 Firefox/152.0', '2026-06-12 02:44:07'),
-	(30, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:153.0) Gecko/20100101 Firefox/153.0', '2026-06-20 21:55:20'),
-	(31, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:154.0) Gecko/20100101 Firefox/154.0', '2026-07-24 16:16:55'),
-	(32, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:154.0) Gecko/20100101 Firefox/154.0', '2026-07-25 17:48:39'),
-	(33, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:154.0) Gecko/20100101 Firefox/154.0', '2026-07-26 18:54:16'),
-	(34, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:154.0) Gecko/20100101 Firefox/154.0', '2026-07-28 02:48:09'),
-	(35, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:154.0) Gecko/20100101 Firefox/154.0', '2026-08-01 05:57:57'),
-	(36, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:154.0) Gecko/20100101 Firefox/154.0', '2026-08-05 04:13:41'),
-	(37, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:154.0) Gecko/20100101 Firefox/154.0', '2026-08-07 03:11:12'),
-	(38, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:154.0) Gecko/20100101 Firefox/154.0', '2026-08-07 17:22:49'),
-	(39, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:154.0) Gecko/20100101 Firefox/154.0', '2026-08-08 03:14:43'),
-	(40, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:154.0) Gecko/20100101 Firefox/154.0', '2026-08-09 21:42:03'),
-	(41, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:154.0) Gecko/20100101 Firefox/154.0', '2026-08-10 18:37:17'),
-	(42, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:154.0) Gecko/20100101 Firefox/154.0', '2026-08-11 17:01:43'),
-	(43, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:154.0) Gecko/20100101 Firefox/154.0', '2026-08-12 03:36:09'),
-	(44, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:154.0) Gecko/20100101 Firefox/154.0', '2026-08-14 01:47:34'),
-	(45, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0', '2026-08-24 00:14:23');
-
 -- Volcando estructura para vista web_editor_db.user_activity_summary
 -- Creando tabla temporal para superar errores de dependencia de VIEW
 CREATE TABLE `user_activity_summary` (
@@ -1547,16 +1356,6 @@ CREATE TABLE IF NOT EXISTS `user_logins` (
   CONSTRAINT `fk_user_logins_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Volcando datos para la tabla web_editor_db.user_logins: ~7 rows (aproximadamente)
-INSERT INTO `user_logins` (`id`, `user_id`, `login_date`, `login_time`, `ip_address`, `user_agent`, `login_success`, `logout_time`, `session_duration`, `created_at`) VALUES
-	(1, 1, '2026-08-23', '23:40:31', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0', 1, NULL, NULL, '2026-08-24 04:40:31'),
-	(2, 1, '2026-08-24', '01:49:21', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0', 1, NULL, NULL, '2026-08-24 06:49:21'),
-	(3, 1, '2026-08-24', '10:05:54', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0', 1, NULL, NULL, '2026-08-24 15:05:54'),
-	(4, 1, '2026-08-24', '13:18:34', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0', 1, NULL, NULL, '2026-08-24 18:18:34'),
-	(5, 1, '2026-08-24', '16:15:02', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0', 1, NULL, NULL, '2026-08-24 21:15:02'),
-	(6, 1, '2026-08-24', '19:13:36', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0', 1, NULL, NULL, '2026-08-25 00:13:36'),
-	(7, 1, '2026-08-24', '21:18:34', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0', 1, NULL, NULL, '2026-08-25 02:18:34');
-
 -- Volcando estructura para tabla web_editor_db.user_sessions
 CREATE TABLE IF NOT EXISTS `user_sessions` (
   `id` varchar(128) NOT NULL,
@@ -1572,12 +1371,6 @@ CREATE TABLE IF NOT EXISTS `user_sessions` (
   CONSTRAINT `fk_user_sessions_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Volcando datos para la tabla web_editor_db.user_sessions: ~4 rows (aproximadamente)
-INSERT INTO `user_sessions` (`id`, `user_id`, `ip_address`, `user_agent`, `payload`, `last_activity`, `created_at`) VALUES
-	('14d1c4a75db0ce7f6983f8e00d4695a2', 1, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0', '', 1787616816, '2026-08-25 00:13:36'),
-	('22f67cef4b105a72f5ef899beff6d414', 1, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0', '', 1787595514, '2026-08-24 18:18:34'),
-	('288f29e6d190afd0d8a4833bbf270a3a', 1, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0', '', 1787606102, '2026-08-24 21:15:02'),
-	('b44ef335a86ea531a18a2cc9ea0c1118', 1, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0', '', 1787624314, '2026-08-25 02:18:34');
 
 -- Volcando estructura para tabla web_editor_db.users
 CREATE TABLE IF NOT EXISTS `users` (
@@ -1628,7 +1421,7 @@ CREATE TABLE IF NOT EXISTS `users` (
 
 -- Volcando datos para la tabla web_editor_db.users: ~3 rows (aproximadamente)
 INSERT INTO `users` (`id`, `username`, `email`, `password_hash`, `full_name`, `bio`, `avatar`, `locale`, `theme`, `timezone`, `created_at`, `updated_at`, `is_active`, `role`, `role_id`, `permissions`, `is_banned`, `banned_reason`, `banned_by`, `banned_at`, `ban_expires_at`, `remember_token`, `remember_expires`, `recovery_token`, `recovery_expires`, `two_factor_enabled`, `two_factor_secret`, `last_login`, `login_count`, `last_ip`) VALUES
-	(1, 'pepiuox', 'pepiuox@yandex.com', '$2y$10$jP0N6ouj0kX3FWDThXC/V.25MKpQBr4O8JtMSFIeuZ4SoliQsp5my', 'jose mantilla', 'Artista multifacesito y desarrollador', NULL, 'es', 'dark', 'Europe/Madrid', '2025-12-19 23:37:50', '2026-08-25 02:18:34', 1, 'Super admin', NULL, '', 0, '', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, '2026-08-24 21:18:34', 67, '127.0.0.1'),
+	(1, 'pepiuox', 'pepiuox@yandex.com', '$2y$10$jP0N6ouj0kX3FWDThXC/V.25MKpQBr4O8JtMSFIeuZ4SoliQsp5my', 'jose mantilla', 'Artista multifacesito y desarrollador', NULL, 'es', 'dark', 'Europe/Madrid', '2025-12-19 23:37:50', '2026-08-26 05:41:02', 1, 'Super admin', NULL, '', 0, '', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, '2026-08-26 00:41:02', 69, '127.0.0.1'),
 	(2, 'manager', 'admin@webeditor.com', '$2y$10$SlcY7.ODeiQIo23vEqeHbeC/hXoPNexaMAAoXlHAuJOvrbqM1v4Ha', 'Administrador', 'manager', NULL, 'es', 'dark', 'Europe/Madrid', '2025-12-20 02:30:27', '2026-08-06 00:37:44', 1, 'Manager', NULL, '', 0, '', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, '2025-12-21 12:53:17', 1, NULL),
 	(3, 'admin', 'admin@local.test', '$2y$10$e0NRbQ7K5z1qVxJmXyOaQ.8FhT9vZ2wK3pL4mN5bV6cX7yZ8aB9cD0', 'Administrador', NULL, NULL, 'es', 'dark', 'Europe/Madrid', '2026-08-24 02:03:33', '2026-08-24 02:31:12', 1, 'Super admin', 1, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, 0, NULL);
 
@@ -1644,7 +1437,7 @@ CREATE TABLE IF NOT EXISTS `users_permissions` (
   UNIQUE KEY `id_UNIQUE` (`idPer`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_uca1400_ai_ci;
 
--- Volcando datos para la tabla web_editor_db.users_permissions: ~60 rows (aproximadamente)
+-- Volcando datos para la tabla web_editor_db.users_permissions: ~57 rows (aproximadamente)
 INSERT INTO `users_permissions` (`idPer`, `name`, `description`, `category`, `required`) VALUES
 	(1, 'Verify Users', 'Administration permission allowing for the verification of new users', 'Users', 1),
 	(2, 'Delete Unverified Users', 'Administration permission allowing the deletion of unverified users', 'Users', 1),
@@ -1723,7 +1516,7 @@ CREATE TABLE IF NOT EXISTS `users_role_permissions` (
   CONSTRAINT `user_roles_FK` FOREIGN KEY (`role_id`) REFERENCES `users_roles` (`idRol`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_uca1400_ai_ci;
 
--- Volcando datos para la tabla web_editor_db.users_role_permissions: ~261 rows (aproximadamente)
+-- Volcando datos para la tabla web_editor_db.users_role_permissions: ~257 rows (aproximadamente)
 INSERT INTO `users_role_permissions` (`idRp`, `role_id`, `permission_id`) VALUES
 	(1, 1, 1),
 	(2, 1, 2),
@@ -2027,12 +1820,6 @@ CREATE TABLE IF NOT EXISTS `visits` (
   CONSTRAINT `visits_ibfk_1` FOREIGN KEY (`page_id`) REFERENCES `pages` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
--- Volcando datos para la tabla web_editor_db.visits: ~4 rows (aproximadamente)
-INSERT INTO `visits` (`id`, `page_id`, `visit_date`, `ip_address`, `user_agent`) VALUES
-	(1, 6, '2026-08-24 18:35:07', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0'),
-	(2, 1, '2026-08-24 23:13:57', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0'),
-	(3, 1, '2026-08-25 02:13:17', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0'),
-	(4, 6, '2026-08-25 04:44:26', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0');
 
 -- Volcando estructura para disparador web_editor_db.after_page_update
 SET @OLDTMP_SQL_MODE=@@SQL_MODE, SQL_MODE='STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION';

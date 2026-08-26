@@ -84,7 +84,7 @@ class BackupService
         $cfg = require CONFIG_PATH . '/database.php';
         $pdo = Database::connection();
 
-        $sql = "-- PePiuoX Maker Backup\n";
+        $sql = "-- PePiuoX Editor Backup\n";
         $sql .= "-- Generated: " . date('Y-m-d H:i:s') . "\n\n";
         $sql .= "SET NAMES utf8mb4;\nSET FOREIGN_KEY_CHECKS=0;\n\n";
 

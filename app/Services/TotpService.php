@@ -46,7 +46,7 @@ class TotpService
     }
 
     /** URL otpauth:// para generar QR. */
-    public static function getQrUrl(string $secret, string $account, string $issuer = 'PePiuoX Maker'): string
+    public static function getQrUrl(string $secret, string $account, string $issuer = 'PePiuoX Editor'): string
     {
         return 'otpauth://totp/' . rawurlencode($issuer) . ':' . rawurlencode($account)
              . '?secret=' . $secret

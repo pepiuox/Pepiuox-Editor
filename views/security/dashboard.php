@@ -1,6 +1,6 @@
 <?php
 /**
- * Dashboard de Seguridad — PePiuoX Maker
+ * Dashboard de Seguridad — PePiuoX Editor
  * 
  * Variables esperadas desde SecurityDashboardController::index():
  *   $period, $stats, $hourly, $dailyAttempts, $topFailedIps,

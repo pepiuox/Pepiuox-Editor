@@ -1,6 +1,6 @@
 <?php
 /**
- * Builder Visual Avanzado — PePiuoX Maker v3
+ * Builder Visual Avanzado — PePiuoX Editor v3
  * Ubicación: views/pages/builder.php
  *
  * Variables esperadas desde PagesController::builder():
@@ -48,7 +48,7 @@ $csrfToken = function_exists('csrf_token') ? csrf_token() : \App\Core\CSRF::toke
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title><?= e($pageTitle) ?> · PePiuoX Maker</title>
+<title><?= e($pageTitle) ?> · PePiuoX Editor</title>
 
 <!-- Google Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">

@@ -157,7 +157,7 @@ class TwoFactorController
         }
 
         $user = Auth::user();
-        $siteName = \App\Services\SettingService::get('general', 'site_name', 'PePiuoX Maker');
+        $siteName = \App\Services\SettingService::get('general', 'site_name', 'PePiuoX Editor');
         
         $content = "═══════════════════════════════════════════════════════════\n";
         $content .= "  CÓDIGOS DE RECUPERACIÓN 2FA - $siteName\n";

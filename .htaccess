@@ -47,6 +47,7 @@
     # ═══════════════════════════════════════════════════════════════
     RewriteCond %{THE_REQUEST} /public/([^\s?]*) [NC]
     RewriteRule ^ %1 [L,NE,R=301]
+    # RewriteRule ^ %1 [L,NE,R=302]
 
     # ═══════════════════════════════════════════════════════════════
     # 6. REESCRITURA INTERNA HACIA /public/

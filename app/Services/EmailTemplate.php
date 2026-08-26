@@ -12,7 +12,7 @@ class EmailTemplate
      */
     public static function wrap(string $title, string $body, string $preheader = ''): string
     {
-        $siteName = SettingService::get('general', 'site_name', 'PePiuoX Maker');
+        $siteName = SettingService::get('general', 'site_name', 'PePiuoX Editor');
         $cfg = require CONFIG_PATH . '/config.php';
         $baseUrl = rtrim($cfg['app_url'] ?? BASE_URL, '/');
         $year = date('Y');
@@ -158,7 +158,7 @@ HTML;
      */
     public static function welcome(string $userName, string $loginUrl): string
     {
-        $siteName = SettingService::get('general', 'site_name', 'PePiuoX Maker');
+        $siteName = SettingService::get('general', 'site_name', 'PePiuoX Editor');
         $body = <<<HTML
 <h1>¡Bienvenido a $siteName, $userName! 👋</h1>
 <p>Tu cuenta ha sido creada exitosamente. Ya puedes comenzar a usar todas las herramientas del CMS.</p>
@@ -235,7 +235,7 @@ HTML;
      */
     public static function userUnbanned(string $userName, string $loginUrl): string
     {
-        $siteName = SettingService::get('general', 'site_name', 'PePiuoX Maker');
+        $siteName = SettingService::get('general', 'site_name', 'PePiuoX Editor');
         $body = <<<HTML
 <div class="alert alert-success">
   <strong>✅ Cuenta restaurada</strong>
@@ -288,7 +288,7 @@ HTML;
  */
 public static function newTrustedDevice(array $user, array $deviceInfo): string
 {
-    $siteName = SettingService::get('general', 'site_name', 'PePiuoX Maker');
+    $siteName = SettingService::get('general', 'site_name', 'PePiuoX Editor');
     $userName = htmlspecialchars($user['full_name'] ?? $user['username']);
     $cfg = require CONFIG_PATH . '/config.php';
     $devicesUrl = rtrim($cfg['app_url'] ?? BASE_URL, '/') . '/admin/security/trusted-devices';

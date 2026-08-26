@@ -1,4 +1,4 @@
-# 🚀 Guía de Instalación — PePiuoX Maker
+# 🚀 Guía de Instalación — PePiuoX Editor
 
 > **Versión:** 1.0.0  
 > **Última actualización:** 25 de agosto de 2026  

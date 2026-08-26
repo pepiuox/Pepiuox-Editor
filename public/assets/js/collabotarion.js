@@ -1,6 +1,6 @@
 /**
  * ═══════════════════════════════════════════════════════════════════
- * COLABORACIÓN EN TIEMPO REAL — PePiuoX Maker
+ * COLABORACIÓN EN TIEMPO REAL — PePiuoX Editor
  * ═══════════════════════════════════════════════════════════════════
  */
 class CollaborationClient {

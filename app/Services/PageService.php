@@ -114,7 +114,7 @@ class PageService
      */
     private static function buildHtml(array $page, ?array $template, array $seo, array $menus): string
     {
-        $siteName = SettingService::get('general', 'site_name', 'PePiuoX Maker');
+        $siteName = SettingService::get('general', 'site_name', 'PePiuoX Editor');
 
         // Head con SEO completo
         $head = self::renderSeoHead($page, $seo, $siteName);
@@ -292,7 +292,7 @@ HTML;
         }
 
         // ═══ 10. META ADICIONALES DE SEGURIDAD Y RENDIMIENTO ═══
-        $out .= '<meta name="generator" content="PePiuoX Maker">' . "\n";
+        $out .= '<meta name="generator" content="PePiuoX Editor">' . "\n";
         $out .= '<meta http-equiv="X-UA-Compatible" content="IE=edge">' . "\n";
 
         return $out;

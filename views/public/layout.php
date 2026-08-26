@@ -1,9 +1,10 @@
 <?php
 /**
  * Layout público para páginas del sitio
- * Variables: $page, $menu, $content
+ * Variables esperadas: $page, $menu, $content
  */
-$pageTitle = htmlspecialchars($page['title'] ?? 'PePiuoX Maker', ENT_QUOTES, 'UTF-8');
+
+$pageTitle = htmlspecialchars($page['title'] ?? 'PePiuoX Editor', ENT_QUOTES, 'UTF-8');
 ?>
 <!DOCTYPE html>
 <html lang="es" data-bs-theme="dark">
@@ -395,7 +396,7 @@ $pageTitle = htmlspecialchars($page['title'] ?? 'PePiuoX Maker', ENT_QUOTES, 'UT
                 <div class="col-lg-4">
                     <h5 class="fw-bold mb-3">
                         <i class="bi bi-layers-fill me-2" style="color: var(--accent);"></i>
-                        PePiuoX Maker
+                        PePiuoX Editor
                     </h5>
                     <p class="text-muted small">
                         Plataforma de creación y gestión de contenido profesional.
@@ -422,7 +423,7 @@ $pageTitle = htmlspecialchars($page['title'] ?? 'PePiuoX Maker', ENT_QUOTES, 'UT
             </div>
             <hr style="border-color: var(--border-color); margin: 2rem 0 1rem;">
             <p class="text-center small text-muted mb-0">
-                &copy; <?= date('Y') ?> PePiuoX Maker. Todos los derechos reservados.
+                &copy; <?= date('Y') ?> PePiuoX Editor. Todos los derechos reservados.
             </p>
         </div>
     </footer>

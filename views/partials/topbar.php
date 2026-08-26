@@ -23,8 +23,8 @@ $currentLangData = current(array_filter($langs, fn($l) => $l['code'] === $curren
 
 <header class="topbar">
   <div class="topbar-left">
-    <!-- Toggle Sidebar -->
-    <button class="btn-toggle-sidebar" id="toggleSidebar" aria-label="Toggle sidebar">
+    <!-- Botón Toggle Sidebar (ahora visible en desktop y móvil) -->
+    <button class="btn-toggle-sidebar" id="toggleSidebar" aria-label="Toggle sidebar" title="Toggle sidebar">
       <i class="bi bi-list"></i>
     </button>
     <h1 class="topbar-title"><?= e($pageTitle ?? 'Dashboard') ?></h1>
@@ -105,76 +105,244 @@ $currentLangData = current(array_filter($langs, fn($l) => $l['code'] === $curren
     </a>
   </div>
 </header>
+
 <style>
-.dropdown { position: relative; }
+/* ============================================================
+   TOPBAR ESTILOS
+   ============================================================ */
+.topbar {
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-color);
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+  min-height: 64px;
+  transition: margin-left 0.3s ease;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.topbar-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--text-main);
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Botón Toggle Sidebar */
+.btn-toggle-sidebar {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.5rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-toggle-sidebar:hover {
+  background: var(--accent-light);
+  color: var(--accent);
+}
+
+.btn-toggle-sidebar i {
+  font-size: 1.6rem;
+}
+
+/* Botones de acción */
+.btn-ghost {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.btn-ghost:hover {
+  background: var(--accent-light);
+  color: var(--accent);
+}
+
+.btn-ghost i {
+  font-size: 1.1rem;
+}
+
+/* Dropdowns */
+.dropdown {
+  position: relative;
+}
+
 .dropdown-menu-custom {
   display: none;
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg);
   min-width: 280px;
   z-index: 1060;
   animation: fadeIn 0.2s ease;
 }
-.dropdown.open .dropdown-menu-custom { display: block; }
+
+.dropdown.open .dropdown-menu-custom {
+  display: block;
+}
+
 .dropdown-header-custom {
-  padding: .75rem 1rem;
-  border-bottom: 1px solid var(--border);
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
-.dropdown-body-custom { max-height: 360px; overflow-y: auto; }
+
+.dropdown-body-custom {
+  max-height: 360px;
+  overflow-y: auto;
+}
+
 .dropdown-footer-custom {
-  padding: .6rem 1rem;
-  border-top: 1px solid var(--border);
+  padding: 0.6rem 1rem;
+  border-top: 1px solid var(--border-color);
   text-align: center;
 }
+
 .dropdown-item-custom {
   display: flex;
   align-items: center;
-  gap: .5rem;
-  padding: .6rem 1rem;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
   color: var(--text-secondary);
   border-bottom: 1px solid var(--border-light);
   transition: background var(--transition-fast);
+  text-decoration: none;
 }
-.dropdown-item-custom:hover { background: var(--bg-hover); color: var(--accent); }
+
+.dropdown-item-custom:hover {
+  background: var(--bg-hover);
+  color: var(--accent);
+}
+
+.dropdown-item-custom.active {
+  background: var(--accent-light);
+  color: var(--accent);
+}
+
+.lang-flag {
+  font-size: 1.1rem;
+}
+
+/* Notificaciones */
+.dropdown-notif {
+  min-width: 360px;
+  max-width: 420px;
+}
+
 .notif-item {
   display: flex;
-  gap: .75rem;
-  padding: .75rem 1rem;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--border-light);
   cursor: pointer;
   transition: background var(--transition-fast);
+  text-decoration: none;
+  color: var(--text-main);
 }
-.notif-item:hover { background: var(--bg-hover); }
-.notif-item.unread { background: rgba(0,212,170,0.04); }
+
+.notif-item:hover {
+  background: var(--bg-hover);
+}
+
+.notif-item.unread {
+  background: rgba(0, 212, 170, 0.04);
+}
+
 .notif-item .icon {
-  width: 36px; height: 36px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  display: grid; place-items: center;
+  display: grid;
+  place-items: center;
   flex-shrink: 0;
-  background: rgba(0,212,170,0.1);
+  background: rgba(0, 212, 170, 0.1);
   color: var(--accent);
 }
-.notif-item.error .icon { background: rgba(239,68,68,0.1); color: var(--danger); }
-.notif-item.warning .icon { background: rgba(245,158,11,0.1); color: var(--warning); }
-.notif-item.success .icon { background: rgba(34,197,94,0.1); color: var(--success); }
-.notif-item .content { flex: 1; min-width: 0; }
-.notif-item .title { font-weight: 600; color: var(--text-primary); font-size: .85rem; }
-.notif-item .msg { font-size: .75rem; color: var(--text-muted); margin-top: 2px; }
-.notif-item .time { font-size: .7rem; color: var(--text-dim); margin-top: 4px; }
+
+.notif-item.error .icon {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
+}
+
+.notif-item.warning .icon {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--warning);
+}
+
+.notif-item.success .icon {
+  background: rgba(34, 197, 94, 0.1);
+  color: var(--success);
+}
+
+.notif-item .content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notif-item .title {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+}
+
+.notif-item .msg {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.notif-item .time {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  margin-top: 4px;
+}
+
 .notif-badge {
   position: absolute;
-  top: -4px; right: -4px;
+  top: -4px;
+  right: -4px;
   background: var(--danger);
   color: #fff;
-  font-size: .65rem;
+  font-size: 0.65rem;
   font-weight: 700;
   min-width: 18px;
   height: 18px;
@@ -184,32 +352,124 @@ $currentLangData = current(array_filter($langs, fn($l) => $l['code'] === $curren
   padding: 0 5px;
   border: 2px solid var(--bg-card);
 }
+
+/* Animaciones */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 991.98px) {
+  .topbar {
+    padding: 0.5rem 1rem;
+    min-height: 56px;
+  }
+
+  .topbar-title {
+    font-size: 1rem;
+  }
+
+  .dropdown-notif {
+    min-width: 300px;
+    max-width: 340px;
+    right: -1rem;
+  }
+
+  .btn-ghost span {
+    display: none !important;
+  }
+
+  .btn-ghost {
+    padding: 0.35rem 0.5rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .topbar {
+    padding: 0.35rem 0.75rem;
+    min-height: 48px;
+  }
+
+  .topbar-title {
+    font-size: 0.9rem;
+  }
+
+  .dropdown-notif {
+    min-width: 280px;
+    max-width: 300px;
+    right: 0;
+  }
+
+  .btn-toggle-sidebar i {
+    font-size: 1.3rem;
+  }
+
+  .btn-ghost i {
+    font-size: 0.95rem;
+  }
+}
 </style>
 
 <script>
-function toggleNotifications() {
-  const dd = document.getElementById('notifDropdown');
+/**
+ * Toggle dropdown
+ */
+function toggleDropdown(id, loadNotifs = false) {
+  const dd = document.getElementById(id);
+  if (!dd) return;
+  
+  // Cerrar otros dropdowns
+  document.querySelectorAll('.dropdown.open').forEach(el => {
+    if (el.id !== id) el.classList.remove('open');
+  });
+  
   dd.classList.toggle('open');
-  if (dd.classList.contains('open')) loadNotifications();
+  
+  if (dd.classList.contains('open') && loadNotifs) {
+    loadNotifications();
+  }
 }
-document.addEventListener('click', (e) => {
-  const dd = document.getElementById('notifDropdown');
-  const ld = document.getElementById('langDropdown');
-  if (dd && !dd.contains(e.target)) dd.classList.remove('open');
-  if (ld && !ld.contains(e.target)) ld.classList.remove('open');
+
+/**
+ * Cerrar dropdowns al hacer clic fuera
+ */
+document.addEventListener('click', function(e) {
+  document.querySelectorAll('.dropdown').forEach(dd => {
+    if (!dd.contains(e.target)) {
+      dd.classList.remove('open');
+    }
+  });
 });
 
+/**
+ * Cargar notificaciones
+ */
 async function loadNotifications() {
   const list = document.getElementById('notifList');
+  if (!list) return;
+  
   try {
-    const r = await fetch('<?= url("admin/notifications/list") ?>', { headers: {'X-Requested-With':'XMLHttpRequest'} });
+    const r = await fetch('<?= url("admin/notifications/list") ?>', {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    });
     const d = await r.json();
+    
     if (!d.success || !d.data.length) {
       list.innerHTML = '<div class="text-center text-muted p-3"><?= t("no_notifications") ?></div>';
       return;
     }
+    
     list.innerHTML = d.data.map(n => `
-      <a href="${n.link || '#'}" class="notif-item ${n.is_read==0?'unread':''} ${n.type}" onclick="markRead(${n.id})">
+      <a href="${n.link || '#'}" class="notif-item ${n.is_read == 0 ? 'unread' : ''} ${n.type}" onclick="markRead(${n.id})">
         <div class="icon"><i class="bi bi-${n.icon || 'bell'}"></i></div>
         <div class="content">
           <div class="title">${escapeHtml(n.title)}</div>
@@ -219,41 +479,83 @@ async function loadNotifications() {
       </a>
     `).join('');
   } catch(e) {
-    list.innerHTML = '<div class="text-center text-muted p-3">Error</div>';
+    list.innerHTML = '<div class="text-center text-muted p-3">Error al cargar notificaciones</div>';
   }
 }
+
+/**
+ * Marcar notificación como leída
+ */
 async function markRead(id) {
-  await fetch(`<?= url("admin/notifications") ?>/${id}/read`, { method:'POST', headers:{'X-Requested-With':'XMLHttpRequest','Content-Type':'application/json'} });
-  const badge = document.getElementById('notifBadge');
-  if (badge) {
-    const n = Math.max(0, parseInt(badge.textContent) - 1);
-    if (n === 0) badge.remove(); else badge.textContent = n;
+  try {
+    await fetch(`<?= url("admin/notifications") ?>/${id}/read`, {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    const badge = document.getElementById('notifBadge');
+    if (badge) {
+      const n = Math.max(0, parseInt(badge.textContent) - 1);
+      if (n === 0) badge.remove();
+      else badge.textContent = n;
+    }
+  } catch(e) {
+    // Silencioso
   }
 }
-function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
-function timeAgo(dt) {
-  const s = Math.floor((Date.now()/1000) - (new Date(dt).getTime()/1000));
-  if (s < 60) return 'ahora';
-  if (s < 3600) return Math.floor(s/60) + ' min';
-  if (s < 86400) return Math.floor(s/3600) + ' h';
-  return Math.floor(s/86400) + ' d';
+
+/**
+ * Escapar HTML
+ */
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
 }
-// Polling cada 60s
+
+/**
+ * Tiempo relativo
+ */
+function timeAgo(dt) {
+  const s = Math.floor((Date.now() / 1000) - (new Date(dt).getTime() / 1000));
+  if (s < 60) return 'ahora';
+  if (s < 3600) return Math.floor(s / 60) + ' min';
+  if (s < 86400) return Math.floor(s / 3600) + ' h';
+  return Math.floor(s / 86400) + ' d';
+}
+
+// ============================================================
+// Polling de notificaciones (cada 60 segundos)
+// ============================================================
 setInterval(() => {
-  fetch('<?= url("admin/notifications/list") ?>', { headers: {'X-Requested-With':'XMLHttpRequest'} })
-    .then(r=>r.json()).then(d => {
+  fetch('<?= url("admin/notifications/list") ?>', {
+    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+  })
+    .then(r => r.json())
+    .then(d => {
       if (d.success) {
         const badge = document.getElementById('notifBadge');
         if (d.unread > 0) {
-          if (badge) badge.textContent = d.unread;
-          else {
+          if (badge) {
+            badge.textContent = d.unread;
+          } else {
             const btn = document.querySelector('#notifDropdown button');
-            const b = document.createElement('span');
-            b.className = 'notif-badge'; b.id = 'notifBadge'; b.textContent = d.unread;
-            btn.appendChild(b);
+            if (btn) {
+              const b = document.createElement('span');
+              b.className = 'notif-badge';
+              b.id = 'notifBadge';
+              b.textContent = d.unread;
+              btn.appendChild(b);
+            }
           }
-        } else if (badge) badge.remove();
+        } else if (badge) {
+          badge.remove();
+        }
       }
-    }).catch(()=>{});
+    })
+    .catch(() => {});
 }, 60000);
 </script>

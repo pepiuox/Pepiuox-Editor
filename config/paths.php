@@ -13,11 +13,16 @@
 define('ROOT_PATH', str_replace('\\', '/', dirname(__DIR__)));
 
 define('APP_PATH', ROOT_PATH . '/app');
+define('CONFIG_PATH', ROOT_PATH . '/config');
 define('PUBLIC_PATH', ROOT_PATH . '/public');
+define('PRIVATE_PATH', ROOT_PATH . '/private');
 define('VIEWS_PATH', ROOT_PATH . '/views');
 define('STORAGE_PATH', ROOT_PATH . '/storage');
+define('CACHE_PATH', STORAGE_PATH . '/cache');
 define('UPLOADS_PATH', ROOT_PATH . '/uploads');
-define('CONFIG_PATH', ROOT_PATH . '/config');
+define('ASSETS_PATH', PUBLIC_PATH . '/assets');
+define('VENDOR_PATH', ROOT_PATH . '/vendor');
+define('LOGS_PATH', STORAGE_PATH . '/logs');
 
 // ═══════════════════════════════════════════════════════════════
 // 2. URLS WEB (Navegador)
@@ -48,3 +53,18 @@ define('SITE_URL', BASE_URL);
 define('URL_BASE', BASE_URL); 
 define('BASE_PATH', $basePath . '/'); // ej: 'public/' o '/'
 define('VIEWS', 'views'); // Relativo a ROOT_PATH
+
+// Crear directorios necesarios si no existen
+$directories = [
+    CACHE_PATH,
+    LOGS_PATH,
+    UPLOADS_PATH,
+    STORAGE_PATH . '/cache/pages',
+    STORAGE_PATH . '/cache/data',
+];
+
+foreach ($directories as $dir) {
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0755, true);
+    }
+}

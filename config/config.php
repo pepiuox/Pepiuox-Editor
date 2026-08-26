@@ -3,7 +3,7 @@
  * Configuración general de la aplicación.
  */
 return [
-    'app_name'      => 'PePiuoX Maker',
+    'app_name'      => 'PePiuoX Editor',
     'app_version'   => '1.0.0',
     'app_url'       => 'http://localhost:170/public', // sin trailing slash
     'timezone'      => 'Europe/Madrid',
@@ -56,7 +56,7 @@ return [
     
     'mail' => [
         'from'      => 'no-reply@tudominio.com',
-        'from_name' => 'PePiuoX Maker',
+        'from_name' => 'PePiuoX Editor',
         'smtp_host' => '', // dejar vacío para usar mail() nativo
         'smtp_port' => 587,
         'smtp_user' => '',

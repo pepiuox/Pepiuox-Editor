@@ -4,7 +4,7 @@ declare(strict_types=1);
 // ═══════════════════════════════════════════════════════════════════
 // 1. BOOTSTRAP INICIAL
 // ═══════════════════════════════════════════════════════════════════
-require __DIR__ . '/../config/paths.php';
+require __DIR__ . '/config/paths.php';
 
 spl_autoload_register(function (string $class) {
     if (str_starts_with($class, 'App\\')) {

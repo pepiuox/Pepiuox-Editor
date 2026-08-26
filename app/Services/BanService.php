@@ -327,7 +327,7 @@ class BanService
      */
     private static function sendBanNotification(array $user, string $reason, ?int $duration, ?string $expiresAt): void
     {
-        $siteName = SettingService::get('general', 'site_name', 'PePiuoX Maker');
+        $siteName = SettingService::get('general', 'site_name', 'PePiuoX Editor');
         $durationText = $duration ? "$duration días (hasta $expiresAt)" : "permanentemente";
         
         $html = "<h2>Cuenta baneada</h2>
@@ -344,7 +344,7 @@ class BanService
      */
     private static function sendUnbanNotification(array $user): void
     {
-        $siteName = SettingService::get('general', 'site_name', 'PePiuoX Maker');
+        $siteName = SettingService::get('general', 'site_name', 'PePiuoX Editor');
         $cfg = require CONFIG_PATH . '/config.php';
         $loginUrl = rtrim($cfg['app_url'] ?? BASE_URL, '/') . '/login';
         

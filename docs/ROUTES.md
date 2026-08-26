@@ -1,4 +1,4 @@
-# 🛣️ Documentación de Rutas — PePiuoX Maker
+# 🛣️ Documentación de Rutas — PePiuoX Editor
 
 > **Versión:** 1.0.0  
 > **Última actualización:** 25 de agosto de 2026  

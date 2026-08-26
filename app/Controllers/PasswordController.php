@@ -37,7 +37,7 @@ class PasswordController
                  <p>Has solicitado restablecer tu contraseña. Haz clic en el enlace (válido 1 hora):</p>
                  <p><a href=\"$link\" style=\"background:#00d4aa;color:#0d1117;padding:10px 20px;border-radius:6px;text-decoration:none;display:inline-block\">Restablecer contraseña</a></p>
                  <p>Si no has sido tú, ignora este email.</p>");
-            MailService::send($email, 'Restablecer contraseña · PePiuoX Maker', $html);
+            MailService::send($email, 'Restablecer contraseña · PePiuoX Editor', $html);
         }
 
         Session::flash('flash.info', $msg);
@@ -104,7 +104,7 @@ class PasswordController
                   <h2 style='color:#00d4aa;margin:0 0 20px'>$title</h2>
                   <div style='line-height:1.6'>$body</div>
                   <hr style='border:none;border-top:1px solid #30363d;margin:20px 0'>
-                  <small style='color:#8b949e'>PePiuoX Maker</small>
+                  <small style='color:#8b949e'>PePiuoX Editor</small>
                 </div></body></html>";
     }
 }
