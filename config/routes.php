@@ -239,7 +239,7 @@ $router->post('/admin/templates/{id}/delete', [App\Controllers\TemplatesControll
 $router->post('/admin/templates/{id}/duplicate', [App\Controllers\TemplatesController::class, 'duplicate'], $auth);
 
 // ── 3.10. Menús ───────────────────────────────────────────────────
-// En routes.php
+
 $router->get('/admin/menus', [App\Controllers\MenuController::class, 'index'], $auth);
 $router->get('/admin/menus/create', [App\Controllers\MenuController::class, 'create'], $auth);
 $router->post('/admin/menus', [App\Controllers\MenuController::class, 'store'], $auth);
@@ -250,6 +250,17 @@ $router->post('/admin/menus/{id}/toggle', [App\Controllers\MenuController::class
 $router->post('/admin/menus/{id}/duplicate', [App\Controllers\MenuController::class, 'duplicate'], $auth);
 $router->post('/admin/menus/reorder', [App\Controllers\MenuController::class, 'reorder'], $auth);
 $router->get('/admin/menus/stats', [App\Controllers\MenuController::class, 'stats'], $auth);
+
+$router->get('/admin/menu', [App\Controllers\MenuController::class, 'index'], $auth);
+$router->get('/admin/menu/create', [App\Controllers\MenuController::class, 'create'], $auth);
+$router->post('/admin/menu', [App\Controllers\MenuController::class, 'store'], $auth);
+$router->get('/admin/menu/{id}/edit', [App\Controllers\MenuController::class, 'edit'], $auth);
+$router->post('/admin/menu/{id}', [App\Controllers\MenuController::class, 'update'], $auth);
+$router->post('/admin/menu/{id}/delete', [App\Controllers\MenuController::class, 'delete'], $auth);
+$router->post('/admin/menu/{id}/toggle', [App\Controllers\MenuController::class, 'toggleStatus'], $auth);
+$router->post('/admin/menu/{id}/duplicate', [App\Controllers\MenuController::class, 'duplicate'], $auth);
+$router->post('/admin/menu/reorder', [App\Controllers\MenuController::class, 'reorder'], $auth);
+$router->get('/admin/menu/stats', [App\Controllers\MenuController::class, 'stats'], $auth);
 
 // ── 3.11. SEO ────────────────────────────────────────────────────
 $router->get('/admin/seo', [App\Controllers\SeoController::class, 'index'], $auth);

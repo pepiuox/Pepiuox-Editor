@@ -39,12 +39,7 @@ class MenuController
         $groups = Database::fetchAll("SELECT DISTINCT menu_group FROM menus ORDER BY menu_group");
         
         // Estadísticas del menú
-        $stats = [
-            'total' => count($items),
-            'published' => count(array_filter($items, fn($item) => $item['is_published'] == 1)),
-            'draft' => count(array_filter($items, fn($item) => $item['is_published'] == 0)),
-            'groups' => count($groups),
-        ];
+        $stats = $this->menuService->getStats($userId);
 
         Response::render(View::render('admin.menu.index', [
             'items' => $items,
@@ -100,12 +95,7 @@ class MenuController
         $menuGroup = $request->post('menu_group', 'main');
 
         if (empty($title)) {
-            if ($request->isAjax()) {
-                Response::json(['success' => false, 'error' => 'El título es obligatorio']);
-            } else {
-                Session::flash('flash.error', 'El título es obligatorio');
-                Response::redirect(url('admin/menus/create?group=' . $menuGroup));
-            }
+            $this->handleError($request, 'El título es obligatorio', 'admin/menus/create?group=' . $menuGroup);
             return;
         }
 
@@ -127,39 +117,17 @@ class MenuController
             $result = $this->menuService->createPage(Auth::id(), $data);
 
             if ($result['success']) {
-                // Invalidar caché
-                CacheService::invalidateAllPages();
-                
-                // Registrar auditoría
-                AuditService::log(
+                $this->invalidateCacheAndLog(
                     'menu_item_created',
-                    "Item de menú creado: {$title} (Grupo: {$menuGroup})",
-                    'menus'
+                    "Item de menú creado: {$title} (Grupo: {$menuGroup})"
                 );
 
-                if ($request->isAjax()) {
-                    Response::json(['success' => true, 'message' => $result['message'], 'id' => $result['id']]);
-                } else {
-                    Session::flash('flash.success', $result['message']);
-                    Response::redirect(url('admin/menus?group=' . $menuGroup));
-                }
+                $this->handleSuccess($request, $result['message'], 'admin/menus?group=' . $menuGroup, $result['id'] ?? null);
             } else {
-                if ($request->isAjax()) {
-                    Response::json(['success' => false, 'error' => $result['error']]);
-                } else {
-                    Session::flash('flash.error', $result['error']);
-                    Response::redirect(url('admin/menus/create?group=' . $menuGroup));
-                }
+                $this->handleError($request, $result['error'], 'admin/menus/create?group=' . $menuGroup);
             }
         } catch (Throwable $e) {
-            error_log('[MenuController] Error al crear item: ' . $e->getMessage());
-            
-            if ($request->isAjax()) {
-                Response::json(['success' => false, 'error' => 'Error al crear el item de menú']);
-            } else {
-                Session::flash('flash.error', 'Error al crear el item de menú');
-                Response::redirect(url('admin/menus/create?group=' . $menuGroup));
-            }
+            $this->handleException($request, $e, 'crear el item de menú', 'admin/menus/create?group=' . $menuGroup);
         }
     }
 
@@ -235,39 +203,17 @@ class MenuController
             $result = $this->menuService->updatePage($id, Auth::id(), $data);
 
             if ($result['success']) {
-                // Invalidar caché
-                CacheService::invalidateAllPages();
-                
-                // Registrar auditoría
-                AuditService::log(
+                $this->invalidateCacheAndLog(
                     'menu_item_updated',
-                    "Item de menú actualizado ID: {$id}",
-                    'menus'
+                    "Item de menú actualizado ID: {$id}"
                 );
 
-                if ($request->isAjax()) {
-                    Response::json(['success' => true, 'message' => $result['message']]);
-                } else {
-                    Session::flash('flash.success', $result['message']);
-                    Response::redirect(url('admin/menus?group=' . $menuGroup));
-                }
+                $this->handleSuccess($request, $result['message'], 'admin/menus?group=' . $menuGroup);
             } else {
-                if ($request->isAjax()) {
-                    Response::json(['success' => false, 'error' => $result['error']]);
-                } else {
-                    Session::flash('flash.error', $result['error']);
-                    Response::redirect(url('admin/menus/' . $id . '/edit?group=' . $menuGroup));
-                }
+                $this->handleError($request, $result['error'], 'admin/menus/' . $id . '/edit?group=' . $menuGroup);
             }
         } catch (Throwable $e) {
-            error_log('[MenuController] Error al actualizar item: ' . $e->getMessage());
-            
-            if ($request->isAjax()) {
-                Response::json(['success' => false, 'error' => 'Error al actualizar el item de menú']);
-            } else {
-                Session::flash('flash.error', 'Error al actualizar el item de menú');
-                Response::redirect(url('admin/menus/' . $id . '/edit?group=' . $menuGroup));
-            }
+            $this->handleException($request, $e, 'actualizar el item de menú', 'admin/menus/' . $id . '/edit?group=' . $menuGroup);
         }
     }
 
@@ -289,14 +235,9 @@ class MenuController
             $result = $this->menuService->deletePage($id, Auth::id());
 
             if ($result['success']) {
-                // Invalidar caché
-                CacheService::invalidateAllPages();
-                
-                // Registrar auditoría
-                AuditService::log(
+                $this->invalidateCacheAndLog(
                     'menu_item_deleted',
-                    "Item de menú eliminado: {$page['title']} (ID: {$id})",
-                    'menus'
+                    "Item de menú eliminado: {$page['title']} (ID: {$id})"
                 );
 
                 if ($request->isAjax()) {
@@ -312,16 +253,12 @@ class MenuController
                 }
             }
         } catch (Throwable $e) {
-            error_log('[MenuController] Error al eliminar item: ' . $e->getMessage());
-            
-            if ($request->isAjax()) {
-                Response::json(['success' => false, 'error' => 'Error al eliminar el item de menú']);
-            } else {
-                Session::flash('flash.error', 'Error al eliminar el item de menú');
-            }
+            $this->handleException($request, $e, 'eliminar el item de menú', null, false);
         }
 
-        Response::redirect(url('admin/menus'));
+        if (!$request->isAjax()) {
+            Response::redirect(url('admin/menus'));
+        }
     }
 
     /**
@@ -335,7 +272,11 @@ class MenuController
             Response::abort(403, 'No tienes permisos para reordenar el menú');
         }
 
+        // Soporte tanto para JSON como para POST estándar
         $items = $request->post('items');
+        if (is_string($items)) {
+            $items = json_decode($items, true);
+        }
 
         if (!$items || !is_array($items)) {
             Response::json(['success' => false, 'error' => 'Datos inválidos']);
@@ -346,14 +287,9 @@ class MenuController
             $result = $this->menuService->updateOrder($items, Auth::id());
 
             if ($result['success']) {
-                // Invalidar caché
-                CacheService::invalidateAllPages();
-                
-                // Registrar auditoría
-                AuditService::log(
+                $this->invalidateCacheAndLog(
                     'menu_reordered',
-                    'Menú reordenado',
-                    'menus'
+                    'Menú reordenado'
                 );
             }
 
@@ -390,14 +326,9 @@ class MenuController
             ]);
 
             if ($result['success']) {
-                // Invalidar caché
-                CacheService::invalidateAllPages();
-                
-                // Registrar auditoría
-                AuditService::log(
+                $this->invalidateCacheAndLog(
                     'menu_toggle_status',
-                    "Estado del menú ID {$id} cambiado a " . ($newStatus ? 'publicado' : 'borrador'),
-                    'menus'
+                    "Estado del menú ID {$id} cambiado a " . ($newStatus ? 'publicado' : 'borrador')
                 );
             }
 
@@ -498,39 +429,64 @@ class MenuController
             $result = $this->menuService->duplicatePage($id, Auth::id());
 
             if ($result['success']) {
-                // Invalidar caché
-                CacheService::invalidateAllPages();
-                
-                // Registrar auditoría
-                AuditService::log(
+                $this->invalidateCacheAndLog(
                     'menu_item_duplicated',
-                    "Item de menú duplicado ID: {$id}",
-                    'menus'
+                    "Item de menú duplicado ID: {$id}"
                 );
 
-                if ($request->isAjax()) {
-                    Response::json(['success' => true, 'message' => $result['message'], 'id' => $result['id']]);
-                } else {
-                    Session::flash('flash.success', $result['message']);
-                    Response::redirect(url('admin/menus'));
-                }
+                $this->handleSuccess($request, $result['message'], 'admin/menus', $result['id'] ?? null);
             } else {
-                if ($request->isAjax()) {
-                    Response::json(['success' => false, 'error' => $result['error']]);
-                } else {
-                    Session::flash('flash.error', $result['error']);
-                    Response::redirect(url('admin/menus'));
-                }
+                $this->handleError($request, $result['error'], 'admin/menus');
             }
         } catch (Throwable $e) {
-            error_log('[MenuController] Error al duplicar item: ' . $e->getMessage());
-            
-            if ($request->isAjax()) {
-                Response::json(['success' => false, 'error' => 'Error al duplicar el item de menú']);
-            } else {
-                Session::flash('flash.error', 'Error al duplicar el item de menú');
-                Response::redirect(url('admin/menus'));
+            $this->handleException($request, $e, 'duplicar el item de menú', 'admin/menus');
+        }
+    }
+
+    /**
+     * Métodos auxiliares para manejo de respuestas
+     */
+    private function invalidateCacheAndLog(string $action, string $description): void
+    {
+        CacheService::invalidateAllPages();
+        AuditService::log($action, $description, 'menus');
+    }
+
+    private function handleSuccess(Request $request, string $message, string $redirect, ?int $id = null): void
+    {
+        if ($request->isAjax()) {
+            $response = ['success' => true, 'message' => $message];
+            if ($id !== null) {
+                $response['id'] = $id;
             }
+            Response::json($response);
+        } else {
+            Session::flash('flash.success', $message);
+            Response::redirect(url($redirect));
+        }
+    }
+
+    private function handleError(Request $request, string $error, string $redirect): void
+    {
+        if ($request->isAjax()) {
+            Response::json(['success' => false, 'error' => $error]);
+        } else {
+            Session::flash('flash.error', $error);
+            Response::redirect(url($redirect));
+        }
+    }
+
+    private function handleException(Request $request, Throwable $e, string $action, string $redirect, bool $redirectOnError = true): void
+    {
+        error_log("[MenuController] Error al {$action}: " . $e->getMessage());
+        
+        if ($request->isAjax()) {
+            Response::json(['success' => false, 'error' => "Error al {$action}"]);
+        } else if ($redirectOnError && $redirect) {
+            Session::flash('flash.error', "Error al {$action}");
+            Response::redirect(url($redirect));
+        } else {
+            Session::flash('flash.error', "Error al {$action}");
         }
     }
 }

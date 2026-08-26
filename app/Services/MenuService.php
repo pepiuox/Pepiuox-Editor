@@ -443,7 +443,7 @@ class MenuService
      */
     public function getStats(int $userId): array
     {
-        return $this->db->fetch(
+        $result = $this->db->fetch(
             "SELECT 
                 COUNT(*) as total,
                 COUNT(CASE WHEN is_published = 1 THEN 1 END) as published,
@@ -453,6 +453,13 @@ class MenuService
              WHERE user_id = ?",
             [$userId]
         );
+
+        return [
+            'total' => (int)($result['total'] ?? 0),
+            'published' => (int)($result['published'] ?? 0),
+            'draft' => (int)($result['draft'] ?? 0),
+            'groups' => (int)($result['groups'] ?? 0),
+        ];
     }
 
     /**
