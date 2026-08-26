@@ -3,126 +3,146 @@
  * Página pública - Carga y renderiza páginas creadas en el CMS
  * 
  * Uso:
- * - /public/page.php (muestra página de inicio)
- * - /public/page.php?slug=mi-pagina (muestra página específica)
- * - /public/page.php?id=5 (muestra página por ID)
+ * - /page.php (muestra página de inicio)
+ * - /page.php?slug=mi-pagina (muestra página específica)
+ * - /page.php?id=5 (muestra página por ID)
+ * - /page/{slug} (a través del router)
+ * 
+ * @package Public
  */
 
 declare(strict_types=1);
 
+// ═══════════════════════════════════════════════════════════════════
+// 1. BOOTSTRAP DEL SISTEMA
+// ═══════════════════════════════════════════════════════════════════
 // Cargar el sistema
-require_once __DIR__ . '/../config/paths.php';
+//require_once __DIR__ . '/../config/paths.php';
 
-// Autoloader
+// Cargar constantes de rutas
+$baseDir = __DIR__;
+$configPath = $baseDir . '/../config';
+
+if (!is_file($configPath . '/paths.php')) {
+    die('Error: No se encontró el archivo de rutas en ' . $configPath . '/paths.php');
+}
+
+require_once $configPath . '/paths.php';
+
+// Verificar que las constantes estén definidas
+if (!defined('APP_PATH')) {
+    die('Error: APP_PATH no está definido. Verifica config/paths.php');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// 2. AUTOLOADER PSR-4
+// ═══════════════════════════════════════════════════════════════════
 spl_autoload_register(function (string $class) {
-    if (str_starts_with($class, 'App\\')) {
-        $path = APP_PATH . '/' . str_replace('\\', '/', substr($class, 4)) . '.php';
-        if (is_file($path)) require $path;
+    // Solo procesar clases con namespace App\
+    if (!str_starts_with($class, 'App\\')) {
+        return;
     }
+
+    $relativeClass = substr($class, 4);
+    $file = APP_PATH . '/' . str_replace('\\', '/', $relativeClass) . '.php';
+    
+    if (is_file($file)) {
+        require_once $file;
+        return true;
+    }
+    
+    return false;
 });
 
-// Cargar helpers
-require APP_PATH . '/Helpers/functions.php';
+// ═══════════════════════════════════════════════════════════════════
+// 3. CARGAR HELPERS Y CONFIGURACIÓN
+// ═══════════════════════════════════════════════════════════════════
+$helpersFile = APP_PATH . '/Helpers/functions.php';
+if (is_file($helpersFile)) {
+    require_once $helpersFile;
+}
 
-// Iniciar sesión
-App\Core\Session::start();
+$configFile = CONFIG_PATH . '/config.php';
+if (is_file($configFile)) {
+    $cfg = require $configFile;
+    date_default_timezone_set($cfg['timezone'] ?? 'UTC');
+}
 
+// ═══════════════════════════════════════════════════════════════════
+// 4. INICIALIZAR SESIÓN
+// ═══════════════════════════════════════════════════════════════════
+try {
+    App\Core\Session::start();
+} catch (Throwable $e) {
+    error_log('[page.php] Error al iniciar sesión: ' . $e->getMessage());
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// 5. IMPORTAR CLASES NECESARIAS
+// ═══════════════════════════════════════════════════════════════════
 use App\Services\PageRenderer;
 use App\Core\Auth;
+use App\Core\Response;
+use App\Core\View;
 
 // ═══════════════════════════════════════════════════════════════════
-// INICIALIZAR RENDERER
+// 6. INICIALIZAR RENDERER
 // ═══════════════════════════════════════════════════════════════════
-$renderer = new PageRenderer();
+try {
+    $renderer = new PageRenderer();
+} catch (Throwable $e) {
+    error_log('[page.php] Error al inicializar PageRenderer: ' . $e->getMessage());
+    Response::abort(500, 'Error al cargar el renderizador de páginas');
+}
 
 // ═══════════════════════════════════════════════════════════════════
-// DETERMINAR QUÉ PÁGINA CARGAR
+// 7. DETERMINAR QUÉ PÁGINA CARGAR
 // ═══════════════════════════════════════════════════════════════════
 $page = null;
+$slug = null;
+$id = null;
 
 // 1. Si se especifica un slug
 if (!empty($_GET['slug'])) {
-    $slug = $renderer->sanitizeSlug($_GET['slug']);
-    $page = $renderer->getPageBySlug($slug);
+    $slug = trim($_GET['slug']);
+    if ($slug !== '') {
+        $page = $renderer->getPageBySlug($slug);
+    }
 }
 
 // 2. Si se especifica un ID
-elseif (!empty($_GET['id'])) {
+if (!$page && !empty($_GET['id'])) {
     $id = (int)$_GET['id'];
-    $page = $renderer->getPageContent($id);
+    if ($id > 0) {
+        $page = $renderer->getPageContent($id);
+    }
 }
 
-// 3. Si no se especifica nada, cargar página de inicio
-else {
+// 3. Si no se especifica nada o los parámetros son inválidos, cargar página de inicio
+if (!$page) {
     $page = $renderer->getHomePage();
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// VERIFICAR SI LA PÁGINA EXISTE
-// ═══════════════════════════════════════════════════════════════════
+// Si no hay página de inicio, mostrar 404
 if (!$page) {
-    http_response_code(404);
-    ?>
-    <!DOCTYPE html>
-    <html lang="es">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Página no encontrada · PePiuoX Editor</title>
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-        <style>
-            body {
-                background: #0d1117;
-                color: #e6edf3;
-                min-height: 100vh;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-family: 'Inter', sans-serif;
-            }
-            .error-container {
-                text-align: center;
-                padding: 3rem;
-            }
-            .error-code {
-                font-size: 8rem;
-                font-weight: 700;
-                color: #00d4aa;
-                line-height: 1;
-                margin-bottom: 1rem;
-            }
-            .error-message {
-                font-size: 1.5rem;
-                color: #8b949e;
-                margin-bottom: 2rem;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="error-container">
-            <div class="error-code">404</div>
-            <div class="error-message">Página no encontrada</div>
-            <a href="<?= url('/') ?>" class="btn btn-primary btn-lg">
-                <i class="bi bi-house"></i> Volver al inicio
-            </a>
-        </div>
-    </body>
-    </html>
-    <?php
-    exit;
+    Response::abort(404, 'Página no encontrada');
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// CARGAR MENÚ
+// 8. CARGAR MENÚ
 // ═══════════════════════════════════════════════════════════════════
-$menu = $renderer->getMenu();
+try {
+    $menu = $renderer->getMenu();
+} catch (Throwable $e) {
+    error_log('[page.php] Error al cargar menú: ' . $e->getMessage());
+    $menu = [];
+}
 
 // ═══════════════════════════════════════════════════════════════════
-// PREPARAR DATOS
+// 9. PREPARAR DATOS DE LA PÁGINA
 // ═══════════════════════════════════════════════════════════════════
-$pageTitle = $renderer->getPageSeoTitle($page);
-$pageDescription = $renderer->getPageSeoDescription($page);
+$pageTitle = $renderer->getPageSeoTitle($page) ?: ($page['title'] ?? 'PePiuoX Editor');
+$pageDescription = $renderer->getPageSeoDescription($page) ?: ($page['description'] ?? '');
 $pageHtml = $page['content_html'] ?? '';
 $pageCss = $page['content_css'] ?? '';
 $pageJs = $page['content_js'] ?? '';
@@ -130,25 +150,39 @@ $pageJs = $page['content_js'] ?? '';
 // Limpiar tags body si vienen del editor
 $pageHtml = str_replace(['<body>', '</body>'], '', $pageHtml);
 
-// Usuario actual (si está logueado)
+// Obtener usuario actual (si está logueado)
 $currentUser = Auth::user();
 
+// Obtener la URL actual para el menú activo
+$currentUrl = $_SERVER['REQUEST_URI'] ?? '/';
+$currentPath = parse_url($currentUrl, PHP_URL_PATH) ?: '/';
+
 // ═══════════════════════════════════════════════════════════════════
-// RENDERIZAR PÁGINA
+// 10. RENDERIZAR PÁGINA
 // ═══════════════════════════════════════════════════════════════════
 ?>
 <!DOCTYPE html>
-<html lang="es" data-bs-theme="dark">
+<html lang="<?= htmlspecialchars($_SESSION['lang'] ?? 'es', ENT_QUOTES, 'UTF-8') ?>" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8') ?></title>
     <meta name="description" content="<?= htmlspecialchars($pageDescription, ENT_QUOTES, 'UTF-8') ?>">
     <meta name="generator" content="PePiuoX Editor">
+    <meta name="robots" content="<?= htmlspecialchars($page['robots'] ?? 'index, follow', ENT_QUOTES, 'UTF-8') ?>">
+    
+    <?php if (!empty($page['canonical'])): ?>
+    <link rel="canonical" href="<?= htmlspecialchars($page['canonical'], ENT_QUOTES, 'UTF-8') ?>">
+    <?php endif; ?>
     
     <!-- Bootstrap 5.3 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    
+    <!-- Google Fonts (Inter) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- CSS de la página -->
     <?php if (!empty($pageCss)): ?>
@@ -166,16 +200,27 @@ $currentUser = Auth::user();
             --text-muted: #8b949e;
             --accent: #00d4aa;
             --accent-hover: #00a88a;
+            --accent-rgb: 0, 212, 170;
             --radius: 12px;
             --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
             --menu-gap: .75rem;
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
         body {
             background: var(--bg-main);
             color: var(--text-main);
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-family: var(--font-family);
             line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
 
         ::selection {
@@ -199,13 +244,15 @@ $currentUser = Auth::user();
         .navbar-main {
             background: var(--bg-card);
             border-bottom: 1px solid var(--border-color);
-            padding: 1rem 0;
+            padding: 0.75rem 0;
+            min-height: 70px;
         }
 
         .navbar-brand {
             font-weight: 700;
             font-size: 1.5rem;
             color: var(--text-main);
+            letter-spacing: -0.5px;
         }
 
         .navbar-brand .brand-accent {
@@ -213,33 +260,51 @@ $currentUser = Auth::user();
         }
 
         .navbar-toggler {
-            border: none;
+            border: 1px solid var(--border-color);
             color: var(--text-main);
+            padding: 0.5rem 0.75rem;
         }
 
         .navbar-toggler:focus {
-            box-shadow: none;
+            box-shadow: 0 0 0 0.25rem rgba(var(--accent-rgb), 0.25);
         }
 
         /* ═══════════════════════════════════════════════════════════
         MENÚ MULTINIVEL
         ═══════════════════════════════════════════════════════════ */
-        .nav-link-parent,
-        .dropdown-item-parent {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: .35rem;
-            width: 100%;
+        .navbar .navbar-nav {
+            gap: 0.25rem;
+        }
+
+        .navbar .nav-item {
+            position: relative;
+        }
+
+        .navbar .nav-link {
+            color: var(--text-muted);
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            transition: all var(--transition);
+            font-weight: 500;
+        }
+
+        .navbar .nav-link:hover,
+        .navbar .nav-link:focus {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .navbar .nav-link.active {
+            color: var(--accent);
+            background: rgba(var(--accent-rgb), 0.1);
         }
 
         .nav-link-parent {
-            border-radius: .5rem;
-        }
-
-        .dropdown-item-parent {
-            border-radius: .5rem;
-            padding-right: .55rem;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            width: 100%;
+            cursor: pointer;
         }
 
         .split-link {
@@ -267,7 +332,7 @@ $currentUser = Auth::user();
         }
 
         .dropdown-item-parent:hover {
-            background: rgba(0, 212, 170, .08);
+            background: rgba(var(--accent-rgb), .08);
         }
 
         .dropdown-item-parent:hover .split-link {
@@ -285,6 +350,8 @@ $currentUser = Auth::user();
             display: inline-flex;
             align-items: center;
             transition: opacity .2s ease, background-color .2s ease, color .2s ease;
+            cursor: pointer;
+            font-size: 0.875rem;
         }
 
         .menu-caret:hover {
@@ -306,25 +373,41 @@ $currentUser = Auth::user();
             box-shadow: 0 16px 40px rgba(0, 0, 0, .35);
             padding: .45rem;
             z-index: 1050;
+            min-width: 220px;
         }
 
         .navbar .dropdown-item {
             border-radius: .45rem;
             color: var(--text-muted);
             transition: background-color .2s ease, color .2s ease;
+            padding: 0.5rem 0.75rem;
+            font-weight: 400;
         }
 
         .navbar .dropdown-item:hover {
-            background: rgba(0, 212, 170, .08);
+            background: rgba(var(--accent-rgb), .08);
             color: var(--accent);
+        }
+
+        .navbar .dropdown-item.active {
+            color: var(--accent);
+            background: rgba(var(--accent-rgb), .1);
+        }
+
+        .dropdown-submenu {
+            position: relative;
+        }
+
+        .dropdown-submenu > .dropdown-menu {
+            top: 0;
+            left: 100%;
+            margin-top: -0.25rem;
+            margin-left: var(--menu-gap);
+            transform: translateX(10px);
         }
 
         /* Desktop: hover */
         @media (min-width: 992px) {
-            .navbar .nav-item.dropdown {
-                position: relative;
-            }
-
             .navbar .dropdown-menu {
                 display: block;
                 opacity: 0;
@@ -352,23 +435,6 @@ $currentUser = Auth::user();
                 left: 0;
                 right: 0;
                 height: var(--menu-gap);
-            }
-
-            .navbar .dropdown-submenu {
-                position: relative;
-            }
-
-            .navbar .dropdown-submenu > .dropdown-menu {
-                top: 0;
-                left: 100%;
-                margin-top: -0.25rem;
-                margin-left: var(--menu-gap);
-                transform: translateX(10px);
-            }
-
-            .navbar .dropdown-submenu:hover > .dropdown-menu,
-            .navbar .dropdown-submenu:focus-within > .dropdown-menu {
-                transform: translateX(0);
             }
 
             .navbar .dropdown-submenu > .dropdown-menu::before {
@@ -410,6 +476,20 @@ $currentUser = Auth::user();
                 transform: none;
                 pointer-events: auto;
             }
+
+            .navbar .dropdown-submenu > .dropdown-menu {
+                left: 0;
+                top: 100%;
+                margin-left: 1rem;
+            }
+
+            .navbar-main .navbar-collapse {
+                background: var(--bg-card);
+                border: 1px solid var(--border-color);
+                border-radius: var(--radius);
+                padding: 1rem;
+                margin-top: 0.75rem;
+            }
         }
 
         /* ═══════════════════════════════════════════════════════════
@@ -421,7 +501,7 @@ $currentUser = Auth::user();
             font-weight: 600;
             border: none;
             border-radius: 8px;
-            padding: 0.6rem 1.5rem;
+            padding: 0.5rem 1.25rem;
             transition: all var(--transition);
         }
 
@@ -429,22 +509,31 @@ $currentUser = Auth::user();
             background: var(--accent-hover);
             color: #fff;
             transform: translateY(-1px);
-            box-shadow: 0 4px 16px rgba(0, 212, 170, 0.3);
+            box-shadow: 0 4px 16px rgba(var(--accent-rgb), 0.3);
         }
 
         .btn-outline-accent {
             border: 1px solid var(--accent);
             color: var(--accent);
             border-radius: 8px;
-            padding: 0.6rem 1.5rem;
+            padding: 0.5rem 1.25rem;
             font-weight: 500;
             transition: all var(--transition);
+            background: transparent;
         }
 
         .btn-outline-accent:hover {
-            background: rgba(0, 212, 170, 0.1);
+            background: rgba(var(--accent-rgb), 0.1);
             border-color: var(--accent-hover);
             color: var(--accent-hover);
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+        CONTENIDO PRINCIPAL
+        ═══════════════════════════════════════════════════════════ */
+        main {
+            flex: 1;
+            padding: 2rem 0;
         }
 
         /* ═══════════════════════════════════════════════════════════
@@ -453,8 +542,8 @@ $currentUser = Auth::user();
         .footer {
             background: var(--bg-card);
             border-top: 1px solid var(--border-color);
-            padding: 4rem 0 2rem;
-            margin-top: 4rem;
+            padding: 3rem 0 1.5rem;
+            margin-top: auto;
         }
 
         .footer a {
@@ -465,11 +554,25 @@ $currentUser = Auth::user();
             color: var(--accent);
         }
 
+        .footer .footer-heading {
+            color: var(--text-main);
+            font-weight: 600;
+            font-size: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .footer .footer-link {
+            display: block;
+            padding: 0.25rem 0;
+            font-size: 0.875rem;
+        }
+
         /* ═══════════════════════════════════════════════════════════
         SCROLLBAR
         ═══════════════════════════════════════════════════════════ */
         ::-webkit-scrollbar {
             width: 8px;
+            height: 8px;
         }
 
         ::-webkit-scrollbar-track {
@@ -488,20 +591,17 @@ $currentUser = Auth::user();
         /* ═══════════════════════════════════════════════════════════
         RESPONSIVE
         ═══════════════════════════════════════════════════════════ */
-        @media (max-width: 991.98px) {
-            .dropdown-submenu > .dropdown-menu {
-                left: 0;
-                top: 100%;
-                margin-left: 1rem;
-                border-left: 2px solid var(--accent);
+        @media (max-width: 767.98px) {
+            .navbar-brand {
+                font-size: 1.25rem;
             }
 
-            .navbar-main .navbar-collapse {
-                background: var(--bg-card);
-                border: 1px solid var(--border-color);
-                border-radius: var(--radius);
-                padding: 1rem;
-                margin-top: 0.75rem;
+            main {
+                padding: 1rem 0;
+            }
+
+            .footer {
+                padding: 2rem 0 1rem;
             }
         }
     </style>
@@ -510,26 +610,27 @@ $currentUser = Auth::user();
     <!-- ═══════════════════════════════════════════════════════════
     NAVBAR
     ═══════════════════════════════════════════════════════════ -->
-    <nav class="navbar navbar-expand-lg navbar-main sticky-top">
+    <nav class="navbar navbar-expand-lg navbar-main sticky-top" aria-label="Navegación principal">
         <div class="container">
             <a class="navbar-brand" href="<?= url('/') ?>">
                 <i class="bi bi-layers-fill me-2" style="color: var(--accent);"></i>
                 PePiuoX<span class="brand-accent"> Maker</span>
             </a>
             
-            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" 
-                    data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false">
-                <span class="navbar-toggler-icon"></span>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" 
+                    data-bs-target="#mainNav" aria-controls="mainNav" 
+                    aria-expanded="false" aria-label="Alternar navegación">
+                <i class="bi bi-list fs-4"></i>
             </button>
             
             <div class="collapse navbar-collapse" id="mainNav">
-                <?= $renderer->renderMenuHtml($menu) ?>
+                <?= $renderer->renderMenuHtml($menu, $currentPath) ?>
                 
                 <!-- Acciones de usuario -->
                 <div class="d-flex align-items-center gap-2 ms-lg-3 mt-3 mt-lg-0">
                     <?php if ($currentUser): ?>
                         <a href="<?= url('admin') ?>" class="btn-outline-accent btn btn-sm">
-                            <i class="bi bi-speedometer2 me-1"></i> Panel Admin
+                            <i class="bi bi-speedometer2 me-1"></i> Panel
                         </a>
                         <a href="<?= url('logout') ?>" class="btn-accent btn btn-sm">
                             <i class="bi bi-box-arrow-right me-1"></i> Salir
@@ -551,7 +652,9 @@ $currentUser = Auth::user();
     CONTENIDO PRINCIPAL
     ═══════════════════════════════════════════════════════════ -->
     <main>
-        <?= $pageHtml ?>
+        <div class="container">
+            <?= $pageHtml ?>
+        </div>
     </main>
 
     <!-- ═══════════════════════════════════════════════════════════
@@ -560,42 +663,54 @@ $currentUser = Auth::user();
     <footer class="footer">
         <div class="container">
             <div class="row g-4">
-                <div class="col-lg-4">
+                <div class="col-lg-4 col-md-6">
                     <h5 class="fw-bold mb-3">
                         <i class="bi bi-layers-fill me-2" style="color: var(--accent);"></i>
                         PePiuoX Editor
                     </h5>
                     <p class="text-muted small">
-                        Plataforma de creación y gestión de contenido profesional.
+                        Plataforma profesional de creación y gestión de contenido web.
                     </p>
+                    <div class="d-flex gap-3 mt-3">
+                        <a href="#" aria-label="Twitter"><i class="bi bi-twitter-x fs-5"></i></a>
+                        <a href="#" aria-label="GitHub"><i class="bi bi-github fs-5"></i></a>
+                        <a href="#" aria-label="YouTube"><i class="bi bi-youtube fs-5"></i></a>
+                    </div>
                 </div>
-                <div class="col-lg-2 col-6">
-                    <h6 class="text-uppercase small fw-bold mb-3" style="color: var(--text-muted);">Navegación</h6>
-                    <ul class="list-unstyled small">
-                        <li><a href="<?= url('/') ?>">Inicio</a></li>
-                        <li><a href="<?= url('about') ?>">Acerca de</a></li>
-                        <li><a href="<?= url('services') ?>">Servicios</a></li>
-                    </ul>
+                <div class="col-lg-2 col-md-6">
+                    <h6 class="footer-heading">Navegación</h6>
+                    <a href="<?= url('/') ?>" class="footer-link">Inicio</a>
+                    <a href="<?= url('about') ?>" class="footer-link">Acerca de</a>
+                    <a href="<?= url('services') ?>" class="footer-link">Servicios</a>
+                    <a href="<?= url('blog') ?>" class="footer-link">Blog</a>
                 </div>
-                <div class="col-lg-2 col-6">
-                    <h6 class="text-uppercase small fw-bold mb-3" style="color: var(--text-muted);">Legal</h6>
-                    <ul class="list-unstyled small">
-                        <li><a href="<?= url('privacy') ?>">Privacidad</a></li>
-                        <li><a href="<?= url('terms') ?>">Términos</a></li>
-                    </ul>
+                <div class="col-lg-2 col-md-6">
+                    <h6 class="footer-heading">Legal</h6>
+                    <a href="<?= url('privacy') ?>" class="footer-link">Privacidad</a>
+                    <a href="<?= url('terms') ?>" class="footer-link">Términos</a>
+                    <a href="<?= url('cookies') ?>" class="footer-link">Cookies</a>
                 </div>
-                <div class="col-lg-4">
-                    <h6 class="text-uppercase small fw-bold mb-3" style="color: var(--text-muted);">Contacto</h6>
-                    <p class="small text-muted">info@pepiuox.com</p>
+                <div class="col-lg-4 col-md-6">
+                    <h6 class="footer-heading">Contacto</h6>
+                    <p class="text-muted small mb-1">
+                        <i class="bi bi-envelope me-2"></i>info@pepiuox.com
+                    </p>
+                    <p class="text-muted small">
+                        <i class="bi bi-geo-alt me-2"></i>España
+                    </p>
                 </div>
             </div>
             <hr style="border-color: var(--border-color); margin: 2rem 0 1rem;">
             <p class="text-center small text-muted mb-0">
                 &copy; <?= date('Y') ?> PePiuoX Editor. Todos los derechos reservados.
+                <span class="d-block d-sm-inline">Versión <?= APP_VERSION ?? '1.0.0' ?></span>
             </p>
         </div>
     </footer>
 
+    <!-- ═══════════════════════════════════════════════════════════
+    SCRIPTS
+    ═══════════════════════════════════════════════════════════ -->
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     
@@ -606,7 +721,7 @@ $currentUser = Auth::user();
     
     <!-- Script del menú -->
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', function() {
             'use strict';
             
             const isDesktop = () => window.matchMedia('(min-width: 992px)').matches;
@@ -668,7 +783,7 @@ $currentUser = Auth::user();
             
             // Cerrar menús al hacer click en un enlace
             document.querySelectorAll('.split-link, a.dropdown-item').forEach(link => {
-                link.addEventListener('click', () => {
+                link.addEventListener('click', function() {
                     if (!isDesktop()) {
                         closeAllSubmenus();
                     }
@@ -677,16 +792,16 @@ $currentUser = Auth::user();
             
             // Cerrar submenus cuando el navbar colapsa
             document.querySelectorAll('.navbar-collapse').forEach(collapse => {
-                collapse.addEventListener('hidden.bs.collapse', () => {
-                    closeAllSubmenus(collapse);
+                collapse.addEventListener('hidden.bs.collapse', function() {
+                    closeAllSubmenus(this);
                 });
             });
             
             // Limpiar estados móviles al cambiar tamaño
             let resizeTimer = null;
-            window.addEventListener('resize', () => {
+            window.addEventListener('resize', function() {
                 clearTimeout(resizeTimer);
-                resizeTimer = setTimeout(() => {
+                resizeTimer = setTimeout(function() {
                     if (isDesktop()) {
                         closeAllSubmenus();
                     }

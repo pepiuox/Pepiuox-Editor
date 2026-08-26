@@ -19,7 +19,7 @@ use App\Core\Database;
 $auth = [App\Middleware\AuthMiddleware::class];
 $apiMW = [App\Middleware\ApiAuthMiddleware::class];
 
-// Rate limiting (objetos instanciados)
+// Rate limiting (con manejo de errores)
 try {
     $rateLimitLogin = [new App\Middleware\RateLimitMiddleware('login', 5, 60)];
     $rateLimitForgot = [new App\Middleware\RateLimitMiddleware('forgot', 3, 3600)];
@@ -54,25 +54,35 @@ $router->get('/', [App\Controllers\PublicController::class, 'home']);
 $router->get('/sitemap.xml', [App\Controllers\PublicController::class, 'sitemap']);
 $router->get('/robots.txt', [App\Controllers\SeoController::class, 'robots']);
 
-// ── 1.2. Autenticación ───────────────────────────────────────────
+// ── 1.2. Páginas Públicas (dinámicas) ────────────────────────────
+$router->get('/page', function() use ($request) {
+    require __DIR__ . '/../page.php';
+});
+
+$router->get('/page/{slug}', function() use ($request) {
+    $_GET['slug'] = $request->uri();
+    require __DIR__ . '/../page.php';
+});
+
+// ── 1.3. Autenticación ───────────────────────────────────────────
 $router->get('/login', [App\Controllers\AuthController::class, 'showLogin']);
 $router->post('/login', [App\Controllers\AuthController::class, 'login'], $rateLimitLogin);
 $router->get('/logout', [App\Controllers\AuthController::class, 'logout']);
 
-// ── 1.3. Recuperación de contraseña ─────────────────────────────
+// ── 1.4. Recuperación de contraseña ─────────────────────────────
 $router->get('/forgot', [App\Controllers\PasswordController::class, 'forgotForm']);
 $router->post('/forgot', [App\Controllers\PasswordController::class, 'forgotSend'], $rateLimitForgot);
 $router->get('/reset', [App\Controllers\PasswordController::class, 'resetForm']);
 $router->post('/reset', [App\Controllers\PasswordController::class, 'resetSave'], $rateLimitReset);
 
-// ── 1.4. 2FA Challenge ───────────────────────────────────────────
+// ── 1.5. 2FA Challenge ───────────────────────────────────────────
 $router->get('/2fa/challenge', [App\Controllers\TwoFactorController::class, 'challenge']);
 $router->post('/2fa/challenge/verify', [App\Controllers\AuthController::class, 'verify2FA'], $rateLimit2FA);
 
-// ── 1.5. Internacionalización ────────────────────────────────────
+// ── 1.6. Internacionalización ────────────────────────────────────
 $router->get('/lang/{code}', [App\Controllers\LanguageController::class, 'switch']);
 
-// ── 1.6. Cron endpoints (protegidos por token) ──────────────────
+// ── 1.7. Cron endpoints (protegidos por token) ──────────────────
 $router->get('/cron/backup', [App\Controllers\BackupsController::class, 'cron']);
 $router->get('/cron/process-expired-bans', [App\Controllers\BannedUsersController::class, 'processExpired']);
 
@@ -134,15 +144,6 @@ $router->get('/cron/cleanup-collaboration', function() use ($request) {
     ]);
 });
 
-// ── 1.7. Páginas Públicas (alternativa) ──────────────────────────
-$router->get('/page', function() {
-    require PUBLIC_PATH . '/page.php';
-});
-$router->get('/page/{slug}', function() {
-    $_GET['slug'] = $_SERVER['REQUEST_URI'] ?? '';
-    require PUBLIC_PATH . '/page.php';
-});
-
 // ═══════════════════════════════════════════════════════════════════
 // 2. API REST PÚBLICA (autenticación por token Bearer)
 // ═══════════════════════════════════════════════════════════════════
@@ -152,10 +153,9 @@ $router->get('/api/v1/pages/{slug}', [App\Controllers\ApiController::class, 'pag
 $router->get('/api/v1/menus/{slug}', [App\Controllers\ApiController::class, 'menusShow'], $apiMW);
 $router->get('/api/v1/me', [App\Controllers\ApiController::class, 'me'], $apiMW);
 
-// API - Menu
+// API - Menu (público, sin autenticación)
 $router->get('/api/menu', [App\Controllers\MenuController::class, 'getMenuJson']);
 $router->get('/api/menu/breadcrumb/{id}', [App\Controllers\MenuController::class, 'getBreadcrumb']);
-
 
 // ═══════════════════════════════════════════════════════════════════
 // 3. PANEL ADMINISTRATIVO (requiere autenticación)
@@ -174,11 +174,11 @@ $router->post('/admin/profile/sessions/close', [App\Controllers\AuthController::
 $router->get('/admin/users', [App\Controllers\UsersController::class, 'index'], $auth);
 $router->get('/admin/users/create', [App\Controllers\UsersController::class, 'create'], $auth);
 $router->post('/admin/users', [App\Controllers\UsersController::class, 'store'], $auth);
+$router->get('/admin/users/search', [App\Controllers\UsersController::class, 'search'], $auth);
 $router->get('/admin/users/{id}/edit', [App\Controllers\UsersController::class, 'edit'], $auth);
 $router->post('/admin/users/{id}', [App\Controllers\UsersController::class, 'update'], $auth);
 $router->post('/admin/users/{id}/delete', [App\Controllers\UsersController::class, 'delete'], $auth);
 $router->post('/admin/users/{id}/password', [App\Controllers\UsersController::class, 'changePassword'], $auth);
-$router->get('/admin/users/search', [App\Controllers\UsersController::class, 'search'], $auth);
 
 // ── 3.4. Usuarios Baneados ───────────────────────────────────────
 $router->get('/admin/users/banned', [App\Controllers\BannedUsersController::class, 'index'], $auth);
@@ -239,28 +239,21 @@ $router->post('/admin/templates/{id}/delete', [App\Controllers\TemplatesControll
 $router->post('/admin/templates/{id}/duplicate', [App\Controllers\TemplatesController::class, 'duplicate'], $auth);
 
 // ── 3.10. Menús ───────────────────────────────────────────────────
-
+// Rutas principales (usando MenuController)
 $router->get('/admin/menus', [App\Controllers\MenuController::class, 'index'], $auth);
 $router->get('/admin/menus/create', [App\Controllers\MenuController::class, 'create'], $auth);
 $router->post('/admin/menus', [App\Controllers\MenuController::class, 'store'], $auth);
+$router->post('/admin/menus/reorder', [App\Controllers\MenuController::class, 'reorder'], $auth);
 $router->get('/admin/menus/{id}/edit', [App\Controllers\MenuController::class, 'edit'], $auth);
 $router->post('/admin/menus/{id}', [App\Controllers\MenuController::class, 'update'], $auth);
 $router->post('/admin/menus/{id}/delete', [App\Controllers\MenuController::class, 'delete'], $auth);
-$router->post('/admin/menus/{id}/toggle', [App\Controllers\MenuController::class, 'toggleStatus'], $auth);
 $router->post('/admin/menus/{id}/duplicate', [App\Controllers\MenuController::class, 'duplicate'], $auth);
-$router->post('/admin/menus/reorder', [App\Controllers\MenuController::class, 'reorder'], $auth);
-$router->get('/admin/menus/stats', [App\Controllers\MenuController::class, 'stats'], $auth);
+$router->post('/admin/menus/{id}/toggle', [App\Controllers\MenuController::class, 'toggleStatus'], $auth);
 
-$router->get('/admin/menu', [App\Controllers\MenuController::class, 'index'], $auth);
-$router->get('/admin/menu/create', [App\Controllers\MenuController::class, 'create'], $auth);
-$router->post('/admin/menu', [App\Controllers\MenuController::class, 'store'], $auth);
-$router->get('/admin/menu/{id}/edit', [App\Controllers\MenuController::class, 'edit'], $auth);
-$router->post('/admin/menu/{id}', [App\Controllers\MenuController::class, 'update'], $auth);
-$router->post('/admin/menu/{id}/delete', [App\Controllers\MenuController::class, 'delete'], $auth);
-$router->post('/admin/menu/{id}/toggle', [App\Controllers\MenuController::class, 'toggleStatus'], $auth);
-$router->post('/admin/menu/{id}/duplicate', [App\Controllers\MenuController::class, 'duplicate'], $auth);
-$router->post('/admin/menu/reorder', [App\Controllers\MenuController::class, 'reorder'], $auth);
-$router->get('/admin/menu/stats', [App\Controllers\MenuController::class, 'stats'], $auth);
+// Menús - API endpoints (JSON)
+$router->get('/admin/menus/json', [App\Controllers\MenuController::class, 'getMenuJson'], $auth);
+$router->get('/admin/menus/stats', [App\Controllers\MenuController::class, 'stats'], $auth);
+$router->get('/admin/menus/{id}/breadcrumb', [App\Controllers\MenuController::class, 'getBreadcrumb'], $auth);
 
 // ── 3.11. SEO ────────────────────────────────────────────────────
 $router->get('/admin/seo', [App\Controllers\SeoController::class, 'index'], $auth);
