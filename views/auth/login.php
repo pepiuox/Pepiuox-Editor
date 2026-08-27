@@ -39,6 +39,7 @@
       </form>
       <div class="login-footer">
         <a href="<?= url('forgot') ?>">¿Olvidaste tu contraseña?</a>
+        <a href="<?= url('register') ?>">¿Registrate y se un usuario?</a>
       </div>
     </div>
   </div>

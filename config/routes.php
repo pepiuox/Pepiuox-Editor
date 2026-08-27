@@ -22,6 +22,7 @@ $apiMW = [App\Middleware\ApiAuthMiddleware::class];
 // Rate limiting (con manejo de errores)
 try {
     $rateLimitLogin = [new App\Middleware\RateLimitMiddleware('login', 5, 60)];
+    $rateLimitRegister = [new App\Middleware\RateLimitMiddleware('register', 3, 3600)];
     $rateLimitForgot = [new App\Middleware\RateLimitMiddleware('forgot', 3, 3600)];
     $rateLimitReset = [new App\Middleware\RateLimitMiddleware('reset', 5, 3600)];
     $rateLimit2FA = [new App\Middleware\RateLimitMiddleware('2fa', 3, 60)];
@@ -42,7 +43,7 @@ try {
  */
 return function(Router $router, Request $request) use (
     $auth, $apiMW,
-    $rateLimitLogin, $rateLimitForgot, $rateLimitReset, $rateLimit2FA
+    $rateLimitLogin, $rateLimitRegister, $rateLimitForgot, $rateLimitReset, $rateLimit2FA
 ) {
 
 // ═══════════════════════════════════════════════════════════════════
@@ -68,7 +69,8 @@ $router->get('/page/{slug}', function() use ($request) {
 $router->get('/login', [App\Controllers\AuthController::class, 'showLogin']);
 $router->post('/login', [App\Controllers\AuthController::class, 'login'], $rateLimitLogin);
 $router->get('/logout', [App\Controllers\AuthController::class, 'logout']);
-
+$router->get('/register', [App\Controllers\PasswordController::class, 'registertForm']);
+$router->post('/register', [App\Controllers\PasswordController::class, 'registerSend'], $rateLimitRegister);
 // ── 1.4. Recuperación de contraseña ─────────────────────────────
 $router->get('/forgot', [App\Controllers\PasswordController::class, 'forgotForm']);
 $router->post('/forgot', [App\Controllers\PasswordController::class, 'forgotSend'], $rateLimitForgot);
