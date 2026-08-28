@@ -80,4 +80,34 @@ class FileModel
             [$id]
         );
     }
+
+/**
+ * Actualiza metadata específica
+ */
+public function updateMetadata(int $id, int $userId, array $metadata): bool
+{
+    return $this->db->execute(
+        "UPDATE files SET metadata = JSON_MERGE_PATCH(COALESCE(metadata, '{}'), ?), updated_at = NOW()
+         WHERE id = ? AND user_id = ?",
+        [json_encode($metadata), $id, $userId]
+    );
+}
+
+/**
+ * Obtiene archivos con filtro por metadata
+ */
+public function getByMetadata(string $key, $value, int $userId = null): array
+{
+    $query = "SELECT * FROM files 
+              WHERE JSON_EXTRACT(metadata, '$." . $key . "') = ?
+              AND deleted_at IS NULL";
+    $params = [$value];
+
+    if ($userId !== null) {
+        $query .= " AND user_id = ?";
+        $params[] = $userId;
+    }
+
+    return $this->db->fetchAll($query, $params);
+}
 }

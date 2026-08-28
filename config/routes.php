@@ -232,30 +232,43 @@ $router->post('/admin/pages/{id}/versions/{vid}/restore', [App\Controllers\Versi
 $router->post('/admin/pages/{id}/versions/{vid}/delete', [App\Controllers\VersionsController::class, 'delete'], $auth);
 
 // ── 3.9. Templates ───────────────────────────────────────────────
+// ✅ Rutas literales primero
 $router->get('/admin/templates', [App\Controllers\TemplatesController::class, 'index'], $auth);
 $router->get('/admin/templates/create', [App\Controllers\TemplatesController::class, 'create'], $auth);
 $router->post('/admin/templates', [App\Controllers\TemplatesController::class, 'store'], $auth);
+
+// ✅ Rutas parametrizadas al final
 $router->get('/admin/templates/{id}/edit', [App\Controllers\TemplatesController::class, 'edit'], $auth);
+$router->get('/admin/templates/{id}/versions', [App\Controllers\TemplatesController::class, 'versions'], $auth); // ✅ NUEVA
 $router->post('/admin/templates/{id}', [App\Controllers\TemplatesController::class, 'update'], $auth);
+$router->post('/admin/templates/{id}/versions', [App\Controllers\TemplatesController::class, 'createVersionAjax'], $auth); // ✅ NUEVA
+$router->post('/admin/templates/{id}/versions/{vid}/restore', [App\Controllers\TemplatesController::class, 'restoreVersion'], $auth); // ✅ NUEVA
+$router->post('/admin/templates/{id}/versions/{vid}/delete', [App\Controllers\TemplatesController::class, 'deleteVersion'], $auth); // ✅ NUEVA
 $router->post('/admin/templates/{id}/delete', [App\Controllers\TemplatesController::class, 'delete'], $auth);
 $router->post('/admin/templates/{id}/duplicate', [App\Controllers\TemplatesController::class, 'duplicate'], $auth);
 
+// ═══════════════════════════════════════════════════════════════════
 // ── 3.10. Menús ───────────────────────────────────────────────────
-// Rutas principales (usando MenuController)
+// ═══════════════════════════════════════════════════════════════════
+
+// ✅ RUTAS LITERALES (ANTES de las parametrizadas)
 $router->get('/admin/menus', [App\Controllers\MenuController::class, 'index'], $auth);
 $router->get('/admin/menus/create', [App\Controllers\MenuController::class, 'create'], $auth);
 $router->post('/admin/menus', [App\Controllers\MenuController::class, 'store'], $auth);
 $router->post('/admin/menus/reorder', [App\Controllers\MenuController::class, 'reorder'], $auth);
+$router->post('/admin/menus/regenerate', [App\Controllers\MenuController::class, 'regenerateCache'], $auth);
+
+// ✅ Rutas API/JSON (literales, antes de {id})
+$router->get('/admin/menus/json', [App\Controllers\MenuController::class, 'getMenuJson'], $auth);
+$router->get('/admin/menus/stats', [App\Controllers\MenuController::class, 'stats'], $auth);
+
+// ✅ RUTAS PARAMETRIZADAS (AL FINAL)
 $router->get('/admin/menus/{id}/edit', [App\Controllers\MenuController::class, 'edit'], $auth);
+$router->get('/admin/menus/{id}/breadcrumb', [App\Controllers\MenuController::class, 'getBreadcrumb'], $auth);
 $router->post('/admin/menus/{id}', [App\Controllers\MenuController::class, 'update'], $auth);
 $router->post('/admin/menus/{id}/delete', [App\Controllers\MenuController::class, 'delete'], $auth);
 $router->post('/admin/menus/{id}/duplicate', [App\Controllers\MenuController::class, 'duplicate'], $auth);
 $router->post('/admin/menus/{id}/toggle', [App\Controllers\MenuController::class, 'toggleStatus'], $auth);
-
-// Menús - API endpoints (JSON)
-$router->get('/admin/menus/json', [App\Controllers\MenuController::class, 'getMenuJson'], $auth);
-$router->get('/admin/menus/stats', [App\Controllers\MenuController::class, 'stats'], $auth);
-$router->get('/admin/menus/{id}/breadcrumb', [App\Controllers\MenuController::class, 'getBreadcrumb'], $auth);
 
 // ── 3.11. SEO ────────────────────────────────────────────────────
 $router->get('/admin/seo', [App\Controllers\SeoController::class, 'index'], $auth);
@@ -271,19 +284,41 @@ $router->get('/admin/seo/{id}/meta-generator', [App\Controllers\SeoController::c
 $router->post('/admin/seo/{id}/generate-meta', [App\Controllers\SeoController::class, 'generateMeta'], $auth);
 $router->post('/admin/seo/{id}/apply-meta', [App\Controllers\SeoController::class, 'applyMeta'], $auth);
 
-// ── 3.12. Archivos ───────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════
+// ── 3.12. Archivos ────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════
+
+// ✅ RUTAS LITERALES (ANTES de las parametrizadas)
 $router->get('/admin/files', [App\Controllers\FilesController::class, 'index'], $auth);
 $router->post('/admin/files/upload', [App\Controllers\FilesController::class, 'upload'], $auth);
 $router->post('/admin/files/wysiwyg-upload', [App\Controllers\FilesController::class, 'wysiwygUpload'], $auth);
 $router->get('/admin/files/search', [App\Controllers\FilesController::class, 'search'], $auth);
+$router->post('/admin/files/search', [App\Controllers\FilesController::class, 'search'], $auth); // ✅ POST para búsquedas complejas
 $router->get('/admin/files/stats', [App\Controllers\FilesController::class, 'stats'], $auth);
 $router->get('/admin/files/editor', [App\Controllers\FilesController::class, 'getEditorFiles'], $auth);
+
+// ✅ Ruta especial para compartir (con {share_id})
+$router->post('/admin/files/share/{share_id}/revoke', [App\Controllers\FilesController::class, 'revokeShare'], $auth);
+
+// ✅ RUTAS PARAMETRIZADAS (AL FINAL)
 $router->get('/admin/files/{id}/download', [App\Controllers\FilesController::class, 'download'], $auth);
 $router->get('/admin/files/{id}/share', [App\Controllers\FilesController::class, 'shareView'], $auth);
 $router->post('/admin/files/{id}/share', [App\Controllers\FilesController::class, 'share'], $auth);
 $router->post('/admin/files/{id}/delete', [App\Controllers\FilesController::class, 'delete'], $auth);
 $router->post('/admin/files/{id}/hard-delete', [App\Controllers\FilesController::class, 'hardDelete'], $auth);
-$router->post('/admin/files/share/{share_id}/revoke', [App\Controllers\FilesController::class, 'revokeShare'], $auth);
+
+// ✅ Búsqueda avanzada con metadata
+$router->get('/admin/files/search/advanced', [App\Controllers\FilesController::class, 'advancedSearch'], $auth);
+$router->post('/admin/files/search/advanced', [App\Controllers\FilesController::class, 'advancedSearch'], $auth);
+
+// ✅ Actualizar metadata
+$router->post('/admin/files/{id}/metadata', [App\Controllers\FilesController::class, 'updateMetadata'], $auth);
+
+// ✅ Obtener metadata de un archivo
+$router->get('/admin/files/{id}/metadata', [App\Controllers\FilesController::class, 'getMetadata'], $auth);
+
+// ✅ Exportar archivos con metadata
+$router->get('/admin/files/export', [App\Controllers\FilesController::class, 'export'], $auth);
 
 // ── 3.13. 2FA ────────────────────────────────────────────────────
 $router->get('/admin/2fa', [App\Controllers\TwoFactorController::class, 'setup'], $auth);
@@ -302,6 +337,7 @@ $router->post('/admin/notifications/{id}/read', [App\Controllers\NotificationsCo
 $router->post('/admin/notifications/{id}/delete', [App\Controllers\NotificationsController::class, 'delete'], $auth);
 
 // ── 3.15. Cache ──────────────────────────────────────────────────
+// ✅ Rutas literales primero
 $router->get('/admin/cache', [App\Controllers\CacheController::class, 'index'], $auth);
 $router->post('/admin/cache/clear', [App\Controllers\CacheController::class, 'clear'], $auth);
 $router->post('/admin/cache/regenerate', [App\Controllers\CacheController::class, 'regenerate'], $auth);
@@ -349,16 +385,28 @@ $router->get('/admin/analytics/export', [App\Controllers\AnalyticsController::cl
 $router->get('/admin/analytics/api', [App\Controllers\AnalyticsController::class, 'apiSummary'], $auth);
 
 // ── 3.22. Auditoría ──────────────────────────────────────────────
+// ✅ RUTAS LITERALES primero
 $router->get('/admin/audit', [App\Controllers\AuditController::class, 'index'], $auth);
+$router->get('/admin/audit/export', [App\Controllers\AuditController::class, 'export'], $auth);
+$router->get('/admin/audit/export-json', [App\Controllers\AuditController::class, 'exportJson'], $auth);
+$router->get('/admin/audit/stats', [App\Controllers\AuditController::class, 'stats'], $auth);
+$router->post('/admin/audit/clean', [App\Controllers\AuditController::class, 'clean'], $auth);
 
-// ── 3.23. Activity Logs ──────────────────────────────────────────
+// ✅ RUTAS PARAMETRIZADAS al final
+$router->get('/admin/audit/user/{id}', [App\Controllers\AuditController::class, 'userLogs'], $auth);
+$router->get('/admin/audit/ip/{ip}', [App\Controllers\AuditController::class, 'ipLogs'], $auth);
+$router->get('/admin/audit/{id}', [App\Controllers\AuditController::class, 'show'], $auth);
+
+// ── 3.23. Activity Logs (se mantiene igual) ──────────────────────
 $router->get('/admin/audit/activity', [App\Controllers\ActivityLogsController::class, 'index'], $auth);
 $router->get('/admin/audit/activity/export', [App\Controllers\ActivityLogsController::class, 'export'], $auth);
 $router->get('/admin/audit/activity/export-json', [App\Controllers\ActivityLogsController::class, 'exportJson'], $auth);
 $router->get('/admin/audit/activity/stats', [App\Controllers\ActivityLogsController::class, 'stats'], $auth);
+$router->post('/admin/audit/activity/clean', [App\Controllers\ActivityLogsController::class, 'clean'], $auth);
+
+// ✅ Rutas parametrizadas AL FINAL
 $router->get('/admin/audit/activity/user/{id}', [App\Controllers\ActivityLogsController::class, 'userLogs'], $auth);
 $router->get('/admin/audit/activity/ip/{ip}', [App\Controllers\ActivityLogsController::class, 'ipLogs'], $auth);
-$router->post('/admin/audit/activity/clean', [App\Controllers\ActivityLogsController::class, 'clean'], $auth);
 $router->get('/admin/audit/activity/{id}', [App\Controllers\ActivityLogsController::class, 'show'], $auth);
 
 // ── 3.24. Seguridad - Dashboard ──────────────────────────────────

@@ -1,71 +1,83 @@
-<?php $pageTitle = 'Detalle de actividad #' . $log['id']; ?>
-
-<div class="d-flex justify-between align-center mb-3">
-  <h2><i class="bi bi-journal-text text-primary"></i> Detalle del registro</h2>
-  <a class="btn btn-ghost" href="<?= url('admin/audit/activity') ?>"><i class="bi bi-arrow-left"></i> Volver</a>
-</div>
+<?php
+/**
+ * Vista: Detalle de log de auditoría
+ */
+$log = $log ?? [];
+$pageTitle = 'Detalle de auditoría #' . ($log['id'] ?? '');
+?>
 
 <div class="card">
-  <div class="card-body">
-    <div class="form-grid">
-      <div class="form-group">
-        <label class="form-label">ID</label>
-        <div><strong>#<?= $log['id'] ?></strong></div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Fecha</label>
-        <div><?= e($log['created_at']) ?></div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Usuario</label>
-        <div><?= e($log['username'] ?? 'Sistema') ?></div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Acción</label>
-        <div><span class="badge badge-info"><?= e($log['action']) ?></span></div>
-      </div>
-      <div class="form-group full-width">
-        <label class="form-label">Descripción</label>
-        <div><?= e($log['description']) ?></div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">IP</label>
-        <div><code><?= e($log['ip_address'] ?? '—') ?></code></div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Método</label>
-        <div><span class="badge badge-ghost"><?= e($log['request_method'] ?? '—') ?></span></div>
-      </div>
-      <div class="form-group full-width">
-        <label class="form-label">URL</label>
-        <div><code><?= e($log['request_url'] ?? '—') ?></code></div>
-      </div>
-      <div class="form-group full-width">
-        <label class="form-label">User Agent</label>
-        <div class="text-small text-muted"><?= e($log['user_agent'] ?? '—') ?></div>
-      </div>
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h3 class="mb-0">
+            <i class="bi bi-file-earmark-text"></i>
+            Detalle del registro #<?= (int)($log['id'] ?? 0) ?>
+        </h3>
+        <a href="<?= url('admin/audit') ?>" class="btn btn-ghost btn-sm">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
     </div>
-    
-    <?php if ($oldData || $newData): ?>
-    <hr>
-    <div class="row g-3">
-      <?php if ($oldData): ?>
-      <div class="col-md-6">
-        <h5><i class="bi bi-dash-circle text-danger"></i> Datos anteriores</h5>
-        <div class="code-block">
-          <pre><?= e(json_encode($oldData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)) ?></pre>
-        </div>
-      </div>
-      <?php endif; ?>
-      <?php if ($newData): ?>
-      <div class="col-md-6">
-        <h5><i class="bi bi-plus-circle text-success"></i> Datos nuevos</h5>
-        <div class="code-block">
-          <pre><?= e(json_encode($newData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)) ?></pre>
-        </div>
-      </div>
-      <?php endif; ?>
+    <div class="card-body">
+        <?php if (empty($log)): ?>
+            <div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle"></i> Registro no encontrado
+            </div>
+        <?php else: ?>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="border rounded p-3">
+                        <h6 class="text-muted mb-3"><i class="bi bi-info-circle"></i> Información general</h6>
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">ID:</dt>
+                            <dd class="col-sm-8">#<?= (int)$log['id'] ?></dd>
+
+                            <dt class="col-sm-4">Fecha:</dt>
+                            <dd class="col-sm-8"><?= e($log['created_at'] ?? '—') ?></dd>
+
+                            <dt class="col-sm-4">Acción:</dt>
+                            <dd class="col-sm-8">
+                                <span class="badge bg-primary"><?= e($log['action'] ?? '—') ?></span>
+                            </dd>
+
+                            <dt class="col-sm-4">Contexto:</dt>
+                            <dd class="col-sm-8"><?= e($log['context'] ?? '—') ?></dd>
+                        </dl>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="border rounded p-3">
+                        <h6 class="text-muted mb-3"><i class="bi bi-person"></i> Usuario</h6>
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">Usuario:</dt>
+                            <dd class="col-sm-8">
+                                <?php if (!empty($log['username'])): ?>
+                                    <strong><?= e($log['username']) ?></strong>
+                                    <br><small class="text-muted"><?= e($log['email'] ?? '') ?></small>
+                                <?php else: ?>
+                                    <span class="text-muted">Sistema</span>
+                                <?php endif; ?>
+                            </dd>
+
+                            <dt class="col-sm-4">Rol:</dt>
+                            <dd class="col-sm-8"><?= e($log['role'] ?? '—') ?></dd>
+
+                            <dt class="col-sm-4">IP:</dt>
+                            <dd class="col-sm-8"><code><?= e($log['ip_address'] ?? '—') ?></code></dd>
+                        </dl>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="border rounded p-3">
+                        <h6 class="text-muted mb-3"><i class="bi bi-card-text"></i> Detalles</h6>
+                        <pre class="bg-light p-3 rounded mb-0" style="white-space:pre-wrap"><?= e($log['details'] ?? '(sin detalles)') ?></pre>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="border rounded p-3">
+                        <h6 class="text-muted mb-3"><i class="bi bi-laptop"></i> User-Agent</h6>
+                        <pre class="bg-light p-3 rounded mb-0 small" style="white-space:pre-wrap"><?= e($log['user_agent'] ?? '—') ?></pre>
+                    </div>
+                </div>
+            </div>
+        <?php endif; ?>
     </div>
-    <?php endif; ?>
-  </div>
 </div>

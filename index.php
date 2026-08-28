@@ -120,3 +120,46 @@ try {
         error_log('[Router] Error: ' . $e->getMessage());
     }
 }
+
+
+
+function listarCarpeta($ruta, $nivel = 0)
+{
+    $elementos = array_diff(scandir($ruta), ['.', '..']);
+
+    $carpetas = [];
+    $archivos = [];
+
+    foreach ($elementos as $elemento) {
+        $rutaCompleta = $ruta . DIRECTORY_SEPARATOR . $elemento;
+
+        if (is_dir($rutaCompleta)) {
+            $carpetas[] = $elemento;
+        } else {
+            $archivos[] = $elemento;
+        }
+    }
+
+    // Orden alfabético
+    natcasesort($carpetas);
+    natcasesort($archivos);
+
+    // Primero carpetas
+    foreach ($carpetas as $carpeta) {
+        $rutaCompleta = $ruta . DIRECTORY_SEPARATOR . $carpeta;
+
+        echo str_repeat('&nbsp;&nbsp;&nbsp;&nbsp;', $nivel);
+        echo "📁 <strong>$carpeta</strong><br>";
+
+        listarCarpeta($rutaCompleta, $nivel + 1);
+    }
+
+    // Después archivos
+    foreach ($archivos as $archivo) {
+        echo str_repeat('&nbsp;&nbsp;&nbsp;&nbsp;', $nivel);
+        echo "📄 $archivo<br>";
+    }
+}
+
+listarCarpeta(__DIR__);
+

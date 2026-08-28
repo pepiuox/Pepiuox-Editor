@@ -1,30 +1,53 @@
 <?php
 namespace App\Services;
 
-use App\Core\Database;
-use App\Core\Auth;
-use PDO;
-use PDOException;
+use App\Core\{Database, Auth};
 use Throwable;
 
 /**
  * Servicio de registro de actividades
- * 
+ *
+ * Registra acciones de usuarios en la tabla `activity_logs`.
+ *
  * @package App\Services
  */
 class ActivityLoggerService
 {
     private Database $db;
-    private string $table = 'user_activities';
     private string $logTable = 'activity_logs';
+    private bool $enabled = true;
 
+    /**
+     * Constructor con inyección de dependencias
+     *
+     * @param Database $db Instancia de la base de datos
+     */
     public function __construct(Database $db)
     {
         $this->db = $db;
     }
 
     /**
-     * Registra una actividad de usuario
+     * Habilita/deshabilita el logging (útil para tests o modo mantenimiento)
+     */
+    public function setEnabled(bool $enabled): void
+    {
+        $this->enabled = $enabled;
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  MÉTODOS PRINCIPALES DE LOGGING
+    // ──────────────────────────────────────────────────────────────
+
+    /**
+     * Registra una actividad genérica
+     *
+     * @param int|null $userId ID del usuario (null si es anónimo/sistema)
+     * @param string $action Nombre de la acción (ej: 'menu_item_created')
+     * @param string|null $details Detalles adicionales
+     * @param string|null $ipAddress IP del cliente
+     * @param string|null $userAgent User-Agent del cliente
+     * @return bool True si se registró correctamente
      */
     public function log(
         ?int $userId,
@@ -33,13 +56,17 @@ class ActivityLoggerService
         ?string $ipAddress = null,
         ?string $userAgent = null
     ): bool {
+        if (!$this->enabled) {
+            return false;
+        }
+
         try {
-            $ipAddress = $ipAddress ?? $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
-            $userAgent = $userAgent ?? $_SERVER['HTTP_USER_AGENT'] ?? 'Desconocido';
+            $ipAddress = $ipAddress ?? $this->getClientIp();
+            $userAgent = $userAgent ?? $this->getUserAgent();
 
             return $this->db->execute(
-                "INSERT INTO activity_logs 
-                 (user_id, action, details, ip_address, user_agent, created_at) 
+                "INSERT INTO {$this->logTable}
+                 (user_id, action, details, ip_address, user_agent, created_at)
                  VALUES (?, ?, ?, ?, ?, NOW())",
                 [$userId, $action, $details, $ipAddress, $userAgent]
             );
@@ -50,12 +77,51 @@ class ActivityLoggerService
     }
 
     /**
-     * Registra actividad del usuario actual
+     * Registra actividad del usuario actualmente autenticado
+     *
+     * @param string $action Nombre de la acción
+     * @param string|null $details Detalles adicionales
+     * @return bool
      */
     public function logCurrentUser(string $action, ?string $details = null): bool
     {
-        return $this->log(Auth::id(), $action, $details);
+        // Verificar que Auth esté disponible y haya usuario logueado
+        $userId = $this->getCurrentUserId();
+
+        if ($userId === null) {
+            // Fallback: registrar como sistema/anónimo
+            return $this->log(null, $action, $details);
+        }
+
+        return $this->log($userId, $action, $details);
     }
+
+    /**
+     * Registra actividad con contexto completo (método unificado)
+     *
+     * @param string $action
+     * @param string|null $details
+     * @param string $context ('user', 'system', 'api')
+     * @return bool
+     */
+    public function logWithContext(
+        string $action,
+        ?string $details = null,
+        string $context = 'user'
+    ): bool {
+        $userId = match ($context) {
+            'user'   => $this->getCurrentUserId(),
+            'system' => null,
+            'api'    => $this->getApiUserId(),
+            default  => null,
+        };
+
+        return $this->log($userId, $action, $details);
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  CONSULTAS Y REPORTES
+    // ──────────────────────────────────────────────────────────────
 
     /**
      * Obtiene actividades con filtros y paginación
@@ -65,40 +131,23 @@ class ActivityLoggerService
         int $offset = 0,
         array $filters = []
     ): array {
-        $sql = "SELECT 
-                    al.*,
-                    u.username,
-                    u.email
-                FROM activity_logs al
-                LEFT JOIN users u ON al.user_id = u.id
-                WHERE 1=1";
-        $params = [];
+        try {
+            $sql = "SELECT al.*, u.username, u.email
+                    FROM {$this->logTable} al
+                    LEFT JOIN users u ON al.user_id = u.id
+                    WHERE 1=1";
+            $params = [];
 
-        if (!empty($filters['user_id'])) {
-            $sql .= " AND al.user_id = ?";
-            $params[] = (int)$filters['user_id'];
+            $this->applyFilters($sql, $params, $filters);
+            $sql .= " ORDER BY al.created_at DESC LIMIT ? OFFSET ?";
+            $params[] = $limit;
+            $params[] = $offset;
+
+            return $this->db->fetchAll($sql, $params);
+        } catch (Throwable $e) {
+            error_log('[ActivityLogger] Error en getActivities: ' . $e->getMessage());
+            return [];
         }
-
-        if (!empty($filters['action'])) {
-            $sql .= " AND al.action LIKE ?";
-            $params[] = '%' . $filters['action'] . '%';
-        }
-
-        if (!empty($filters['date_from'])) {
-            $sql .= " AND DATE(al.created_at) >= ?";
-            $params[] = $filters['date_from'];
-        }
-
-        if (!empty($filters['date_to'])) {
-            $sql .= " AND DATE(al.created_at) <= ?";
-            $params[] = $filters['date_to'];
-        }
-
-        $sql .= " ORDER BY al.created_at DESC LIMIT ? OFFSET ?";
-        $params[] = $limit;
-        $params[] = $offset;
-
-        return $this->db->fetchAll($sql, $params);
     }
 
     /**
@@ -106,34 +155,17 @@ class ActivityLoggerService
      */
     public function getTotalCount(array $filters = []): int
     {
-        $sql = "SELECT COUNT(*) as total
-                FROM activity_logs al
-                LEFT JOIN users u ON al.user_id = u.id
-                WHERE 1=1";
-        $params = [];
+        try {
+            $sql = "SELECT COUNT(*) as total FROM {$this->logTable} al WHERE 1=1";
+            $params = [];
+            $this->applyFilters($sql, $params, $filters);
 
-        if (!empty($filters['user_id'])) {
-            $sql .= " AND al.user_id = ?";
-            $params[] = (int)$filters['user_id'];
+            $result = $this->db->fetch($sql, $params);
+            return (int)($result['total'] ?? 0);
+        } catch (Throwable $e) {
+            error_log('[ActivityLogger] Error en getTotalCount: ' . $e->getMessage());
+            return 0;
         }
-
-        if (!empty($filters['action'])) {
-            $sql .= " AND al.action LIKE ?";
-            $params[] = '%' . $filters['action'] . '%';
-        }
-
-        if (!empty($filters['date_from'])) {
-            $sql .= " AND DATE(al.created_at) >= ?";
-            $params[] = $filters['date_from'];
-        }
-
-        if (!empty($filters['date_to'])) {
-            $sql .= " AND DATE(al.created_at) <= ?";
-            $params[] = $filters['date_to'];
-        }
-
-        $result = $this->db->fetch($sql, $params);
-        return (int)($result['total'] ?? 0);
     }
 
     /**
@@ -141,13 +173,18 @@ class ActivityLoggerService
      */
     public function getUserLogs(int $userId, int $limit = 50): array
     {
-        return $this->db->fetchAll(
-            "SELECT * FROM activity_logs
-             WHERE user_id = ?
-             ORDER BY created_at DESC
-             LIMIT ?",
-            [$userId, $limit]
-        );
+        try {
+            return $this->db->fetchAll(
+                "SELECT * FROM {$this->logTable}
+                 WHERE user_id = ?
+                 ORDER BY created_at DESC
+                 LIMIT ?",
+                [$userId, $limit]
+            );
+        } catch (Throwable $e) {
+            error_log('[ActivityLogger] Error en getUserLogs: ' . $e->getMessage());
+            return [];
+        }
     }
 
     /**
@@ -155,21 +192,16 @@ class ActivityLoggerService
      */
     public function cleanOldLogs(int $days = 90): int
     {
-        return (int)$this->db->execute(
-            "DELETE FROM activity_logs
-             WHERE created_at < DATE_SUB(NOW(), INTERVAL ? DAY)",
-            [$days]
-        );
-    }
-
-    /**
-     * Obtiene usuarios activos para filtros
-     */
-    public function getActiveUsers(): array
-    {
-        return $this->db->fetchAll(
-            "SELECT id, username, email FROM users WHERE status = 'active' ORDER BY username"
-        );
+        try {
+            return (int)$this->db->execute(
+                "DELETE FROM {$this->logTable}
+                 WHERE created_at < DATE_SUB(NOW(), INTERVAL ? DAY)",
+                [$days]
+            );
+        } catch (Throwable $e) {
+            error_log('[ActivityLogger] Error en cleanOldLogs: ' . $e->getMessage());
+            return 0;
+        }
     }
 
     /**
@@ -177,107 +209,116 @@ class ActivityLoggerService
      */
     public function getActivityStatistics(int $days = 30): array
     {
-        return $this->db->fetchAll(
-            "SELECT 
-                action,
-                COUNT(*) as total,
-                DATE(created_at) as date
-             FROM activity_logs
-             WHERE created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
-             GROUP BY action, DATE(created_at)
-             ORDER BY date DESC, total DESC",
-            [$days]
-        );
+        try {
+            return $this->db->fetchAll(
+                "SELECT action, COUNT(*) as total, DATE(created_at) as date
+                 FROM {$this->logTable}
+                 WHERE created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+                 GROUP BY action, DATE(created_at)
+                 ORDER BY date DESC, total DESC",
+                [$days]
+            );
+        } catch (Throwable $e) {
+            error_log('[ActivityLogger] Error en getActivityStatistics: ' . $e->getMessage());
+            return [];
+        }
     }
 
     /**
-     * Obtiene actividad por tipo
+     * Obtiene usuarios activos para filtros
      */
-    public function getActivitiesByType(string $action, int $limit = 50): array
+    public function getActiveUsers(): array
     {
-        return $this->db->fetchAll(
-            "SELECT 
-                al.*, 
-                u.username, 
-                u.email,
-                DATE_FORMAT(al.created_at, '%d/%m/%Y %H:%i:%s') as formatted_date
-             FROM activity_logs al
-             LEFT JOIN users u ON al.user_id = u.id
-             WHERE al.action = ?
-             ORDER BY al.created_at DESC
-             LIMIT ?",
-            [$action, $limit]
-        );
+        try {
+            return $this->db->fetchAll(
+                "SELECT id, username, email FROM users
+                 WHERE status = 'active' ORDER BY username"
+            );
+        } catch (Throwable $e) {
+            return [];
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  HELPERS PRIVADOS
+    // ──────────────────────────────────────────────────────────────
+
+    /**
+     * Obtiene el ID del usuario actual de forma segura
+     */
+    private function getCurrentUserId(): ?int
+    {
+        try {
+            if (!class_exists(Auth::class)) {
+                return null;
+            }
+            $id = Auth::id();
+            return $id ? (int)$id : null;
+        } catch (Throwable $e) {
+            return null;
+        }
     }
 
     /**
-     * Obtiene actividades por rango de fechas
+     * Obtiene el ID del usuario desde contexto API
      */
-    public function getActivitiesByDateRange(string $startDate, string $endDate): array
+    private function getApiUserId(): ?int
     {
-        return $this->db->fetchAll(
-            "SELECT 
-                al.*, 
-                u.username, 
-                u.email,
-                DATE_FORMAT(al.created_at, '%d/%m/%Y %H:%i:%s') as formatted_date
-             FROM activity_logs al
-             LEFT JOIN users u ON al.user_id = u.id
-             WHERE DATE(al.created_at) BETWEEN ? AND ?
-             ORDER BY al.created_at DESC",
-            [$startDate, $endDate]
-        );
+        if (isset(\App\Core\Request::$apiContext['user_id'])) {
+            return (int)\App\Core\Request::$apiContext['user_id'];
+        }
+        return $this->getCurrentUserId();
     }
 
     /**
-     * Obtiene actividades de usuarios
+     * Obtiene la IP del cliente de forma segura
      */
-    public function getUserActivities(?int $userId = null, int $limit = 50): array
+    private function getClientIp(): string
     {
-        $sql = "SELECT 
-                    ua.*, 
-                    u.username, 
-                    u.role,
-                    DATE_FORMAT(ua.created_at, '%d/%m/%Y %H:%i:%s') as formatted_date
-                FROM " . $this->table . " ua
-                LEFT JOIN users u ON ua.user_id = u.id";
-
-        $params = [];
-        if ($userId !== null) {
-            $sql .= " WHERE ua.user_id = ?";
-            $params[] = $userId;
+        if (PHP_SAPI === 'cli') {
+            return '127.0.0.1';
         }
 
-        $sql .= " ORDER BY ua.created_at DESC LIMIT ?";
-        $params[] = $limit;
+        $forwarded = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? '';
+        if ($forwarded) {
+            $ips = array_map('trim', explode(',', $forwarded));
+            return $ips[0];
+        }
 
-        return $this->db->fetchAll($sql, $params);
+        return $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
     }
 
     /**
-     * Registra actividad con múltiples métodos (backward compatibility)
+     * Obtiene el User-Agent de forma segura
      */
-    public function logActivity(int $userId, string $activityType, string $description): bool
+    private function getUserAgent(): string
     {
-        return $this->db->execute(
-            "INSERT INTO " . $this->table . " 
-             (user_id, activity_type, description, ip_address, user_agent) 
-             VALUES (?, ?, ?, ?, ?)",
-            [
-                $userId,
-                $activityType,
-                $description,
-                $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0',
-                $_SERVER['HTTP_USER_AGENT'] ?? 'Desconocido'
-            ]
-        );
+        if (PHP_SAPI === 'cli') {
+            return 'CLI';
+        }
+        return $_SERVER['HTTP_USER_AGENT'] ?? 'Desconocido';
     }
 
     /**
-     * Obtiene usuarios para filtros
+     * Aplica filtros comunes a las consultas SQL
      */
-    public function getUsers(): array
+    private function applyFilters(string &$sql, array &$params, array $filters): void
     {
-        return $this->db->fetchAll("SELECT id, username FROM users ORDER BY username");
+        if (!empty($filters['user_id'])) {
+            $sql .= " AND al.user_id = ?";
+            $params[] = (int)$filters['user_id'];
+        }
+        if (!empty($filters['action'])) {
+            $sql .= " AND al.action LIKE ?";
+            $params[] = '%' . $filters['action'] . '%';
+        }
+        if (!empty($filters['date_from'])) {
+            $sql .= " AND DATE(al.created_at) >= ?";
+            $params[] = $filters['date_from'];
+        }
+        if (!empty($filters['date_to'])) {
+            $sql .= " AND DATE(al.created_at) <= ?";
+            $params[] = $filters['date_to'];
+        }
     }
 }

@@ -1,28 +1,50 @@
 <?php
 namespace App\Models;
+
 use App\Core\Database;
 
+/**
+ * Modelo de Template (compatibilidad legacy)
+ * @deprecated Use App\Services\TemplatesService instead
+ */
 class Template
 {
     public static function all(): array
     {
-        return Database::fetchAll("SELECT * FROM templates ORDER BY name ASC");
+        try {
+            return Database::fetchAll("SELECT * FROM templates ORDER BY name ASC");
+        } catch (\Throwable $e) {
+            return [];
+        }
     }
+
     public static function allActive(): array
     {
-        return Database::fetchAll("SELECT * FROM templates WHERE is_active = 1 ORDER BY name ASC");
+        try {
+            return Database::fetchAll("SELECT * FROM templates WHERE is_active = 1 ORDER BY name ASC");
+        } catch (\Throwable $e) {
+            return [];
+        }
     }
+
     public static function find(int $id): ?array
     {
-        return Database::fetch("SELECT * FROM templates WHERE id = ?", [$id]);
+        try {
+            return Database::fetch("SELECT * FROM templates WHERE id = ?", [$id]);
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
+
     public static function create(array $data): int
     {
         if (!empty($data['is_default'])) {
             Database::execute("UPDATE templates SET is_default = 0");
         }
         return Database::insert(
-            "INSERT INTO templates (name, description, content_html, content_css, content_js, content_php, grapesjs_data, is_system_template, is_active, is_default, created_by)
+            "INSERT INTO templates
+             (name, description, content_html, content_css, content_js, content_php,
+              grapesjs_data, is_system_template, is_active, is_default, created_by)
              VALUES (?,?,?,?,?,?,?,?,?,?,?)",
             [
                 $data['name'], $data['description'] ?? '',
@@ -36,23 +58,30 @@ class Template
             ]
         );
     }
+
     public static function update(int $id, array $data): int
     {
         if (!empty($data['is_default'])) {
             Database::execute("UPDATE templates SET is_default = 0");
         }
-        $fields = []; $params = [];
-        foreach (['name','description','content_html','content_css','content_js','content_php','grapesjs_data','is_system_template','is_active','is_default'] as $f) {
-            if (array_key_exists($f, $data)) { $fields[] = "`$f` = ?"; $params[] = $data[$f]; }
+        $fields = [];
+        $params = [];
+        foreach (['name','description','content_html','content_css','content_js','content_php','grapesjs_data','is_active','is_default'] as $f) {
+            if (array_key_exists($f, $data)) {
+                $fields[] = "`$f` = ?";
+                $params[] = $data[$f];
+            }
         }
         if (!$fields) return 0;
         $params[] = $id;
         return Database::execute("UPDATE templates SET " . implode(',', $fields) . " WHERE id = ?", $params);
     }
+
     public static function delete(int $id): int
     {
         return Database::execute("DELETE FROM templates WHERE id = ? AND is_system_template = 0", [$id]);
     }
+
     public static function duplicate(int $id): ?int
     {
         $t = self::find($id);
@@ -67,5 +96,20 @@ class Template
             'grapesjs_data' => $t['grapesjs_data'],
             'is_active' => 0,
         ]);
+    }
+
+    /**
+     * ✅ Requerido por CacheService::invalidateTemplatePages()
+     */
+    public static function usingTemplate(int $templateId): array
+    {
+        try {
+            return Database::fetchAll(
+                "SELECT id FROM pages WHERE template_id = ?",
+                [$templateId]
+            );
+        } catch (\Throwable $e) {
+            return [];
+        }
     }
 }

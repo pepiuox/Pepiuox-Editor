@@ -1,30 +1,209 @@
 <?php
 namespace App\Controllers;
 
-use App\Core\{Request, Response, View, Session, CSRF, Database, Auth};
-use App\Services\{FileManagerService, AuditService};
-use App\Services\FileService;
-use finfo;
+use App\Core\{Request, Response, View, Auth, CSRF, Session, Database, Security};
+use App\Services\{
+    ActivityLoggerService,
+    CacheService,
+    AuditService,
+    FileManagerService
+};
 use Throwable;
 
 /**
  * Controlador de gestión de archivos
- * 
+ *
  * @package App\Controllers
  */
 class FilesController
 {
-    private FileManagerService $fileManager;
-    private array $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'pdf', 'doc', 'docx', 'txt', 'zip', 'rar', '7z'];
-    private int $maxFileSize = 10 * 1024 * 1024; // 10MB
+    private Database $db;
+    private ActivityLoggerService $logger;
+    private CacheService $cacheService;
+    private AuditService $auditService;
+    
+    // ✅ Nullable para permitir null
+    private ?FileManagerService $fileManager = null;
+    
+    // ✅ Propiedades para validación
+    private int $maxFileSize = 10485760; // 10MB por defecto
+    private array $allowedExtensions;
 
-    public function __construct(FileManagerService $fileManager)
-    {
+    /**
+     * Constructor con todas las dependencias inyectadas
+     */
+    public function __construct(
+        Database $db,
+        ActivityLoggerService $logger,
+        CacheService $cacheService,
+        AuditService $auditService,
+        ?FileManagerService $fileManager = null
+    ) {
+        $this->db = $db;
+        $this->logger = $logger;
+        $this->cacheService = $cacheService;
+        $this->auditService = $auditService;
         $this->fileManager = $fileManager;
+        
+        // ✅ Cargar extensiones permitidas desde la constante definida en paths.php
+        $this->allowedExtensions = defined('ALLOWED_EXTENSIONS') 
+            ? ALLOWED_EXTENSIONS 
+            : [
+                'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg',
+                'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+                'txt', 'csv', 'zip', 'rar', 'tar', 'gz', '7z',
+                'mp3', 'wav', 'ogg', 'm4a',
+                'mp4', 'mpeg', 'webm', 'mov', 'avi'
+            ];
+        
+        // ✅ Si FileManager es null, crear uno de emergencia
+        if ($this->fileManager === null) {
+            $this->fileManager = $this->createEmergencyFileManager();
+        }
     }
 
     /**
-     * Lista de archivos con filtros
+     * Crea un FileManagerService de emergencia si no está disponible
+     */
+    private function createEmergencyFileManager(): FileManagerService
+    {
+        try {
+            $fileModel = new \App\Models\FileModel($this->db);
+            $mediaModel = new \App\Models\MediaModel($this->db);
+            
+            // ✅ Security requiere Database en su constructor
+            $security = new Security($this->db);
+
+            return new FileManagerService(
+                $this->db,
+                $fileModel,
+                $mediaModel,
+                $security,
+                $this->logger
+            );
+        } catch (Throwable $e) {
+            error_log('[FilesController] Error creando FileManagerService de emergencia: ' . $e->getMessage());
+            
+            // Si falla, crear un proxy/mock que implemente la interfaz
+            return $this->createMockFileManager();
+        }
+    }
+
+    /**
+     * Crea un mock de FileManagerService para evitar errores fatales
+     */
+    private function createMockFileManager(): FileManagerService
+    {
+        // Crear una clase anónima que extienda FileManagerService
+        return new class($this->db, $this->logger) extends FileManagerService {
+            private $db;
+            private $logger;
+            
+            public function __construct($db, $logger) {
+                $this->db = $db;
+                $this->logger = $logger;
+                
+                // ✅ Security requiere Database
+                $fileModel = new \App\Models\FileModel($db);
+                $mediaModel = new \App\Models\MediaModel($db);
+                $security = new \App\Core\Security($db);
+                
+                parent::__construct(
+                    $db,
+                    $fileModel,
+                    $mediaModel,
+                    $security,
+                    $logger
+                );
+            }
+            
+            public function getUserFiles(int $userId, array $filters = []): array {
+                try {
+                    $query = "SELECT * FROM files WHERE user_id = ? AND deleted_at IS NULL";
+                    $params = [$userId];
+                    
+                    if (!empty($filters['category'])) {
+                        $query .= " AND category = ?";
+                        $params[] = $filters['category'];
+                    }
+                    
+                    $query .= " ORDER BY created_at DESC";
+                    
+                    return $this->db->fetchAll($query, $params);
+                } catch (Throwable $e) {
+                    return [];
+                }
+            }
+            
+            public function upload(array $file, int $userId, array $options = []): array {
+                return ['success' => false, 'error' => 'Servicio de archivos no disponible temporalmente'];
+            }
+            
+            public function getFile(int $fileId, ?int $userId = null): ?array {
+                try {
+                    $query = "SELECT * FROM files WHERE id = ? AND deleted_at IS NULL";
+                    $params = [$fileId];
+                    
+                    if ($userId !== null) {
+                        $query .= " AND (user_id = ? OR is_public = 1)";
+                        $params[] = $userId;
+                    }
+                    
+                    return $this->db->fetch($query, $params);
+                } catch (Throwable $e) {
+                    return null;
+                }
+            }
+            
+            public function incrementDownloadCount(int $fileId): bool {
+                try {
+                    return $this->db->execute(
+                        "UPDATE files SET download_count = download_count + 1 WHERE id = ?",
+                        [$fileId]
+                    );
+                } catch (Throwable $e) {
+                    return false;
+                }
+            }
+            
+            public function delete(int $fileId, int $userId): array {
+                return ['success' => false, 'error' => 'Servicio de archivos no disponible temporalmente'];
+            }
+            
+            public function uploadBase64(string $base64, int $userId, array $options = []): array {
+                return ['success' => false, 'error' => 'Servicio de archivos no disponible temporalmente'];
+            }
+            
+            public function getCategories(): array {
+                return defined('FILE_CATEGORIES') ? FILE_CATEGORIES : ['document', 'image', 'audio', 'video', 'archive', 'other'];
+            }
+            
+            public function formatFileSize(int $bytes): string {
+                if ($bytes >= 1073741824) {
+                    return number_format($bytes / 1073741824, 2) . ' GB';
+                } elseif ($bytes >= 1048576) {
+                    return number_format($bytes / 1048576, 2) . ' MB';
+                } elseif ($bytes >= 1024) {
+                    return number_format($bytes / 1024, 2) . ' KB';
+                } else {
+                    return $bytes . ' bytes';
+                }
+            }
+            
+            public function getDownloadStats(int $days = 30): array { return []; }
+            public function getPublicFiles(array $filters = []): array { return []; }
+            public function getStats(?int $userId = null): array { return ['total_files' => 0]; }
+            public function hardDelete(int $fileId): array { return ['success' => false]; }
+            public function update(int $fileId, int $userId, array $data): array { return ['success' => false]; }
+            public function findDuplicate(string $filename, int $userId): ?array { return null; }
+            public function cleanTempFiles(): int { return 0; }
+            public function getFileIcon(string $fileType): string { return 'bi bi-file'; }
+            public function getCategoryColor(string $category): string { return 'secondary'; }
+        };
+    }
+
+    /**
+     * Muestra la lista de archivos con filtro por categoría
      */
     public function index(Request $request): void
     {
@@ -32,39 +211,33 @@ class FilesController
             Response::abort(403, 'No tienes permisos para ver archivos');
         }
 
-        $filters = [
-            'category' => $request->get('category'),
-            'search' => $request->get('search'),
-            'is_public' => $request->get('is_public'),
-            'date_from' => $request->get('date_from'),
-            'date_to' => $request->get('date_to'),
-        ];
+        try {
+            $cat = $request->get('category');
+            $userId = Auth::id();
 
-        // Limpiar filtros vacíos
-        $filters = array_filter($filters, function($value) {
-            return $value !== '' && $value !== null;
-        });
+            // ✅ Validar categoría usando la constante definida en paths.php
+            $validCategories = defined('FILE_CATEGORIES') ? FILE_CATEGORIES : ['image', 'document', 'audio', 'video', 'archive', 'other'];
+            
+            $filters = [];
+            if ($cat && in_array($cat, $validCategories, true)) {
+                $filters['category'] = $cat;
+            }
 
-        $userId = Auth::id();
-        $files = $this->fileManager->getUserFiles($userId, $filters);
-        $stats = $this->fileManager->getStats($userId);
-        $categories = $this->fileManager->getCategories();
+            // ✅ Usar FileManagerService
+            $files = $this->fileManager->getUserFiles($userId, $filters);
 
-        // Obtener usuarios para compartir (si está habilitado)
-        $users = [];
-        if (Auth::can('files.share')) {
-            $users = Database::fetchAll(
-                "SELECT id, username, email FROM users WHERE is_active = 1 ORDER BY username"
-            );
+            // ✅ Vista correcta
+            Response::render(View::render('files.index', [
+                'files' => $files,
+                'cat' => $cat,
+            ]));
+        } catch (Throwable $e) {
+            error_log('[FilesController] Error en index: ' . $e->getMessage());
+            Response::render(View::render('files.index', [
+                'files' => [],
+                'cat' => null,
+            ]));
         }
-
-        Response::render(View::render('admin.files.index', [
-            'files' => $files,
-            'stats' => $stats,
-            'categories' => $categories,
-            'filters' => $filters,
-            'users' => $users,
-        ]));
     }
 
     /**
@@ -73,57 +246,54 @@ class FilesController
     public function upload(Request $request): void
     {
         CSRF::guard();
-
         if (!Auth::can('files.upload')) {
             Response::abort(403, 'No tienes permisos para subir archivos');
         }
 
-        $uploadedFiles = $_FILES['files'] ?? null;
-        
-        // Si es una subida individual (WYSIWYG o AJAX)
+        // ✅ Subida individual (AJAX)
         if (isset($_FILES['file'])) {
             $this->handleSingleUpload($request);
             return;
         }
 
-        // Si no hay archivos
-        if (!$uploadedFiles) {
+        // ✅ Subida múltiple
+        if (isset($_FILES['files'])) {
+            $result = $this->handleMultipleUploads($_FILES['files'], $request);
+            
             if ($request->isAjax()) {
-                Response::json(['success' => false, 'error' => 'No se seleccionaron archivos']);
+                Response::json($result);
             } else {
-                Session::flash('flash.error', 'No se seleccionaron archivos.');
+                if ($result['success']) {
+                    Session::flash('flash.success', $result['message']);
+                }
+                if (!empty($result['errors'])) {
+                    Session::flash('flash.error', implode('<br>', $result['errors']));
+                }
                 Response::redirect(url('admin/files'));
             }
             return;
         }
 
-        // Procesar múltiples archivos
-        $result = $this->handleMultipleUploads($uploadedFiles, $request);
-        
+        // ❌ No se recibieron archivos
         if ($request->isAjax()) {
-            Response::json($result);
+            Response::json(['success' => false, 'error' => 'No se seleccionaron archivos']);
         } else {
-            if ($result['success']) {
-                Session::flash('flash.success', $result['message']);
-            }
-            if (!empty($result['errors'])) {
-                Session::flash('flash.error', implode('<br>', $result['errors']));
-            }
+            Session::flash('flash.error', 'No se seleccionaron archivos.');
             Response::redirect(url('admin/files'));
         }
     }
 
     /**
-     * Maneja la subida de un solo archivo (AJAX/WYSIWYG)
+     * Maneja subida individual (AJAX/WYSIWYG)
      */
     private function handleSingleUpload(Request $request): void
     {
         $file = $_FILES['file'];
-        
+
         if ($file['error'] !== UPLOAD_ERR_OK) {
             Response::json([
                 'success' => false,
-                'error' => 'Error al subir el archivo: ' . $this->getUploadErrorMessage($file['error'])
+                'error' => 'Error al subir: ' . $this->getUploadErrorMessage($file['error'])
             ]);
             return;
         }
@@ -143,53 +313,42 @@ class FilesController
     }
 
     /**
-     * Maneja la subida de múltiples archivos
+     * Maneja subida múltiple
      */
     private function handleMultipleUploads(array $uploadedFiles, Request $request): array
     {
         $count = 0;
         $errors = [];
         $uploaded = [];
-
-        $names = (array)$uploadedFiles['name'];
         $userId = Auth::id();
         $description = $request->post('description');
         $isPublic = (int)$request->post('is_public', 0);
         $category = $request->post('category');
 
-        for ($i = 0; $i < count($names); $i++) {
-            $single = [
-                'name' => $names[$i],
-                'type' => is_array($uploadedFiles['type']) ? $uploadedFiles['type'][$i] : $uploadedFiles['type'],
-                'tmp_name' => is_array($uploadedFiles['tmp_name']) ? $uploadedFiles['tmp_name'][$i] : $uploadedFiles['tmp_name'],
-                'error' => is_array($uploadedFiles['error']) ? $uploadedFiles['error'][$i] : $uploadedFiles['error'],
-                'size' => is_array($uploadedFiles['size']) ? $uploadedFiles['size'][$i] : $uploadedFiles['size'],
-            ];
+        // ✅ Normalizar array de archivos
+        $files = $this->normalizeFilesArray($uploadedFiles);
 
-            // Validar error
+        foreach ($files as $single) {
+            // ✅ Validar error de subida
             if ($single['error'] !== UPLOAD_ERR_OK) {
                 $errors[] = 'Error al subir: ' . $single['name'] . ' - ' . $this->getUploadErrorMessage($single['error']);
                 continue;
             }
 
-            // Validar tamaño
+            // ✅ Validar tamaño
             if ($single['size'] > $this->maxFileSize) {
                 $errors[] = 'Archivo demasiado grande (máx ' . $this->fileManager->formatFileSize($this->maxFileSize) . '): ' . $single['name'];
                 continue;
             }
 
-            // Validar extensión
+            // ✅ Validar extensión usando la constante definida en paths.php
             $ext = strtolower(pathinfo($single['name'], PATHINFO_EXTENSION));
             if (!in_array($ext, $this->allowedExtensions, true)) {
                 $errors[] = 'Tipo de archivo no permitido: ' . $single['name'] . ' (.' . $ext . ')';
                 continue;
             }
 
-            // Validar MIME real
-            $finfo = new finfo(FILEINFO_MIME_TYPE);
-            $mime = $finfo->file($single['tmp_name']);
-
-            // Usar el servicio para subir
+            // ✅ Usar el servicio para subir
             $result = $this->fileManager->upload(
                 $single,
                 $userId,
@@ -205,13 +364,13 @@ class FilesController
                 $count++;
                 $uploaded[] = $result;
             } else {
-                $errors[] = 'Error al subir ' . $single['name'] . ': ' . $result['error'];
+                $errors[] = 'Error al subir ' . $single['name'] . ': ' . ($result['error'] ?? 'desconocido');
             }
         }
 
-        // Registrar auditoría
         if ($count > 0) {
-            AuditService::log(
+            $this->auditService->log(
+                Auth::id(),
                 'files_uploaded',
                 "Subió {$count} archivo(s) al sistema",
                 'files'
@@ -228,45 +387,71 @@ class FilesController
     }
 
     /**
+     * Normaliza el array de archivos para subida múltiple
+     */
+    private function normalizeFilesArray(array $files): array
+    {
+        // ✅ Si es un solo archivo, convertirlo a array
+        if (!is_array($files['name'])) {
+            return [$files];
+        }
+
+        $result = [];
+        $count = count($files['name']);
+
+        for ($i = 0; $i < $count; $i++) {
+            $result[] = [
+                'name' => $files['name'][$i],
+                'type' => $files['type'][$i],
+                'tmp_name' => $files['tmp_name'][$i],
+                'error' => $files['error'][$i],
+                'size' => $files['size'][$i],
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
      * Descarga un archivo
      */
     public function download(Request $request, array $params): void
     {
-        $id = (int)$params['id'];
-        $userId = Auth::id();
+        $id = (int)($params['id'] ?? 0);
+        if (!$id) {
+            Response::abort(404, 'ID de archivo no válido');
+        }
 
-        // Obtener archivo con permisos
+        $userId = Auth::id();
         $file = $this->fileManager->getFile($id, $userId);
 
         if (!$file) {
             Response::abort(404, 'Archivo no encontrado');
         }
 
-        // Verificar permisos adicionales (compartido)
-        $canDownload = $this->checkDownloadPermissions($file, $userId);
-
-        if (!$canDownload) {
+        // ✅ Verificar permisos
+        if (!$this->checkDownloadPermissions($file, $userId)) {
             Response::abort(403, 'No tienes permisos para descargar este archivo');
         }
 
-        // Verificar existencia física
-        $path = $file['file_path'];
-        if (!is_file($path)) {
-            Response::abort(404, 'Archivo físico no encontrado en el servidor');
+        // ✅ Verificar que el archivo físico existe
+        $path = $file['file_path'] ?? '';
+        if (empty($path) || !is_file($path)) {
+            Response::abort(404, 'Archivo físico no encontrado');
         }
 
-        // Incrementar contador de descargas
+        // ✅ Incrementar contador de descargas
         $this->fileManager->incrementDownloadCount($id);
 
-        // Registrar auditoría
-        AuditService::log(
+        // ✅ Registrar auditoría
+        $this->auditService->log(
+            Auth::id(),
             'file_downloaded',
             "Descargó el archivo: {$file['original_name']}",
-            'files',
-            $id
+            'files'
         );
 
-        // Servir archivo
+        // ✅ Servir archivo
         $this->serveFile($path, $file);
     }
 
@@ -275,22 +460,22 @@ class FilesController
      */
     private function checkDownloadPermissions(array $file, int $userId): bool
     {
-        // Propietario
+        // ✅ Propietario
         if ((int)$file['user_id'] === $userId) {
             return true;
         }
 
-        // Archivo público
+        // ✅ Archivo público
         if ((int)($file['is_public'] ?? 0) === 1) {
             return true;
         }
 
-        // Compartido con usuario
+        // ✅ Compartido con el usuario
         try {
-            $shared = Database::fetch(
-                "SELECT * FROM file_shares 
-                 WHERE file_id = ? 
-                 AND (shared_with = ? OR shared_with IS NULL)
+            $shared = $this->db->fetch(
+                "SELECT * FROM file_shares
+                 WHERE file_id = ?
+                 AND shared_with = ?
                  AND (expires_at IS NULL OR expires_at > NOW())
                  LIMIT 1",
                 [$file['id'], $userId]
@@ -306,11 +491,16 @@ class FilesController
      */
     private function serveFile(string $path, array $file): void
     {
-        $mimeType = $file['mime_type'] ?? mime_content_type($path) ?: 'application/octet-stream';
-        $originalName = basename($file['original_name']);
+        $mimeType = $file['mime_type'] ?? (mime_content_type($path) ?: 'application/octet-stream');
+        $originalName = basename($file['original_name'] ?? 'archivo');
         $fileSize = filesize($path);
 
-        // Headers para descarga
+        // ✅ Limpiar buffers
+        if (ob_get_level()) {
+            ob_end_clean();
+        }
+
+        // ✅ Headers
         header('Content-Type: ' . $mimeType);
         header('Content-Disposition: attachment; filename="' . $originalName . '"');
         header('Content-Length: ' . $fileSize);
@@ -318,12 +508,7 @@ class FilesController
         header('Cache-Control: private, no-cache, must-revalidate');
         header('Pragma: no-cache');
 
-        // Para archivos grandes
-        if ($fileSize > 10 * 1024 * 1024) { // 10MB
-            header('X-Accel-Redirect: ' . $path); // Para Nginx
-            header('X-Sendfile: ' . $path); // Para Apache con mod_xsendfile
-        }
-
+        // ✅ Leer y enviar archivo
         readfile($path);
         exit;
     }
@@ -337,25 +522,32 @@ class FilesController
             Response::abort(403, 'No tienes permisos para compartir archivos');
         }
 
-        $id = (int)$params['id'];
-        $file = $this->fileManager->getFile($id, Auth::id());
+        $id = (int)($params['id'] ?? 0);
+        if (!$id) {
+            Response::abort(404, 'ID de archivo no válido');
+        }
 
+        $file = $this->fileManager->getFile($id, Auth::id());
         if (!$file) {
             Response::abort(404, 'Archivo no encontrado');
         }
 
-        // Obtener shares existentes
-        $shares = Database::fetchAll(
-            "SELECT * FROM file_shares WHERE file_id = ? ORDER BY created_at DESC",
+        // ✅ Obtener compartidos
+        $shares = $this->db->fetchAll(
+            "SELECT s.*, u.username, u.email 
+             FROM file_shares s 
+             LEFT JOIN users u ON u.id = s.shared_with 
+             WHERE s.file_id = ? 
+             ORDER BY s.created_at DESC",
             [$id]
         );
 
-        // Obtener usuarios para compartir
-        $users = Database::fetchAll(
-            "SELECT id, username, email FROM users WHERE is_active = 1 ORDER BY username"
+        // ✅ Obtener usuarios activos para compartir
+        $users = $this->db->fetchAll(
+            "SELECT id, username, email FROM users WHERE status = 'active' ORDER BY username"
         );
 
-        Response::render(View::render('admin.files.share', [
+        Response::render(View::render('files.share', [
             'file' => $file,
             'shares' => $shares,
             'users' => $users,
@@ -368,25 +560,44 @@ class FilesController
     public function share(Request $request, array $params): void
     {
         CSRF::guard();
-
         if (!Auth::can('files.share')) {
             Response::abort(403, 'No tienes permisos para compartir archivos');
         }
 
-        $id = (int)$params['id'];
-        $file = $this->fileManager->getFile($id, Auth::id());
-
-        if (!$file) {
-            Response::abort(404, 'Archivo no encontrado');
+        $id = (int)($params['id'] ?? 0);
+        if (!$id) {
+            Session::flash('flash.error', 'ID de archivo no válido');
+            Response::redirect(url('admin/files'));
+            return;
         }
 
-        $sharedWith = (int)$request->post('shared_with');
-        $accessLevel = $request->post('access_level', 'view');
-        $days = $request->post('days') ? (int)$request->post('days') : null;
+        $file = $this->fileManager->getFile($id, Auth::id());
+        if (!$file) {
+            Session::flash('flash.error', 'Archivo no encontrado');
+            Response::redirect(url('admin/files'));
+            return;
+        }
 
-        // Validar usuario destino
-        $user = Database::fetch(
-            "SELECT id FROM users WHERE id = ? AND is_active = 1",
+        $sharedWith = (int)$request->post('shared_with', 0);
+        $accessLevel = $request->post('access_level', 'view');
+        $days = (int)$request->post('days', 0);
+
+        // ✅ Validar usuario destino
+        if ($sharedWith <= 0) {
+            Session::flash('flash.error', 'Debes seleccionar un usuario destino');
+            Response::redirect(url("admin/files/{$id}/share"));
+            return;
+        }
+
+        if ($sharedWith === Auth::id()) {
+            Session::flash('flash.error', 'No puedes compartir el archivo contigo mismo');
+            Response::redirect(url("admin/files/{$id}/share"));
+            return;
+        }
+
+        // ✅ Verificar que el usuario existe
+        $user = $this->db->fetch(
+            "SELECT id FROM users WHERE id = ? AND status = 'active'",
             [$sharedWith]
         );
 
@@ -396,71 +607,30 @@ class FilesController
             return;
         }
 
-        // No compartir consigo mismo
-        if ($sharedWith === Auth::id()) {
-            Session::flash('flash.error', 'No puedes compartir el archivo contigo mismo');
-            Response::redirect(url("admin/files/{$id}/share"));
-            return;
-        }
-
-        // Guardar share
-        $expiresAt = $days ? date('Y-m-d H:i:s', strtotime("+{$days} days")) : null;
+        // ✅ Calcular expiración
+        $expiresAt = $days > 0 ? date('Y-m-d H:i:s', strtotime("+{$days} days")) : null;
 
         try {
-            Database::insert(
-                "INSERT INTO file_shares (file_id, shared_by, shared_with, access_level, expires_at, created_at)
+            $this->db->insert(
+                "INSERT INTO file_shares 
+                 (file_id, shared_by, shared_with, access_level, expires_at, created_at) 
                  VALUES (?, ?, ?, ?, ?, NOW())",
-                [Auth::id(), $sharedWith, $accessLevel, $expiresAt]
+                [$id, Auth::id(), $sharedWith, $accessLevel, $expiresAt]
             );
 
-            AuditService::log(
+            $this->auditService->log(
+                Auth::id(),
                 'file_shared',
-                "Compartió el archivo ID {$id} con el usuario ID {$sharedWith}",
-                'files',
-                $id
-            );
-
-            Session::flash('flash.success', 'Archivo compartido correctamente');
-
-        } catch (Throwable $e) {
-            Session::flash('flash.error', 'Error al compartir el archivo: ' . $e->getMessage());
-        }
-
-        Response::redirect(url("admin/files/{$id}/share"));
-    }
-
-    /**
-     * Revoca un compartir
-     */
-    public function revokeShare(Request $request, array $params): void
-    {
-        CSRF::guard();
-
-        if (!Auth::can('files.share')) {
-            Response::abort(403, 'No tienes permisos para revocar compartidos');
-        }
-
-        $shareId = (int)$params['share_id'];
-        
-        try {
-            Database::execute(
-                "DELETE FROM file_shares WHERE id = ? AND shared_by = ?",
-                [$shareId, Auth::id()]
-            );
-
-            AuditService::log(
-                'file_share_revoked',
-                "Revocó compartido ID {$shareId}",
+                "Compartió el archivo {$file['original_name']} con el usuario ID {$sharedWith}",
                 'files'
             );
 
-            Session::flash('flash.success', 'Compartido revocado correctamente');
-
+            Session::flash('flash.success', 'Archivo compartido correctamente');
         } catch (Throwable $e) {
-            Session::flash('flash.error', 'Error al revocar el compartido: ' . $e->getMessage());
+            Session::flash('flash.error', 'Error al compartir: ' . $e->getMessage());
         }
 
-        Response::redirect(url('admin/files'));
+        Response::redirect(url("admin/files/{$id}/share"));
     }
 
     /**
@@ -469,30 +639,16 @@ class FilesController
     public function delete(Request $request, array $params): void
     {
         CSRF::guard();
-
         if (!Auth::can('files.delete')) {
             Response::abort(403, 'No tienes permisos para eliminar archivos');
         }
 
-        $id = (int)$params['id'];
-        $file = $this->fileManager->getFile($id, Auth::id());
-
-        if (!$file) {
+        $id = (int)($params['id'] ?? 0);
+        if (!$id) {
             if ($request->isAjax()) {
-                Response::json(['success' => false, 'error' => 'Archivo no encontrado']);
+                Response::json(['success' => false, 'error' => 'ID no válido']);
             } else {
-                Session::flash('flash.error', 'Archivo no encontrado');
-                Response::redirect(url('admin/files'));
-            }
-            return;
-        }
-
-        // Solo propietario o admin puede eliminar
-        if ((int)$file['user_id'] !== Auth::id() && !Auth::can('files.delete_all')) {
-            if ($request->isAjax()) {
-                Response::json(['success' => false, 'error' => 'No tienes permisos para eliminar este archivo']);
-            } else {
-                Session::flash('flash.error', 'No tienes permisos para eliminar este archivo');
+                Session::flash('flash.error', 'ID de archivo no válido');
                 Response::redirect(url('admin/files'));
             }
             return;
@@ -501,92 +657,54 @@ class FilesController
         $result = $this->fileManager->delete($id, Auth::id());
 
         if ($result['success']) {
-            AuditService::log(
+            $this->auditService->log(
+                Auth::id(),
                 'file_deleted',
-                "Eliminó el archivo: {$file['original_name']}",
-                'files',
-                $id
+                "Eliminó el archivo ID: {$id}",
+                'files'
             );
         }
 
         if ($request->isAjax()) {
             Response::json($result);
         } else {
-            if ($result['success']) {
-                Session::flash('flash.success', $result['message']);
-            } else {
-                Session::flash('flash.error', $result['error']);
-            }
+            Session::flash(
+                $result['success'] ? 'flash.success' : 'flash.error',
+                $result['message'] ?? $result['error'] ?? 'Error al eliminar'
+            );
             Response::redirect(url('admin/files'));
         }
     }
 
     /**
-     * Eliminación permanente (solo admin)
+     * Subida WYSIWYG (base64 o archivo)
      */
-    public function hardDelete(Request $request, array $params): void
+    public function wysiwygUpload(Request $request): void
     {
         CSRF::guard();
-
-        if (!Auth::can('files.delete_all')) {
-            Response::abort(403, 'No tienes permisos para eliminar archivos permanentemente');
-        }
-
-        $id = (int)$params['id'];
-        $result = $this->fileManager->hardDelete($id);
-
-        if ($request->isAjax()) {
-            Response::json($result);
-        } else {
-            if ($result['success']) {
-                AuditService::log(
-                    'file_permanently_deleted',
-                    "Eliminó permanentemente el archivo ID: {$id}",
-                    'files',
-                    $id
-                );
-                Session::flash('flash.success', $result['message']);
-            } else {
-                Session::flash('flash.error', $result['error']);
-            }
-            Response::redirect(url('admin/files'));
-        }
-    }
-
-    /**
-     * Obtiene archivos para el editor WYSIWYG
-     */
-    public function getEditorFiles(Request $request): void
-    {
-        if (!Auth::can('files.view')) {
+        if (!Auth::can('files.upload')) {
             Response::abort(403);
         }
 
-        $userId = Auth::id();
-        $filters = [
-            'category' => $request->get('category', 'image'),
-            'is_public' => 1, // Mostrar solo públicos para el editor
-        ];
+        // Base64 desde editor
+        $base64 = $request->post('base64');
+        if ($base64) {
+            $result = $this->fileManager->uploadBase64(
+                $base64,
+                Auth::id(),
+                ['name' => $request->post('filename', 'editor_image.jpg')]
+            );
+            Response::json($result);
+            return;
+        }
 
-        $files = $this->fileManager->getUserFiles($userId, $filters);
+        // Archivo normal
+        if (isset($_FILES['file'])) {
+            $this->handleSingleUpload($request);
+            return;
+        }
 
-        // Formatear para el editor
-        $editorFiles = array_map(function($file) {
-            return [
-                'id' => $file['id'],
-                'name' => $file['original_name'],
-                'url' => $file['url'] ?? url('admin/files/' . $file['id'] . '/download'),
-                'thumbnail' => $file['url'] ?? '',
-                'size' => $this->fileManager->formatFileSize($file['file_size']),
-                'category' => $file['category'],
-                'uploaded_at' => $file['created_at'],
-            ];
-        }, $files);
-
-        Response::json([
-            'success' => true,
-            'files' => $editorFiles
-        ]);
+        Response::json(['success' => false, 'error' => 'No se recibió archivo'], 400);
     }
 
     /**
@@ -595,8 +713,8 @@ class FilesController
     private function getUploadErrorMessage(int $errorCode): string
     {
         $errors = [
-            UPLOAD_ERR_INI_SIZE => 'El archivo excede el tamaño máximo permitido por el servidor',
-            UPLOAD_ERR_FORM_SIZE => 'El archivo excede el tamaño máximo permitido por el formulario',
+            UPLOAD_ERR_INI_SIZE => 'El archivo excede el tamaño máximo del servidor',
+            UPLOAD_ERR_FORM_SIZE => 'El archivo excede el tamaño máximo del formulario',
             UPLOAD_ERR_PARTIAL => 'El archivo fue subido parcialmente',
             UPLOAD_ERR_NO_FILE => 'No se seleccionó ningún archivo',
             UPLOAD_ERR_NO_TMP_DIR => 'No hay directorio temporal disponible',
@@ -606,53 +724,155 @@ class FilesController
 
         return $errors[$errorCode] ?? 'Error desconocido al subir el archivo';
     }
+    
 
-    /**
-     * Obtiene estadísticas de archivos
-     */
-    public function stats(Request $request): void
-    {
-        if (!Auth::can('files.view')) {
-            Response::abort(403);
-        }
-
-        $userId = Auth::id();
-        $stats = $this->fileManager->getStats($userId);
-        $downloads = $this->fileManager->getDownloadStats(30);
-        $categories = $this->fileManager->getCategories();
-
-        Response::json([
-            'success' => true,
-            'stats' => $stats,
-            'downloads' => $downloads,
-            'categories' => $categories
-        ]);
+/**
+ * Búsqueda avanzada con filtros de metadata
+ */
+public function advancedSearch(Request $request): void
+{
+    if (!Auth::can('files.view')) {
+        Response::abort(403, 'No tienes permisos para ver archivos');
     }
 
-    /**
-     * Busca archivos por término
-     */
-    public function search(Request $request): void
-    {
-        if (!Auth::can('files.view')) {
-            Response::abort(403);
-        }
-
-        $term = $request->get('q', '');
-        if (strlen($term) < 2) {
-            Response::json(['success' => true, 'files' => []]);
-            return;
-        }
-
+    try {
         $filters = [
-            'search' => $term
+            'search' => $request->get('search'),
+            'category' => $request->get('category'),
+            'metadata_search' => $request->get('metadata_search'),
+            'min_width' => $request->get('min_width'),
+            'max_width' => $request->get('max_width'),
+            'exif_date_from' => $request->get('exif_date_from'),
+            'order_by_metadata' => $request->get('order_by_metadata'),
+            'order_direction' => $request->get('order_direction'),
         ];
 
-        $files = $this->fileManager->getUserFiles(Auth::id(), $filters);
+        // ✅ Eliminar filtros vacíos
+        $filters = array_filter($filters, function($value) {
+            return $value !== null && $value !== '';
+        });
 
-        Response::json([
-            'success' => true,
-            'files' => $files
-        ]);
+        $userId = Auth::id();
+        $files = $this->fileManager->searchFiles($filters, $userId);
+
+        Response::render(View::render('files.advanced_search', [
+            'files' => $files,
+            'filters' => $filters,
+            'categories' => $this->fileManager->getCategories()
+        ]));
+    } catch (Throwable $e) {
+        error_log('[FilesController] Error en advancedSearch: ' . $e->getMessage());
+        Response::render(View::render('files.advanced_search', [
+            'files' => [],
+            'filters' => [],
+            'categories' => []
+        ]));
     }
+}
+
+/**
+ * Actualiza metadata de un archivo
+ */
+public function updateMetadata(Request $request, array $params): void
+{
+    CSRF::guard();
+    if (!Auth::can('files.edit')) {
+        Response::abort(403, 'No tienes permisos para editar archivos');
+    }
+
+    $id = (int)($params['id'] ?? 0);
+    if (!$id) {
+        if ($request->isAjax()) {
+            Response::json(['success' => false, 'error' => 'ID no válido']);
+        } else {
+            Session::flash('flash.error', 'ID de archivo no válido');
+            Response::redirect(url('admin/files'));
+        }
+        return;
+    }
+
+    // ✅ Obtener metadata del request
+    $metadata = [
+        'description' => $request->post('description'),
+        'tags' => $request->post('tags'),
+        'custom_fields' => $request->post('custom_fields'),
+        'exif' => [
+            'make' => $request->post('exif_make'),
+            'model' => $request->post('exif_model'),
+            'datetime' => $request->post('exif_datetime'),
+        ]
+    ];
+
+    // ✅ Eliminar campos vacíos
+    $metadata = array_filter($metadata, function($value) {
+        return $value !== null && $value !== '';
+    });
+
+    $result = $this->fileManager->updateMetadata($id, Auth::id(), $metadata);
+
+    if ($request->isAjax()) {
+        Response::json($result);
+    } else {
+        Session::flash(
+            $result['success'] ? 'flash.success' : 'flash.error',
+            $result['message'] ?? $result['error'] ?? 'Error al actualizar metadata'
+        );
+        Response::redirect(url("admin/files/{$id}/edit"));
+    }
+}
+
+/**
+ * Exporta archivos con metadata a CSV
+ */
+public function export(Request $request): void
+{
+    if (!Auth::can('files.view')) {
+        Response::abort(403, 'No tienes permisos para exportar archivos');
+    }
+
+    try {
+        $userId = Auth::id();
+        $files = $this->fileManager->getUserFiles($userId);
+
+        // ✅ Preparar datos para exportación
+        $headers = ['ID', 'Nombre', 'Categoría', 'Tamaño', 'Descargas', 'Público', 'Fecha', 'Metadatos'];
+        $rows = [];
+
+        foreach ($files as $file) {
+            $metadata = json_decode($file['metadata'] ?? '{}', true) ?? [];
+            $exif = $metadata['exif'] ?? [];
+
+            $rows[] = [
+                $file['id'],
+                $file['original_name'],
+                $file['category'],
+                $this->fileManager->formatFileSize($file['file_size']),
+                $file['download_count'],
+                $file['is_public'] ? 'Sí' : 'No',
+                $file['created_at'],
+                json_encode($metadata)
+            ];
+        }
+
+        // ✅ Generar CSV
+        $filename = 'archivos_' . date('Y-m-d_H-i-s') . '.csv';
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+
+        $output = fopen('php://output', 'w');
+        fputcsv($output, $headers);
+
+        foreach ($rows as $row) {
+            fputcsv($output, $row);
+        }
+
+        fclose($output);
+        exit;
+
+    } catch (Throwable $e) {
+        error_log('[FilesController] Error en export: ' . $e->getMessage());
+        Session::flash('flash.error', 'Error al exportar archivos');
+        Response::redirect(url('admin/files'));
+    }
+}
 }

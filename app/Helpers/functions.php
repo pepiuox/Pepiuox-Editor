@@ -328,3 +328,110 @@ function h(string $str): string
 {
     return e($str);
 }
+
+/**
+ * Funciones auxiliares para el sistema de archivos
+ */
+
+if (!function_exists('_fileIcon')) {
+    function _fileIcon(string $category): string {
+        return match($category) {
+            'image'    => 'image',
+            'document' => 'file-earmark-text',
+            'audio'    => 'music-note',
+            'video'    => 'camera-video',
+            'archive'  => 'file-zip',
+            default    => 'file-earmark',
+        };
+    }
+}
+
+if (!function_exists('_fileIconColor')) {
+    function _fileIconColor(string $category): string {
+        return match($category) {
+            'image'    => '#22c55e',
+            'document' => '#3b82f6',
+            'audio'    => '#f59e0b',
+            'video'    => '#ef4444',
+            'archive'  => '#8b5cf6',
+            default    => '#8b949e',
+        };
+    }
+}
+
+if (!function_exists('_formatFileSize')) {
+    function _formatFileSize($bytes): string {
+        $bytes = (int)($bytes ?? 0);
+        if ($bytes < 1024) return $bytes . ' B';
+        if ($bytes < 1048576) return round($bytes / 1024, 1) . ' KB';
+        if ($bytes < 1073741824) return round($bytes / 1048576, 2) . ' MB';
+        return round($bytes / 1073741824, 2) . ' GB';
+    }
+}
+
+if (!function_exists('_fileExtension')) {
+    function _fileExtension(string $filename): string {
+        return strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+    }
+}
+
+// ✅ NUEVAS FUNCIONES PARA METADATA
+
+if (!function_exists('_getFileMetadata')) {
+    function _getFileMetadata(?array $file): array {
+        if (!$file || empty($file['metadata'])) {
+            return [];
+        }
+        
+        // Si metadata es string JSON, decodificarlo
+        if (is_string($file['metadata'])) {
+            return json_decode($file['metadata'], true) ?? [];
+        }
+        
+        return $file['metadata'] ?? [];
+    }
+}
+
+if (!function_exists('_getFileExif')) {
+    function _getFileExif(?array $file): ?array {
+        $metadata = _getFileMetadata($file);
+        return $metadata['exif'] ?? null;
+    }
+}
+
+if (!function_exists('_getFileDimensions')) {
+    function _getFileDimensions(?array $file): ?array {
+        $metadata = _getFileMetadata($file);
+        if (!empty($metadata['exif']['width']) && !empty($metadata['exif']['height'])) {
+            return [
+                'width' => $metadata['exif']['width'],
+                'height' => $metadata['exif']['height']
+            ];
+        }
+        return null;
+    }
+}
+
+if (!function_exists('_fileIsImage')) {
+    function _fileIsImage(?array $file): bool {
+        return ($file['category'] ?? '') === 'image';
+    }
+}
+
+if (!function_exists('_fileIsVideo')) {
+    function _fileIsVideo(?array $file): bool {
+        return ($file['category'] ?? '') === 'video';
+    }
+}
+
+if (!function_exists('_fileIsAudio')) {
+    function _fileIsAudio(?array $file): bool {
+        return ($file['category'] ?? '') === 'audio';
+    }
+}
+
+if (!function_exists('_fileIsDocument')) {
+    function _fileIsDocument(?array $file): bool {
+        return ($file['category'] ?? '') === 'document';
+    }
+}

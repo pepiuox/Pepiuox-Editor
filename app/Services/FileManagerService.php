@@ -8,8 +8,8 @@ use App\Models\FileModel;
 use App\Models\MediaModel;
 use App\Services\ActivityLoggerService;
 use PDO;
-use Exception;
 use Throwable;
+use Exception;
 
 /**
  * Servicio de gestión de archivos y medios
@@ -24,8 +24,12 @@ class FileManagerService
     private Security $security;
     private ActivityLoggerService $logger;
     private string $uploadsDir;
+    
+    // ✅ Tipos MIME permitidos (coherentes con la estructura)
     private array $allowedTypes = [
+        // Imágenes
         'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+        // Documentos
         'application/pdf', 'application/msword',
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         'application/vnd.ms-excel',
@@ -33,21 +37,29 @@ class FileManagerService
         'application/vnd.ms-powerpoint',
         'application/vnd.openxmlformats-officedocument.presentationml.presentation',
         'text/plain', 'text/csv',
+        // Archivos comprimidos
         'application/zip', 'application/x-rar-compressed', 'application/x-tar',
         'application/x-7z-compressed', 'application/gzip',
+        // Audio
         'audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/mp4',
+        // Video
         'video/mp4', 'video/mpeg', 'video/webm', 'video/quicktime'
     ];
 
+    // ✅ Tamaños máximos por categoría (en bytes)
     private array $maxFileSizes = [
         'image' => 10 * 1024 * 1024,    // 10MB
         'document' => 20 * 1024 * 1024, // 20MB
         'audio' => 50 * 1024 * 1024,    // 50MB
         'video' => 100 * 1024 * 1024,   // 100MB
         'archive' => 50 * 1024 * 1024,  // 50MB
+        'other' => 10 * 1024 * 1024,    // 10MB
         'default' => 10 * 1024 * 1024   // 10MB
     ];
 
+    /**
+     * Constructor con todas las dependencias
+     */
     public function __construct(
         Database $db,
         FileModel $fileModel,
@@ -60,7 +72,12 @@ class FileManagerService
         $this->mediaModel = $mediaModel;
         $this->security = $security;
         $this->logger = $logger;
-        $this->uploadsDir = ROOT_PATH . '/uploads/';
+        
+        // ✅ Usar constantes definidas en paths.php
+        $this->uploadsDir = defined('UPLOADS_PATH') 
+            ? rtrim(UPLOADS_PATH, '/') . '/' 
+            : (ROOT_PATH . '/uploads/');
+        
         $this->initializeDirectories();
     }
 
@@ -69,12 +86,13 @@ class FileManagerService
      */
     private function initializeDirectories(): void
     {
+        // ✅ Coherente con las categorías de la base de datos
         $categories = ['documents', 'images', 'audio', 'video', 'archives', 'others', 'media', 'temp'];
         
         foreach ($categories as $category) {
             $path = $this->uploadsDir . $category . '/';
             if (!is_dir($path)) {
-                mkdir($path, 0755, true);
+                @mkdir($path, 0755, true);
             }
         }
     }
@@ -85,12 +103,12 @@ class FileManagerService
     public function upload(array $file, int $userId, array $options = []): array
     {
         try {
-            // Validar archivo
+            // ✅ Validar archivo
             if ($file['error'] !== UPLOAD_ERR_OK) {
                 throw new Exception($this->getUploadErrorMessage($file['error']));
             }
 
-            // Validar tamaño
+            // ✅ Validar tamaño
             $size = $file['size'];
             $category = $options['category'] ?? $this->getFileCategory($file['type']);
             $maxSize = $this->maxFileSizes[$category] ?? $this->maxFileSizes['default'];
@@ -103,19 +121,19 @@ class FileManagerService
                 ));
             }
 
-            // Validar tipo
+            // ✅ Validar tipo MIME real
             $mimeType = mime_content_type($file['tmp_name']) ?: $file['type'];
             if (!$this->isAllowedType($mimeType)) {
                 throw new Exception('Tipo de archivo no permitido: ' . $mimeType);
             }
 
-            // Validar extensión
+            // ✅ Validar extensión
             $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
             if (!$this->isAllowedExtension($extension)) {
                 throw new Exception('Extensión de archivo no permitida: ' . $extension);
             }
 
-            // Verificar duplicados (opcional)
+            // ✅ Verificar duplicados (opcional)
             if (!empty($options['check_duplicate'])) {
                 $existing = $this->findDuplicate($file['name'], $userId);
                 if ($existing) {
@@ -131,25 +149,25 @@ class FileManagerService
                 }
             }
 
-            // Generar nombre único
+            // ✅ Generar nombre único
             $uniqueName = $this->generateUniqueFilename($extension);
             $categoryDir = $this->getCategoryDirectory($category);
             $uploadPath = $categoryDir . '/' . $uniqueName;
 
-            // Mover archivo
+            // ✅ Mover archivo
             if (!move_uploaded_file($file['tmp_name'], $uploadPath)) {
                 throw new Exception('Error al guardar el archivo en el servidor');
             }
 
-            // Establecer permisos
+            // ✅ Establecer permisos
             chmod($uploadPath, 0644);
 
-            // Procesar imagen si es necesario
+            // ✅ Procesar imagen si es necesario
             if (str_starts_with($mimeType, 'image/')) {
                 $this->processImage($uploadPath, $options);
             }
 
-            // Guardar en base de datos
+            // ✅ Guardar en base de datos (coherente con la estructura)
             $data = [
                 'user_id' => $userId,
                 'filename' => $uniqueName,
@@ -166,7 +184,7 @@ class FileManagerService
 
             $fileId = $this->fileModel->create($data);
 
-            // Registrar actividad
+            // ✅ Registrar actividad
             $this->logger->logCurrentUser(
                 'file_uploaded',
                 "Subió el archivo: {$file['name']} ({$this->formatFileSize($size)})"
@@ -194,14 +212,118 @@ class FileManagerService
             ];
         }
     }
+    
+/**
+ * Obtiene archivos con filtros avanzados incluyendo metadata
+ */
+public function searchFiles(array $filters = [], int $userId = null): array
+{
+    $query = "SELECT * FROM files WHERE deleted_at IS NULL";
+    $params = [];
 
+    if ($userId !== null) {
+        $query .= " AND user_id = ?";
+        $params[] = $userId;
+    }
+
+    // ✅ Búsqueda en metadata (JSON)
+    if (!empty($filters['metadata_search'])) {
+        $query .= " AND JSON_EXTRACT(metadata, '$.*') LIKE ?";
+        $params[] = '%' . $filters['metadata_search'] . '%';
+    }
+
+    // ✅ Filtrar por dimensiones de imagen
+    if (!empty($filters['min_width'])) {
+        $query .= " AND JSON_EXTRACT(metadata, '$.exif.width') >= ?";
+        $params[] = (int)$filters['min_width'];
+    }
+
+    if (!empty($filters['max_width'])) {
+        $query .= " AND JSON_EXTRACT(metadata, '$.exif.width') <= ?";
+        $params[] = (int)$filters['max_width'];
+    }
+
+    // ✅ Filtrar por fecha de EXIF
+    if (!empty($filters['exif_date_from'])) {
+        $query .= " AND JSON_EXTRACT(metadata, '$.exif.datetime') >= ?";
+        $params[] = $filters['exif_date_from'];
+    }
+
+    // ✅ Ordenar por metadata
+    if (!empty($filters['order_by_metadata'])) {
+        $direction = $filters['order_direction'] ?? 'ASC';
+        $query .= " ORDER BY JSON_EXTRACT(metadata, '$." . $filters['order_by_metadata'] . "') " . $direction;
+    } else {
+        $query .= " ORDER BY created_at DESC";
+    }
+
+    return $this->db->fetchAll($query, $params);
+}
+
+/**
+ * Actualiza metadata de un archivo
+ */
+public function updateMetadata(int $fileId, int $userId, array $metadata): array
+{
+    try {
+        // ✅ Verificar que el archivo existe y pertenece al usuario
+        $file = $this->getFile($fileId, $userId);
+        if (!$file) {
+            return ['success' => false, 'error' => 'Archivo no encontrado'];
+        }
+
+        // ✅ Combinar metadata existente con la nueva
+        $existingMetadata = json_decode($file['metadata'] ?? '{}', true) ?? [];
+        $newMetadata = array_merge($existingMetadata, $metadata);
+
+        // ✅ Actualizar en la base de datos
+        $updated = $this->fileModel->update($fileId, $userId, [
+            'metadata' => json_encode($newMetadata)
+        ]);
+
+        if (!$updated) {
+            throw new Exception('Error al actualizar metadata');
+        }
+
+        return [
+            'success' => true,
+            'message' => 'Metadata actualizada correctamente',
+            'metadata' => $newMetadata
+        ];
+
+    } catch (Throwable $e) {
+        return ['success' => false, 'error' => $e->getMessage()];
+    }
+}
+
+/**
+ * Obtiene estadísticas detalladas con metadata
+ */
+public function getDetailedStats(?int $userId = null): array
+{
+    $stats = $this->getStats($userId);
+
+    // ✅ Estadísticas de metadata
+    $metadataStats = $this->db->fetch(
+        "SELECT 
+            COUNT(CASE WHEN metadata IS NOT NULL THEN 1 END) as has_metadata,
+            COUNT(CASE WHEN JSON_EXTRACT(metadata, '$.exif') IS NOT NULL THEN 1 END) as has_exif,
+            COUNT(CASE WHEN JSON_EXTRACT(metadata, '$.exif.make') IS NOT NULL THEN 1 END) as has_camera_info,
+            COUNT(CASE WHEN JSON_EXTRACT(metadata, '$.exif.width') IS NOT NULL THEN 1 END) as has_dimensions
+         FROM files
+         WHERE deleted_at IS NULL" . ($userId !== null ? " AND user_id = ?" : ""),
+        $userId !== null ? [$userId] : []
+    );
+
+    return array_merge($stats, $metadataStats);
+}
     /**
      * Sube un archivo base64 (desde editor WYSIWYG)
      */
     public function uploadBase64(string $base64, int $userId, array $options = []): array
     {
         try {
-            // Decodificar base64
+            // ✅ Decodificar base64
             $base64 = preg_replace('/^data:image\/\w+;base64,/', '', $base64);
             $binaryData = base64_decode($base64, true);
 
@@ -209,7 +331,7 @@ class FileManagerService
                 throw new Exception('Datos base64 inválidos');
             }
 
-            // Detectar tipo MIME
+            // ✅ Detectar tipo MIME
             $finfo = finfo_open(FILEINFO_MIME_TYPE);
             $mimeType = finfo_buffer($finfo, $binaryData);
             finfo_close($finfo);
@@ -218,26 +340,26 @@ class FileManagerService
                 throw new Exception('Tipo de archivo no permitido: ' . $mimeType);
             }
 
-            // Obtener extensión
+            // ✅ Obtener extensión
             $extension = $this->getExtensionFromMime($mimeType);
             if (!$extension) {
                 $extension = 'jpg';
             }
 
-            // Generar nombre único
+            // ✅ Generar nombre único
             $uniqueName = $this->generateUniqueFilename($extension);
-            $category = 'images';
+            $category = 'image'; // ✅ Coherente con la base de datos (ENUM)
             $categoryDir = $this->getCategoryDirectory($category);
             $uploadPath = $categoryDir . '/' . $uniqueName;
 
-            // Guardar archivo
+            // ✅ Guardar archivo
             if (file_put_contents($uploadPath, $binaryData) === false) {
                 throw new Exception('Error al guardar el archivo');
             }
 
             chmod($uploadPath, 0644);
 
-            // Guardar en base de datos
+            // ✅ Guardar en base de datos
             $data = [
                 'user_id' => $userId,
                 'filename' => $uniqueName,
@@ -275,39 +397,52 @@ class FileManagerService
      */
     public function getUserFiles(int $userId, array $filters = []): array
     {
-        $query = "SELECT * FROM files WHERE user_id = ? AND deleted_at IS NULL";
-        $params = [$userId];
+        try {
+            $query = "SELECT * FROM files WHERE user_id = ? AND deleted_at IS NULL";
+            $params = [$userId];
 
-        if (!empty($filters['category'])) {
-            $query .= " AND category = ?";
-            $params[] = $filters['category'];
+            // ✅ Filtrar por categoría (coherente con ENUM)
+            if (!empty($filters['category'])) {
+                $validCategories = ['document', 'image', 'audio', 'video', 'archive', 'other'];
+                if (in_array($filters['category'], $validCategories, true)) {
+                    $query .= " AND category = ?";
+                    $params[] = $filters['category'];
+                }
+            }
+
+            // ✅ Búsqueda por nombre o descripción
+            if (!empty($filters['search'])) {
+                $query .= " AND (original_name LIKE ? OR description LIKE ?)";
+                $searchTerm = '%' . $filters['search'] . '%';
+                $params[] = $searchTerm;
+                $params[] = $searchTerm;
+            }
+
+            // ✅ Filtrar por estado público
+            if (isset($filters['is_public']) && in_array($filters['is_public'], [0, 1], true)) {
+                $query .= " AND is_public = ?";
+                $params[] = (int)$filters['is_public'];
+            }
+
+            // ✅ Filtrar por fecha
+            if (!empty($filters['date_from'])) {
+                $query .= " AND created_at >= ?";
+                $params[] = $filters['date_from'] . ' 00:00:00';
+            }
+
+            if (!empty($filters['date_to'])) {
+                $query .= " AND created_at <= ?";
+                $params[] = $filters['date_to'] . ' 23:59:59';
+            }
+
+            // ✅ Ordenar por fecha de creación
+            $query .= " ORDER BY created_at DESC";
+
+            return $this->db->fetchAll($query, $params);
+        } catch (Throwable $e) {
+            error_log('[FileManagerService] Error en getUserFiles: ' . $e->getMessage());
+            return [];
         }
-
-        if (!empty($filters['search'])) {
-            $query .= " AND (original_name LIKE ? OR description LIKE ?)";
-            $searchTerm = '%' . $filters['search'] . '%';
-            $params[] = $searchTerm;
-            $params[] = $searchTerm;
-        }
-
-        if (!empty($filters['is_public'])) {
-            $query .= " AND is_public = ?";
-            $params[] = $filters['is_public'];
-        }
-
-        if (!empty($filters['date_from'])) {
-            $query .= " AND created_at >= ?";
-            $params[] = $filters['date_from'] . ' 00:00:00';
-        }
-
-        if (!empty($filters['date_to'])) {
-            $query .= " AND created_at <= ?";
-            $params[] = $filters['date_to'] . ' 23:59:59';
-        }
-
-        $query .= " ORDER BY created_at DESC";
-
-        return $this->db->fetchAll($query, $params);
     }
 
     /**
@@ -315,27 +450,35 @@ class FileManagerService
      */
     public function getPublicFiles(array $filters = []): array
     {
-        $query = "SELECT f.*, u.username as owner_name 
-                  FROM files f
-                  LEFT JOIN users u ON f.user_id = u.id
-                  WHERE f.is_public = 1 AND f.deleted_at IS NULL";
-        $params = [];
+        try {
+            $query = "SELECT f.*, u.username as owner_name 
+                      FROM files f
+                      LEFT JOIN users u ON f.user_id = u.id
+                      WHERE f.is_public = 1 AND f.deleted_at IS NULL";
+            $params = [];
 
-        if (!empty($filters['category'])) {
-            $query .= " AND f.category = ?";
-            $params[] = $filters['category'];
+            if (!empty($filters['category'])) {
+                $validCategories = ['document', 'image', 'audio', 'video', 'archive', 'other'];
+                if (in_array($filters['category'], $validCategories, true)) {
+                    $query .= " AND f.category = ?";
+                    $params[] = $filters['category'];
+                }
+            }
+
+            if (!empty($filters['search'])) {
+                $query .= " AND (f.original_name LIKE ? OR f.description LIKE ?)";
+                $searchTerm = '%' . $filters['search'] . '%';
+                $params[] = $searchTerm;
+                $params[] = $searchTerm;
+            }
+
+            $query .= " ORDER BY f.download_count DESC, f.created_at DESC";
+
+            return $this->db->fetchAll($query, $params);
+        } catch (Throwable $e) {
+            error_log('[FileManagerService] Error en getPublicFiles: ' . $e->getMessage());
+            return [];
         }
-
-        if (!empty($filters['search'])) {
-            $query .= " AND (f.original_name LIKE ? OR f.description LIKE ?)";
-            $searchTerm = '%' . $filters['search'] . '%';
-            $params[] = $searchTerm;
-            $params[] = $searchTerm;
-        }
-
-        $query .= " ORDER BY f.download_count DESC, f.created_at DESC";
-
-        return $this->db->fetchAll($query, $params);
     }
 
     /**
@@ -343,26 +486,34 @@ class FileManagerService
      */
     public function getFile(int $fileId, ?int $userId = null): ?array
     {
-        $query = "SELECT f.*, u.username as owner_name, u.email as owner_email
-                  FROM files f
-                  LEFT JOIN users u ON f.user_id = u.id
-                  WHERE f.id = ? AND f.deleted_at IS NULL";
+        try {
+            $query = "SELECT f.*, u.username as owner_name, u.email as owner_email
+                      FROM files f
+                      LEFT JOIN users u ON f.user_id = u.id
+                      WHERE f.id = ? AND f.deleted_at IS NULL";
 
-        if ($userId !== null) {
-            $query .= " AND (f.user_id = ? OR f.is_public = 1)";
-            $file = $this->db->fetch($query, [$fileId, $userId]);
-        } else {
-            $file = $this->db->fetch($query, [$fileId]);
+            $params = [$fileId];
+
+            if ($userId !== null) {
+                $query .= " AND (f.user_id = ? OR f.is_public = 1)";
+                $params[] = $userId;
+            }
+
+            $file = $this->db->fetch($query, $params);
+
+            if ($file) {
+                // ✅ Añadir información adicional
+                $file['size_formatted'] = $this->formatFileSize($file['file_size']);
+                $file['icon'] = $this->getFileIcon($file['file_type']);
+                $file['color'] = $this->getCategoryColor($file['category']);
+                $file['url'] = $this->getFileUrl($file['filename'], $file['category']);
+            }
+
+            return $file;
+        } catch (Throwable $e) {
+            error_log('[FileManagerService] Error en getFile: ' . $e->getMessage());
+            return null;
         }
-
-        if ($file) {
-            $file['size_formatted'] = $this->formatFileSize($file['file_size']);
-            $file['icon'] = $this->getFileIcon($file['file_type']);
-            $file['color'] = $this->getCategoryColor($file['category']);
-            $file['url'] = $this->getFileUrl($file['filename'], $file['category']);
-        }
-
-        return $file;
     }
 
     /**
@@ -377,14 +528,16 @@ class FileManagerService
                 return ['success' => false, 'error' => 'Archivo no encontrado'];
             }
 
-            if ($file['user_id'] !== $userId) {
+            // ✅ Verificar que sea el propietario
+            if ((int)$file['user_id'] !== $userId) {
                 return ['success' => false, 'error' => 'No tienes permisos para eliminar este archivo'];
             }
 
+            // ✅ Soft delete usando el modelo
             $deleted = $this->fileModel->softDelete($fileId, $userId);
 
             if (!$deleted) {
-                throw new Exception('Error al eliminar el archivo');
+                throw new Exception('Error al eliminar el archivo de la base de datos');
             }
 
             $this->logger->logCurrentUser(
@@ -414,12 +567,12 @@ class FileManagerService
                 return ['success' => false, 'error' => 'Archivo no encontrado'];
             }
 
-            // Eliminar archivo físico
+            // ✅ Eliminar archivo físico
             if (is_file($file['file_path'])) {
-                unlink($file['file_path']);
+                @unlink($file['file_path']);
             }
 
-            // Eliminar de la base de datos
+            // ✅ Eliminar de la base de datos
             $deleted = $this->fileModel->hardDelete($fileId);
 
             if (!$deleted) {
@@ -447,11 +600,26 @@ class FileManagerService
     public function update(int $fileId, int $userId, array $data): array
     {
         try {
+            // ✅ Campos permitidos (coherentes con la base de datos)
             $allowedFields = ['description', 'is_public', 'category'];
             $updateData = [];
 
             foreach ($data as $key => $value) {
-                if (in_array($key, $allowedFields)) {
+                if (in_array($key, $allowedFields, true)) {
+                    // ✅ Validar categoría si se actualiza
+                    if ($key === 'category') {
+                        $validCategories = ['document', 'image', 'audio', 'video', 'archive', 'other'];
+                        if (!in_array($value, $validCategories, true)) {
+                            throw new Exception('Categoría no válida');
+                        }
+                    }
+                    // ✅ Validar is_public
+                    if ($key === 'is_public') {
+                        $value = (int)$value;
+                        if (!in_array($value, [0, 1], true)) {
+                            throw new Exception('is_public debe ser 0 o 1');
+                        }
+                    }
                     $updateData[$key] = $value;
                 }
             }
@@ -486,7 +654,12 @@ class FileManagerService
      */
     public function incrementDownloadCount(int $fileId): bool
     {
-        return $this->fileModel->incrementDownloads($fileId);
+        try {
+            return $this->fileModel->incrementDownloads($fileId);
+        } catch (Throwable $e) {
+            error_log('[FileManagerService] Error en incrementDownloadCount: ' . $e->getMessage());
+            return false;
+        }
     }
 
     /**
@@ -494,46 +667,76 @@ class FileManagerService
      */
     public function getStats(?int $userId = null): array
     {
-        $query = "SELECT 
-                    COUNT(*) as total_files,
-                    SUM(file_size) as total_size,
-                    COUNT(CASE WHEN category = 'image' THEN 1 END) as images,
-                    COUNT(CASE WHEN category = 'document' THEN 1 END) as documents,
-                    COUNT(CASE WHEN category = 'audio' THEN 1 END) as audio,
-                    COUNT(CASE WHEN category = 'video' THEN 1 END) as video,
-                    COUNT(CASE WHEN category = 'archive' THEN 1 END) as archives,
-                    COUNT(CASE WHEN is_public = 1 THEN 1 END) as public_files
-                  FROM files
-                  WHERE deleted_at IS NULL";
+        try {
+            $query = "SELECT 
+                        COUNT(*) as total_files,
+                        COALESCE(SUM(file_size), 0) as total_size,
+                        COUNT(CASE WHEN category = 'image' THEN 1 END) as images,
+                        COUNT(CASE WHEN category = 'document' THEN 1 END) as documents,
+                        COUNT(CASE WHEN category = 'audio' THEN 1 END) as audio,
+                        COUNT(CASE WHEN category = 'video' THEN 1 END) as video,
+                        COUNT(CASE WHEN category = 'archive' THEN 1 END) as archives,
+                        COUNT(CASE WHEN category = 'other' THEN 1 END) as others,
+                        COUNT(CASE WHEN is_public = 1 THEN 1 END) as public_files,
+                        COUNT(CASE WHEN is_public = 0 THEN 1 END) as private_files
+                      FROM files
+                      WHERE deleted_at IS NULL";
 
-        $params = [];
+            $params = [];
 
-        if ($userId !== null) {
-            $query .= " AND user_id = ?";
-            $params[] = $userId;
+            if ($userId !== null) {
+                $query .= " AND user_id = ?";
+                $params[] = $userId;
+            }
+
+            $stats = $this->db->fetch($query, $params);
+
+            if ($stats) {
+                $stats['total_size_formatted'] = $this->formatFileSize($stats['total_size'] ?? 0);
+                $stats['avg_size'] = $stats['total_files'] > 0
+                    ? $this->formatFileSize($stats['total_size'] / $stats['total_files'])
+                    : '0 bytes';
+            }
+
+            return $stats ?? [
+                'total_files' => 0,
+                'total_size' => 0,
+                'total_size_formatted' => '0 bytes',
+                'images' => 0,
+                'documents' => 0,
+                'audio' => 0,
+                'video' => 0,
+                'archives' => 0,
+                'others' => 0,
+                'public_files' => 0,
+                'private_files' => 0,
+                'avg_size' => '0 bytes'
+            ];
+        } catch (Throwable $e) {
+            error_log('[FileManagerService] Error en getStats: ' . $e->getMessage());
+            return [
+                'total_files' => 0,
+                'total_size' => 0,
+                'total_size_formatted' => '0 bytes',
+                'images' => 0,
+                'documents' => 0,
+                'audio' => 0,
+                'video' => 0,
+                'archives' => 0,
+                'others' => 0,
+                'public_files' => 0,
+                'private_files' => 0,
+                'avg_size' => '0 bytes'
+            ];
         }
+    }
 
-        $stats = $this->db->fetch($query, $params);
-
-        if ($stats) {
-            $stats['total_size_formatted'] = $this->formatFileSize($stats['total_size'] ?? 0);
-            $stats['avg_size'] = $stats['total_files'] > 0
-                ? $this->formatFileSize($stats['total_size'] / $stats['total_files'])
-                : '0 bytes';
-        }
-
-        return $stats ?? [
-            'total_files' => 0,
-            'total_size' => 0,
-            'total_size_formatted' => '0 bytes',
-            'images' => 0,
-            'documents' => 0,
-            'audio' => 0,
-            'video' => 0,
-            'archives' => 0,
-            'public_files' => 0,
-            'avg_size' => '0 bytes'
-        ];
+    /**
+     * Obtiene todas las categorías disponibles (coherente con ENUM)
+     */
+    public function getCategories(): array
+    {
+        return ['document', 'image', 'audio', 'video', 'archive', 'other'];
     }
 
     /**
@@ -541,20 +744,28 @@ class FileManagerService
      */
     public function getDownloadStats(int $days = 30): array
     {
-        return $this->db->fetchAll(
-            "SELECT 
-                f.id,
-                f.original_name,
-                f.download_count,
-                f.category,
-                DATE(f.created_at) as upload_date
-             FROM files f
-             WHERE f.download_count > 0
-             AND f.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
-             ORDER BY f.download_count DESC
-             LIMIT 20",
-            [$days]
-        );
+        try {
+            return $this->db->fetchAll(
+                "SELECT 
+                    f.id,
+                    f.original_name,
+                    f.download_count,
+                    f.category,
+                    DATE(f.created_at) as upload_date,
+                    u.username as owner_name
+                 FROM files f
+                 LEFT JOIN users u ON f.user_id = u.id
+                 WHERE f.download_count > 0
+                 AND f.deleted_at IS NULL
+                 AND f.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+                 ORDER BY f.download_count DESC
+                 LIMIT 20",
+                [$days]
+            );
+        } catch (Throwable $e) {
+            error_log('[FileManagerService] Error en getDownloadStats: ' . $e->getMessage());
+            return [];
+        }
     }
 
     /**
@@ -562,12 +773,17 @@ class FileManagerService
      */
     public function findDuplicate(string $filename, int $userId): ?array
     {
-        return $this->db->fetch(
-            "SELECT * FROM files 
-             WHERE original_name = ? AND user_id = ? AND deleted_at IS NULL
-             LIMIT 1",
-            [$filename, $userId]
-        );
+        try {
+            return $this->db->fetch(
+                "SELECT * FROM files 
+                 WHERE original_name = ? AND user_id = ? AND deleted_at IS NULL
+                 LIMIT 1",
+                [$filename, $userId]
+            );
+        } catch (Throwable $e) {
+            error_log('[FileManagerService] Error en findDuplicate: ' . $e->getMessage());
+            return null;
+        }
     }
 
     /**
@@ -583,14 +799,14 @@ class FileManagerService
         $maxHeight = $options['max_height'] ?? 1080;
         $quality = $options['quality'] ?? 85;
 
-        $imageInfo = getimagesize($path);
+        $imageInfo = @getimagesize($path);
         if (!$imageInfo) {
             return;
         }
 
         [$width, $height] = $imageInfo;
 
-        // Redimensionar si es necesario
+        // ✅ Redimensionar si es necesario
         if ($width > $maxWidth || $height > $maxHeight) {
             $ratio = min($maxWidth / $width, $maxHeight / $height);
             $newWidth = (int)($width * $ratio);
@@ -603,8 +819,8 @@ class FileManagerService
 
             $dst = imagecreatetruecolor($newWidth, $newHeight);
 
-            // Mantener transparencia
-            if ($imageInfo[2] === IMAGETYPE_PNG) {
+            // ✅ Mantener transparencia para PNG y GIF
+            if ($imageInfo[2] === IMAGETYPE_PNG || $imageInfo[2] === IMAGETYPE_GIF) {
                 imagealphablending($dst, false);
                 imagesavealpha($dst, true);
                 $transparent = imagecolorallocatealpha($dst, 255, 255, 255, 127);
@@ -614,7 +830,7 @@ class FileManagerService
             imagecopyresampled($dst, $src, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
             imagedestroy($src);
 
-            // Guardar imagen redimensionada
+            // ✅ Guardar imagen redimensionada
             $this->saveImage($dst, $path, $imageInfo[2], $quality);
             imagedestroy($dst);
         }
@@ -626,10 +842,10 @@ class FileManagerService
     private function createImageFromFile(string $path, int $type)
     {
         return match ($type) {
-            IMAGETYPE_JPEG => imagecreatefromjpeg($path),
-            IMAGETYPE_PNG => imagecreatefrompng($path),
-            IMAGETYPE_GIF => imagecreatefromgif($path),
-            IMAGETYPE_WEBP => imagecreatefromwebp($path),
+            IMAGETYPE_JPEG => @imagecreatefromjpeg($path),
+            IMAGETYPE_PNG => @imagecreatefrompng($path),
+            IMAGETYPE_GIF => @imagecreatefromgif($path),
+            IMAGETYPE_WEBP => @imagecreatefromwebp($path),
             default => null
         };
     }
@@ -640,11 +856,11 @@ class FileManagerService
     private function saveImage($resource, string $path, int $type, int $quality): void
     {
         match ($type) {
-            IMAGETYPE_JPEG => imagejpeg($resource, $path, $quality),
-            IMAGETYPE_PNG => imagepng($resource, $path, 9),
-            IMAGETYPE_GIF => imagegif($resource, $path),
-            IMAGETYPE_WEBP => imagewebp($resource, $path, $quality),
-            default => imagejpeg($resource, $path, $quality)
+            IMAGETYPE_JPEG => @imagejpeg($resource, $path, $quality),
+            IMAGETYPE_PNG => @imagepng($resource, $path, 9),
+            IMAGETYPE_GIF => @imagegif($resource, $path),
+            IMAGETYPE_WEBP => @imagewebp($resource, $path, $quality),
+            default => @imagejpeg($resource, $path, $quality)
         };
     }
 
@@ -659,7 +875,7 @@ class FileManagerService
             'extension' => strtolower(pathinfo($file['name'], PATHINFO_EXTENSION))
         ];
 
-        // Extraer EXIF para imágenes
+        // ✅ Extraer EXIF para imágenes
         if (str_starts_with($file['type'], 'image/') && extension_loaded('exif')) {
             $exif = @exif_read_data($path);
             if ($exif) {
@@ -702,7 +918,7 @@ class FileManagerService
         $path = $this->uploadsDir . $dir . '/';
 
         if (!is_dir($path)) {
-            mkdir($path, 0755, true);
+            @mkdir($path, 0755, true);
         }
 
         return $path;
@@ -727,7 +943,7 @@ class FileManagerService
     }
 
     /**
-     * Determina la categoría de un archivo
+     * Determina la categoría de un archivo (coherente con ENUM)
      */
     private function getFileCategory(string $mimeType): string
     {
@@ -747,7 +963,7 @@ class FileManagerService
             'application/vnd.openxmlformats-officedocument.presentationml.presentation',
             'text/plain',
             'text/csv'
-        ])) {
+        ], true)) {
             return 'document';
         } elseif (in_array($mimeType, [
             'application/zip',
@@ -755,7 +971,7 @@ class FileManagerService
             'application/x-tar',
             'application/x-7z-compressed',
             'application/gzip'
-        ])) {
+        ], true)) {
             return 'archive';
         } else {
             return 'other';
@@ -767,7 +983,7 @@ class FileManagerService
      */
     private function isAllowedType(string $mimeType): bool
     {
-        return in_array($mimeType, $this->allowedTypes);
+        return in_array($mimeType, $this->allowedTypes, true);
     }
 
     /**
@@ -784,7 +1000,7 @@ class FileManagerService
             'mp4', 'mpeg', 'webm', 'mov', 'avi'
         ];
 
-        return in_array($extension, $allowedExtensions);
+        return in_array($extension, $allowedExtensions, true);
     }
 
     /**
@@ -802,6 +1018,7 @@ class FileManagerService
             'text/plain' => 'txt',
             'audio/mpeg' => 'mp3',
             'video/mp4' => 'mp4',
+            'video/webm' => 'webm',
         ];
 
         return $map[$mimeType] ?? null;
@@ -851,6 +1068,7 @@ class FileManagerService
     public function getFileIcon(string $fileType): string
     {
         $icons = [
+            // Documentos
             'pdf' => 'bi bi-file-pdf',
             'doc' => 'bi bi-file-word',
             'docx' => 'bi bi-file-word',
@@ -860,24 +1078,30 @@ class FileManagerService
             'pptx' => 'bi bi-file-ppt',
             'txt' => 'bi bi-file-text',
             'csv' => 'bi bi-file-spreadsheet',
+            // Imágenes
             'jpg' => 'bi bi-file-image',
             'jpeg' => 'bi bi-file-image',
             'png' => 'bi bi-file-image',
             'gif' => 'bi bi-file-image',
             'webp' => 'bi bi-file-image',
             'svg' => 'bi bi-file-image',
+            // Archivos comprimidos
             'zip' => 'bi bi-file-zip',
             'rar' => 'bi bi-file-zip',
             'tar' => 'bi bi-file-zip',
             'gz' => 'bi bi-file-zip',
             '7z' => 'bi bi-file-zip',
+            // Audio
             'mp3' => 'bi bi-file-music',
             'wav' => 'bi bi-file-music',
             'ogg' => 'bi bi-file-music',
+            'm4a' => 'bi bi-file-music',
+            // Video
             'mp4' => 'bi bi-file-play',
             'webm' => 'bi bi-file-play',
             'mov' => 'bi bi-file-play',
             'avi' => 'bi bi-file-play',
+            'mpeg' => 'bi bi-file-play',
             'default' => 'bi bi-file'
         ];
 
@@ -902,33 +1126,30 @@ class FileManagerService
     }
 
     /**
-     * Obtiene todas las categorías disponibles
-     */
-    public function getCategories(): array
-    {
-        return ['document', 'image', 'audio', 'video', 'archive', 'other'];
-    }
-
-    /**
      * Limpia archivos temporales
      */
     public function cleanTempFiles(): int
     {
-        $tempDir = $this->uploadsDir . 'temp/';
-        if (!is_dir($tempDir)) {
+        try {
+            $tempDir = $this->uploadsDir . 'temp/';
+            if (!is_dir($tempDir)) {
+                return 0;
+            }
+
+            $count = 0;
+            $files = glob($tempDir . '*');
+
+            foreach ($files as $file) {
+                if (is_file($file) && (time() - filemtime($file)) > 86400) { // 24 horas
+                    @unlink($file);
+                    $count++;
+                }
+            }
+
+            return $count;
+        } catch (Throwable $e) {
+            error_log('[FileManagerService] Error en cleanTempFiles: ' . $e->getMessage());
             return 0;
         }
-
-        $count = 0;
-        $files = glob($tempDir . '*');
-
-        foreach ($files as $file) {
-            if (is_file($file) && (time() - filemtime($file)) > 86400) { // 24 horas
-                unlink($file);
-                $count++;
-            }
-        }
-
-        return $count;
     }
 }

@@ -1,35 +1,76 @@
 <?php
 namespace App\Core;
 
+use Throwable;
+use ReflectionClass;
+use ReflectionMethod;
+use ReflectionNamedType;
+
 /**
- * Router principal de la aplicación
- * 
+ * Router principal con Inyección de Dependencias y control de flujo
+ *
+ * Dependencias:
+ * - Request (App\Core\Request)
+ * - Response (App\Core\Response)
+ *
  * @package App\Core
  */
 class Router
 {
     private array $routes = [];
     private array $middlewares = [];
+    private array $routeCache = [];
+
+    /** @var callable|null Contenedor DI externo */
+    private $resolver = null;
+
+    /** @var string Prefijo base para todas las rutas */
+    private string $basePath = '';
+
+    // ──────────────────────────────────────────────────────────────
+    //  CONFIGURACIÓN
+    // ──────────────────────────────────────────────────────────────
 
     /**
-     * Registra una ruta GET
+     * Establece un contenedor de resolución de dependencias
      */
+    public function setResolver(callable $resolver): void
+    {
+        $this->resolver = $resolver;
+    }
+
+    /**
+     * Establece un prefijo base (ej: '/api/v1')
+     */
+    public function setBasePath(string $path): void
+    {
+        $this->basePath = rtrim($path, '/');
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  REGISTRO DE RUTAS
+    // ──────────────────────────────────────────────────────────────
+
     public function get(string $path, $handler, array $middlewares = []): self
     {
         return $this->add('GET', $path, $handler, $middlewares);
     }
 
-    /**
-     * Registra una ruta POST
-     */
     public function post(string $path, $handler, array $middlewares = []): self
     {
         return $this->add('POST', $path, $handler, $middlewares);
     }
 
-    /**
-     * Registra una ruta que acepta GET y POST
-     */
+    public function put(string $path, $handler, array $middlewares = []): self
+    {
+        return $this->add('PUT', $path, $handler, $middlewares);
+    }
+
+    public function delete(string $path, $handler, array $middlewares = []): self
+    {
+        return $this->add('DELETE', $path, $handler, $middlewares);
+    }
+
     public function any(string $path, $handler, array $middlewares = []): self
     {
         $this->add('GET', $path, $handler, $middlewares);
@@ -37,206 +78,355 @@ class Router
         return $this;
     }
 
-    /**
-     * Registra una ruta con método específico
-     */
     private function add(string $method, string $path, $handler, array $middlewares): self
     {
-        $this->routes[] = compact('method', 'path', 'handler', 'middlewares');
+        $fullPath = $this->basePath . $path;
+        $this->routes[] = compact('method', 'fullPath', 'handler', 'middlewares');
+        $this->routeCache = [];
         return $this;
     }
 
-    /**
-     * Registra un middleware global
-     */
     public function middleware(callable $middleware): self
     {
         $this->middlewares[] = $middleware;
         return $this;
     }
 
-    /**
-     * Despacha la petición
-     */
+    // ──────────────────────────────────────────────────────────────
+    //  DESPACHO
+    // ──────────────────────────────────────────────────────────────
+
     public function dispatch(Request $request): void
     {
-        $method = $request->method();
-        $uri = $this->normalizeUri($request->uri());
+        try {
+            $method = $request->method();
+            $uri = $request->uri(); // ✅ Ya normalizado por Request
 
-        // Ejecutar middlewares globales
-        foreach ($this->middlewares as $middleware) {
-            $middleware($request);
+            // Middlewares globales
+            foreach ($this->middlewares as $middleware) {
+                if ($this->executeMiddleware($middleware, $request) === false) {
+                    return;
+                }
+            }
+
+            // Buscar ruta
+            $matched = $this->findRoute($method, $uri);
+            if (!$matched) {
+                Response::abort(404, "Ruta no encontrada: {$uri}");
+                return;
+            }
+
+            [$route, $params] = $matched;
+
+            // Middlewares de ruta
+            foreach ($route['middlewares'] as $mw) {
+                if ($this->executeMiddleware($mw, $request) === false) {
+                    return;
+                }
+            }
+
+            // Ejecutar handler
+            $this->executeHandler($route['handler'], $request, $params);
+
+        } catch (Throwable $e) {
+            $this->handleException($e, $request);
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  BÚSQUEDA DE RUTAS
+    // ──────────────────────────────────────────────────────────────
+
+    private function findRoute(string $method, string $uri): ?array
+    {
+        $cacheKey = $method . ':' . $uri;
+        if (isset($this->routeCache[$cacheKey])) {
+            return $this->routeCache[$cacheKey];
         }
 
-        // Buscar ruta coincidente
         foreach ($this->routes as $route) {
             if ($route['method'] !== $method) {
                 continue;
             }
 
-            $pattern = $this->toPattern($route['path']);
+            $pattern = $this->toPattern($route['fullPath']);
             if (preg_match($pattern, $uri, $matches)) {
-                // Ejecutar middlewares de la ruta
-                foreach ($route['middlewares'] as $mw) {
-                    $this->executeMiddleware($mw, $request);
-                }
-
-                // Extraer parámetros
                 $params = $this->extractParams($matches);
-
-                // Ejecutar handler
-                $this->executeHandler($route['handler'], $request, $params);
-                return;
+                $result = [$route, $params];
+                $this->routeCache[$cacheKey] = $result;
+                return $result;
             }
         }
 
-        // No se encontró ruta
-        $this->handleNotFound();
+        return null;
     }
 
-    /**
-     * Normaliza la URI
-     */
-    private function normalizeUri(string $uri): string
-    {
-        $uri = parse_url($uri, PHP_URL_PATH) ?: '';
-        return rtrim($uri, '/') ?: '/';
-    }
-
-    /**
-     * Convierte una ruta a patrón regex
-     */
     private function toPattern(string $path): string
     {
-        $pattern = preg_replace_callback('/\{([a-zA-Z_][a-zA-Z0-9_]*)\}/', function($matches) {
-            return '(?P<' . $matches[1] . '>[^/]+)';
-        }, $path);
-
+        $pattern = preg_replace_callback(
+            '/\{([a-zA-Z_][a-zA-Z0-9_]*)\}/',
+            fn($m) => '(?P<' . $m[1] . '>[^/]+)',
+            $path
+        );
         return '#^' . $pattern . '$#';
     }
 
-    /**
-     * Extrae parámetros de los matches
-     */
     private function extractParams(array $matches): array
     {
         $params = [];
         foreach ($matches as $key => $value) {
             if (is_string($key)) {
-                $params[$key] = $this->sanitizeParam($value);
+                $params[$key] = ctype_digit((string)$value) ? (int)$value : htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
             }
         }
         return $params;
     }
 
+    // ──────────────────────────────────────────────────────────────
+    //  MIDDLEWARES
+    // ──────────────────────────────────────────────────────────────
+
     /**
-     * Sanitiza un parámetro
+     * Ejecuta un middleware. Retorna false para detener la cadena.
+     */
+    private function executeMiddleware($mw, Request $request)
+    {
+        try {
+            if (is_object($mw)) {
+                return $mw->handle($request);
+            }
+            if (is_string($mw) && class_exists($mw)) {
+                return $this->resolve($mw)->handle($request);
+            }
+            if (is_array($mw) && count($mw) === 2) {
+                [$class, $method] = $mw;
+                $instance = is_string($class) ? $this->resolve($class) : $class;
+                return $instance->$method($request);
+            }
+            if (is_callable($mw)) {
+                return $mw($request);
+            }
+            throw new \RuntimeException('Middleware inválido: ' . gettype($mw));
+        } catch (Throwable $e) {
+            error_log('[Router] Middleware error: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  INYECCIÓN DE DEPENDENCIAS
+    // ──────────────────────────────────────────────────────────────
+
+    /**
+     * ✅ Sanitiza preservando el tipo string
+     * El controlador decide si necesita (int) o (string)
      */
     private function sanitizeParam($value)
     {
-        if (is_numeric($value)) {
-            return (int)$value;
-        }
-        return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+        // Sanitizar SIEMPRE como string
+        $sanitized = htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+        
+        // Si el valor es puramente numérico, marcarlo para que el Router
+        // pueda convertirlo a int si el método lo requiere
+        // Pero NUNCA forzar la conversión aquí
+        return $sanitized;
     }
 
     /**
-     * Ejecuta un middleware
+     * ✅ En callMethod, convertir a int si el parámetro es tipado como int
+     *
+     * Llama al método del controlador respetando su firma exacta
      */
-    private function executeMiddleware($mw, Request $request): void
+    
+    private function callMethod(object $instance, string $method, Request $request, array $params): void
     {
-        if (is_object($mw)) {
-            // Objeto ya instanciado
-            $mw->handle($request);
-        } elseif (is_string($mw) && class_exists($mw)) {
-            // Clase con método handle
-            (new $mw())->handle($request);
-        } elseif (is_array($mw) && count($mw) === 2) {
-            // [Clase::class, 'metodo']
-            [$class, $method] = $mw;
-            if (is_string($class)) {
-                (new $class())->$method($request);
-            } else {
-                $class->$method($request);
-            }
-        } elseif (is_callable($mw)) {
-            // Callable
-            $mw($request);
-        } else {
-            throw new \RuntimeException('Middleware inválido: ' . gettype($mw));
+        if (!method_exists($instance, $method)) {
+            throw new \RuntimeException("Método '{$method}' no existe en " . get_class($instance));
         }
+
+        $ref = new ReflectionMethod($instance, $method);
+        $args = [];
+
+        foreach ($ref->getParameters() as $param) {
+            $name = $param->getName();
+            $type = $param->getType();
+
+            // Inyectar Request por tipo
+            if ($type instanceof ReflectionNamedType && $type->getName() === Request::class) {
+                $args[] = $request;
+                continue;
+            }
+
+            // Inyectar array $params por nombre o tipo
+            if ($name === 'params' || ($type && $type->getName() === 'array' && $name !== 'data')) {
+                $args[] = $params;
+                continue;
+            }
+
+            // Buscar en params de la ruta
+            if (array_key_exists($name, $params)) {
+                $value = $params[$name];
+                
+                // ✅ Conversión de tipo según la firma del método
+                if ($type instanceof ReflectionNamedType && $type->isBuiltin()) {
+                    $value = $this->castToType($value, $type->getName());
+                }
+                
+                $args[] = $value;
+                continue;
+            }
+
+            if ($param->isDefaultValueAvailable()) {
+                $args[] = $param->getDefaultValue();
+            } elseif ($param->allowsNull()) {
+                $args[] = null;
+            } else {
+                throw new \RuntimeException("Parámetro '{$name}' requerido en " . get_class($instance) . "::{$method}()");
+            }
+        }
+
+        $ref->invokeArgs($instance, $args);
     }
 
     /**
-     * Ejecuta el handler
+     * ✅ Convierte un valor al tipo esperado por el método
      */
+    private function castToType($value, string $typeName)
+    {
+        return match ($typeName) {
+            'int'     => (int)$value,
+            'float'   => (float)$value,
+            'bool'    => (bool)$value,
+            'string'  => (string)$value,
+            'array'   => (array)$value,
+            default   => $value,
+        };
+    }
+
+    private function resolve(string $class)
+    {
+        if ($this->resolver) {
+            return ($this->resolver)($class);
+        }
+        return $this->autoResolve($class);
+    }
+
+    private function autoResolve(string $class)
+    {
+        if (!class_exists($class)) {
+            throw new \RuntimeException("Clase no encontrada: {$class}");
+        }
+
+        $ref = new ReflectionClass($class);
+        $ctor = $ref->getConstructor();
+
+        if (!$ctor) {
+            return new $class();
+        }
+
+        $deps = [];
+        foreach ($ctor->getParameters() as $param) {
+            $type = $param->getType();
+
+            if ($type instanceof ReflectionNamedType && !$type->isBuiltin()) {
+                try {
+                    $deps[] = $this->autoResolve($type->getName());
+                    continue;
+                } catch (Throwable $e) {
+                    // Fallback a default/null
+                }
+            }
+
+            if ($param->isDefaultValueAvailable()) {
+                $deps[] = $param->getDefaultValue();
+            } elseif ($param->allowsNull()) {
+                $deps[] = null;
+            } else {
+                throw new \RuntimeException(
+                    "No se puede resolver '{$param->getName()}' en {$class}"
+                );
+            }
+        }
+
+        return $ref->newInstanceArgs($deps);
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  EJECUCIÓN DE HANDLERS
+    // ──────────────────────────────────────────────────────────────
+
     private function executeHandler($handler, Request $request, array $params): void
     {
         if (is_array($handler)) {
-            // [Controller::class, 'method']
             [$class, $method] = $handler;
-            if (is_string($class)) {
-                (new $class())->$method($request, $params);
-            } else {
-                $class->$method($request, $params);
-            }
+            $instance = is_string($class) ? $this->resolve($class) : $class;
+            $this->callMethod($instance, $method, $request, $params);
         } elseif (is_callable($handler)) {
-            // Callable
             $handler($request, $params);
         } else {
             throw new \RuntimeException('Handler inválido');
         }
     }
 
-    /**
-     * Maneja rutas no encontradas
-     */
-    private function handleNotFound(): void
+   
+
+    // ──────────────────────────────────────────────────────────────
+    //  MANEJO DE ERRORES
+    // ──────────────────────────────────────────────────────────────
+
+    private function handleException(Throwable $e, Request $request): void
     {
-        Response::abort(404, 'Página no encontrada');
+        error_log('[Router] ' . $e->getMessage() . ' en ' . $e->getFile() . ':' . $e->getLine());
+
+        $code = $e->getCode();
+        if ($code < 100 || $code > 599) {
+            $code = 500;
+        }
+
+        if ($request->isAjax()) {
+            Response::json([
+                'success' => false,
+                'error' => 'Error interno del servidor',
+            ], $code);
+        } else {
+            Response::abort($code, $e->getMessage());
+        }
     }
 
-    /**
-     * Obtiene todas las rutas registradas
-     */
+    // ──────────────────────────────────────────────────────────────
+    //  UTILIDADES
+    // ──────────────────────────────────────────────────────────────
+
     public function getRoutes(): array
     {
         return $this->routes;
     }
 
-    /**
-     * Verifica si una ruta existe
-     */
     public function hasRoute(string $path, string $method = 'GET'): bool
     {
-        $uri = $this->normalizeUri($path);
+        $uri = '/' . ltrim($path, '/');
         foreach ($this->routes as $route) {
-            if ($route['method'] !== $method) {
-                continue;
-            }
-            $pattern = $this->toPattern($route['path']);
-            if (preg_match($pattern, $uri)) {
+            if ($route['method'] !== $method) continue;
+            if (preg_match($this->toPattern($route['fullPath']), $uri)) {
                 return true;
             }
         }
         return false;
     }
 
-    /**
-     * Genera una URL a partir del nombre de la ruta
-     */
     public function url(string $name, array $params = []): string
     {
-        // Buscar ruta por nombre (si se soporta)
+        $base = defined('BASE_URL') ? rtrim(BASE_URL, '/') : '';
+
         foreach ($this->routes as $route) {
             if (isset($route['name']) && $route['name'] === $name) {
-                $path = $route['path'];
+                $path = $route['fullPath'];
                 foreach ($params as $key => $value) {
-                    $path = str_replace('{' . $key . '}', $value, $path);
+                    $path = str_replace('{' . $key . '}', (string)$value, $path);
                 }
-                return rtrim(BASE_URL, '/') . '/' . ltrim($path, '/');
+                return $base . '/' . ltrim($path, '/');
             }
         }
-        return rtrim(BASE_URL, '/') . '/' . ltrim($name, '/');
+        return $base . '/' . ltrim($name, '/');
     }
 }

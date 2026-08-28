@@ -4,10 +4,12 @@
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
             <file>file:/C:/Users/PePiuoX/Documents/Github/Pepiuox-Editor/public/index.php</file>
-            <file>file:/C:/Users/PePiuoX/Documents/Github/Pepiuox-Editor/views/files/index.php</file>
             <file>file:/C:/Users/PePiuoX/Documents/Github/Pepiuox-Editor/views/users/banned.php</file>
             <file>file:/C:/Users/PePiuoX/Documents/Github/Pepiuox-Editor/views/pages/builder.php</file>
             <file>file:/C:/Users/PePiuoX/Documents/Github/Pepiuox-Editor/views/profile/index.php</file>
+            <file>file:/C:/Users/PePiuoX/Documents/Github/Pepiuox-Editor/config/routes.php</file>
+            <file>file:/C:/Users/PePiuoX/Documents/Github/Pepiuox-Editor/views/users/index.php</file>
+            <file>file:/C:/Users/PePiuoX/Documents/Github/Pepiuox-Editor/views/audit/activity.php</file>
         </group>
     </open-files>
 </project-private>

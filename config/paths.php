@@ -12,7 +12,14 @@
 // ROOT_PATH apunta a la carpeta raíz del proyecto (donde está la carpeta config/)
 define('ROOT_PATH', str_replace('\\', '/', dirname(__DIR__)));
 
-define('APP_PATH', ROOT_PATH . '/app');
+// ✅ Definir rutas base
+/**
+ * Configuración de rutas del sistema
+ */
+
+if (!defined('APP_PATH')) {
+    define('APP_PATH', ROOT_PATH . '/app');
+}
 define('CONFIG_PATH', ROOT_PATH . '/config');
 define('PUBLIC_PATH', ROOT_PATH . '/public');
 define('PRIVATE_PATH', ROOT_PATH . '/private');
@@ -23,6 +30,23 @@ define('UPLOADS_PATH', ROOT_PATH . '/uploads');
 define('ASSETS_PATH', PUBLIC_PATH . '/assets');
 define('VENDOR_PATH', ROOT_PATH . '/vendor');
 define('LOGS_PATH', STORAGE_PATH . '/logs');
+
+// ✅ Definir constantes de categorías
+if (!defined('FILE_CATEGORIES')) {
+    define('FILE_CATEGORIES', ['document', 'image', 'audio', 'video', 'archive', 'other']);
+}
+
+// ✅ Definir extensiones permitidas
+if (!defined('ALLOWED_EXTENSIONS')) {
+    define('ALLOWED_EXTENSIONS', [
+        'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg',
+        'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+        'txt', 'csv',
+        'zip', 'rar', 'tar', 'gz', '7z',
+        'mp3', 'wav', 'ogg', 'm4a',
+        'mp4', 'mpeg', 'webm', 'mov', 'avi'
+    ]);
+}
 
 // ═══════════════════════════════════════════════════════════════
 // 2. URLS WEB (Navegador)
@@ -41,6 +65,15 @@ $basePath = ($scriptDir === '/' || $scriptDir === '\\') ? '' : $scriptDir;
 
 // URL base de la aplicación (ej: http://localhost:170/public)
 define('BASE_URL', $protocol . $host . $basePath);
+
+
+if (!defined('BASE_URL')) {
+    // Detectar URL base automáticamente
+    $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $basePath = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
+    define('BASE_URL', $protocol . $host . $basePath);
+}
 
 // URLs específicas de recursos
 define('ASSETS_URL', BASE_URL . '/assets');

@@ -1,31 +1,97 @@
 <?php
 namespace App\Controllers;
-use App\Core\{Request, Response, View, Session, CSRF};
-use App\Services\{CacheService, AuditService};
 
+use App\Core\{Request, Response, View, Auth, CSRF, Session};
+use App\Services\CacheService;
+use Throwable;
+
+/**
+ * Controlador de gestión de caché
+ *
+ * @package App\Controllers
+ */
 class CacheController
 {
-    public function index(Request $req): void
+    private CacheService $cacheService;
+
+    public function __construct(CacheService $cacheService)
     {
-        $stats = CacheService::stats();
-        Response::render(View::render('cache.index', compact('stats')));
+        $this->cacheService = $cacheService;
     }
 
-    public function clear(Request $req): void
+    /**
+     * Muestra el panel de caché con estadísticas
+     */
+    public function index(Request $request): void
+    {
+        if (!Auth::can('cache.view')) {
+            Response::abort(403, 'No tienes permisos para ver la caché');
+        }
+
+        try {
+            // ✅ Usa getCacheStats() (no stats())
+            $stats = $this->cacheService->getCacheStats();
+
+            Response::render(View::render('cache.index', [
+                'stats' => $stats,
+            ]));
+        } catch (Throwable $e) {
+            error_log('[CacheController] Error en index: ' . $e->getMessage());
+            Response::render(View::render('cache.index', [
+                'stats' => [
+                    'files' => 0, 'size' => 0, 'enabled' => false, 'ttl' => 0,
+                    'database' => ['total' => 0, 'active' => 0, 'expired' => 0],
+                ],
+            ]));
+        }
+    }
+
+    /**
+     * Limpia toda la caché
+     */
+    public function clear(Request $request): void
     {
         CSRF::guard();
-        CacheService::invalidateAllPages();
-        AuditService::log('cache_cleared', 'Cache limpiado', 'cache');
-        Session::flash('flash.success', 'Cache limpiado.');
+        if (!Auth::can('cache.clear')) {
+            Response::abort(403, 'No tienes permisos para limpiar la caché');
+        }
+
+        try {
+            $success = $this->cacheService->clearAllCache();
+            Session::flash(
+                $success ? 'flash.success' : 'flash.warning',
+                $success ? 'Caché limpiada correctamente' : 'Caché limpiada parcialmente'
+            );
+        } catch (Throwable $e) {
+            error_log('[CacheController] Error en clear: ' . $e->getMessage());
+            Session::flash('flash.error', 'Error al limpiar la caché');
+        }
+
         Response::redirect(url('admin/cache'));
     }
 
-    public function regenerate(Request $req): void
+    /**
+     * Regenera toda la caché
+     */
+    public function regenerate(Request $request): void
     {
         CSRF::guard();
-        $n = CacheService::regenerateAll();
-        AuditService::log('cache_regenerated', "Cache regenerado: $n páginas", 'cache');
-        Session::flash('flash.success', "Cache regenerado ($n páginas).");
+        if (!Auth::can('cache.clear')) {
+            Response::abort(403, 'No tienes permisos para regenerar la caché');
+        }
+
+        try {
+            $this->cacheService->clearAllCache();
+            $count = method_exists($this->cacheService, 'regenerateAll')
+                ? $this->cacheService->regenerateAll()
+                : 0;
+
+            Session::flash('flash.success', "Caché regenerada: {$count} páginas procesadas");
+        } catch (Throwable $e) {
+            error_log('[CacheController] Error en regenerate: ' . $e->getMessage());
+            Session::flash('flash.error', 'Error al regenerar la caché');
+        }
+
         Response::redirect(url('admin/cache'));
     }
 }

@@ -23,7 +23,7 @@ $actionColor = fn($a) => match(true) {
     <div class="d-flex gap-2">
       <a class="btn btn-ghost btn-sm" href="<?= url('admin/audit/activity/export?' . http_build_query($filters)) ?>"><i class="bi bi-download"></i> Exportar CSV</a>
       <form method="post" action="<?= url('admin/audit/activity/clean') ?>" onsubmit="return confirm('¿Eliminar registros antiguos?')">
-        <?= csrf_field() ?>
+      <?= \App\Core\CSRF::field() ?>
         <div class="d-flex gap-1">
           <select name="days" class="form-select form-select-sm" style="width:auto">
             <option value="30">30 días</option>

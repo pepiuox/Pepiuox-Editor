@@ -1,39 +1,38 @@
 <?php
-// ═══════════════════════════════════════════════════════════════════
-// PUNTO DE ENTRADA DE LA APLICACIÓN
-// ═══════════════════════════════════════════════════════════════════
-
+/**
+ * public/index.php
+ * Punto de entrada único de la aplicación
+ *
+ * Flujo:
+ * 1. Cargar constantes y autoloader
+ * 2. Cargar helpers y configuración
+ * 3. Inicializar sesión y App
+ * 4. Configurar DI Container (bootstrap.php)
+ * 5. Cargar rutas
+ * 6. Despachar petición
+ */
 declare(strict_types=1);
 
 // ═══════════════════════════════════════════════════════════════════
-// 1. CARGAR CONSTANTES Y CONFIGURACIÓN
+// 1. CONSTANTES Y AUTOLOADER
 // ═══════════════════════════════════════════════════════════════════
 require __DIR__ . '/../config/paths.php';
 
-// ═══════════════════════════════════════════════════════════════════
-// 2. AUTOLOADER PSR-4 CON MANEJO DE ERRORES
-// ═══════════════════════════════════════════════════════════════════
 spl_autoload_register(function (string $class) {
-    // Solo procesar clases con namespace
-    if (!str_contains($class, '\\')) {
-        return;
-    }
+    if (!str_contains($class, '\\')) return;
 
-    // Mapeo de namespaces a directorios
     $prefixes = [
-        'App\\' => APP_PATH . '/',
-        'App\\Core\\' => APP_PATH . '/Core/',
-        'App\\Models\\' => APP_PATH . '/Models/',
+        'App\\Core\\'        => APP_PATH . '/Core/',
+        'App\\Models\\'      => APP_PATH . '/Models/',
         'App\\Controllers\\' => APP_PATH . '/Controllers/',
-        'App\\Services\\' => APP_PATH . '/Services/',
-        'App\\Middleware\\' => APP_PATH . '/Middleware/',
+        'App\\Services\\'    => APP_PATH . '/Services/',
+        'App\\Middleware\\'  => APP_PATH . '/Middleware/',
+        'App\\'              => APP_PATH . '/',
     ];
 
     foreach ($prefixes as $prefix => $baseDir) {
         if (str_starts_with($class, $prefix)) {
-            $relativeClass = substr($class, strlen($prefix));
-            $file = $baseDir . str_replace('\\', '/', $relativeClass) . '.php';
-            
+            $file = $baseDir . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
             if (is_file($file)) {
                 require_once $file;
                 return;
@@ -43,29 +42,25 @@ spl_autoload_register(function (string $class) {
 });
 
 // ═══════════════════════════════════════════════════════════════════
-// 3. CARGAR HELPERS GLOBALES
+// 2. HELPERS Y CONFIGURACIÓN
 // ═══════════════════════════════════════════════════════════════════
-if (is_file(APP_PATH . '/Helpers/functions.php')) {
-    require_once APP_PATH . '/Helpers/functions.php';
-} else {
-    die('Error: No se encontró el archivo de helpers en ' . APP_PATH . '/Helpers/functions.php');
+$helpersFile = APP_PATH . '/Helpers/functions.php';
+if (!is_file($helpersFile)) {
+    die('Error: No se encontró el archivo de helpers en ' . $helpersFile);
 }
+require_once $helpersFile;
 
-// ═══════════════════════════════════════════════════════════════════
-// 4. CARGAR CONFIGURACIÓN GENERAL
-// ═══════════════════════════════════════════════════════════════════
-if (!is_file(CONFIG_PATH . '/config.php')) {
-    die('Error: No se encontró el archivo de configuración en ' . CONFIG_PATH . '/config.php');
+$configFile = CONFIG_PATH . '/config.php';
+if (!is_file($configFile)) {
+    die('Error: No se encontró config.php');
 }
+$cfg = require $configFile;
 
-$cfg = require CONFIG_PATH . '/config.php';
 date_default_timezone_set($cfg['timezone'] ?? 'UTC');
 
-// Configurar manejo de errores
 if ($cfg['debug'] ?? false) {
     error_reporting(E_ALL);
     ini_set('display_errors', '1');
-    ini_set('display_startup_errors', '1');
 } else {
     error_reporting(0);
     ini_set('display_errors', '0');
@@ -73,10 +68,9 @@ if ($cfg['debug'] ?? false) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// 5. VERIFICAR CONEXIÓN A BD
+// 3. VERIFICAR BASE DE DATOS
 // ═══════════════════════════════════════════════════════════════════
 if (!is_file(CONFIG_PATH . '/database.php')) {
-    // Redirigir al instalador si no hay configuración de BD
     if (basename($_SERVER['REQUEST_URI'] ?? '') !== 'install.php') {
         header('Location: install.php');
         exit;
@@ -84,54 +78,65 @@ if (!is_file(CONFIG_PATH . '/database.php')) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// 6. INICIALIZAR SESIÓN Y BOOTSTRAP
+// 4. SESIÓN Y APP BOOT
 // ═══════════════════════════════════════════════════════════════════
 try {
     App\Core\Session::start();
     App\Core\App::boot();
 } catch (Throwable $e) {
-    if ($cfg['debug'] ?? false) {
-        die('Error al inicializar la aplicación: ' . $e->getMessage());
-    } else {
-        die('Error interno del servidor');
-    }
+    $msg = ($cfg['debug'] ?? false) ? $e->getMessage() : 'Error interno del servidor';
+    die('Error al inicializar la aplicación: ' . $msg);
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// 7. INICIALIZAR ROUTER Y REQUEST
+// 5. BOOTSTRAP DI CONTAINER
 // ═══════════════════════════════════════════════════════════════════
 try {
-    $router = new App\Core\Router();
-    $request = new App\Core\Request();
-} catch (Throwable $e) {
-    if ($cfg['debug'] ?? false) {
-        die('Error al inicializar el router: ' . $e->getMessage());
-    } else {
-        die('Error interno del servidor');
+    $bootstrapFile = APP_PATH . '/bootstrap.php';
+    if (!is_file($bootstrapFile)) {
+        throw new \RuntimeException('No se encontró bootstrap.php en ' . $bootstrapFile);
     }
+    require_once $bootstrapFile;
+
+    // ✅ Construir contenedor de servicios (singleton)
+    $services = buildServiceContainer();
+
+    // ✅ Inicializar Router y Request
+    $router  = new App\Core\Router();
+    $request = new App\Core\Request();
+
+    // ✅ Registrar dependencias en el router
+    registerDependencies($router, $services);
+
+} catch (\Throwable $e) {
+    $msg = ($cfg['debug'] ?? false)
+        ? $e->getMessage()
+        : 'Error interno del servidor';
+    http_response_code(500);
+    die('Error al inicializar la aplicación: ' . htmlspecialchars($msg));
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// 8. CARGAR RUTAS DESDE ARCHIVO EXTERNO
+// 6. CARGAR RUTAS
 // ═══════════════════════════════════════════════════════════════════
-if (is_file(CONFIG_PATH . '/routes.php')) {
-    $routes = require CONFIG_PATH . '/routes.php';
+$routesFile = CONFIG_PATH . '/routes.php';
+if (is_file($routesFile)) {
+    $routes = require $routesFile;
     if (is_callable($routes)) {
-        // Pasar el router y el request a la función de rutas
         $routes($router, $request);
     }
 } else {
-    // Si no existe el archivo de rutas, cargar rutas por defecto
     $router->get('/', [App\Controllers\PublicController::class, 'home']);
     $router->get('/{slug}', [App\Controllers\PublicController::class, 'show']);
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// 9. DISPATCH CON MANEJO DE ERRORES
+// 7. DISPATCH
 // ═══════════════════════════════════════════════════════════════════
+
 try {
     $router->dispatch($request);
-} catch (Throwable $e) {
+} catch (\Throwable $e) {
     if ($cfg['debug'] ?? false) {
         echo '<h1>Error</h1>';
         echo '<pre>' . htmlspecialchars($e->getMessage()) . '</pre>';
@@ -139,6 +144,6 @@ try {
     } else {
         http_response_code(500);
         echo '<h1>Error interno del servidor</h1>';
-        error_log('[Router] Error: ' . $e->getMessage());
+        error_log('[App] ' . $e->getMessage() . ' en ' . $e->getFile() . ':' . $e->getLine());
     }
 }
