@@ -1,7 +1,11 @@
 <?php
 /**
- * Script de prueba para verificar el sistema de archivos
- * Ejecutar: php test_files.php
+ * RETIRADO de la raíz web el 2026-10-17.
+ *
+ * Era alcanzable por HTTP. Nada que instale, diagnostique o pruebe puede serlo
+ * (constitución v1.0.0, principio 16). Se conserva por historial, no para usarlo.
+ *
+ * Sus rutas relativas apuntan a donde estaba antes, así que no se ejecuta tal cual.
  */
 
 // Cargar configuración

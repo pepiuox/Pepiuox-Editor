@@ -1,4 +1,13 @@
 <?php
+/**
+ * RETIRADO de la raíz web el 2026-10-17.
+ *
+ * Era alcanzable por HTTP. Nada que instale, diagnostique o pruebe puede serlo
+ * (constitución v1.0.0, principio 16). Se conserva por historial, no para usarlo.
+ *
+ * Además está roto: lee db/db.sql y db/migrations.sql, que no existen. Su propio mensaje
+ * de éxito pedía borrarlo. Para instalar, sigue docs/INSTALL.md.
+ */
 declare(strict_types=1);
 session_start();
 $step = $_GET['step'] ?? '1';

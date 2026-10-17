@@ -54,14 +54,13 @@ if ($cfg['debug'] ?? false) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// 5. VERIFICAR CONEXIÓN A BD Y REDIRIGIR AL INSTALADOR
+// 5. VERIFICAR QUE EXISTE LA CONFIGURACIÓN DE BD
+//    No hay instalador web: se retiró de la raíz por seguridad
+//    (constitución v1.0.0, principio 16). Guía: docs/INSTALL.md.
 // ═══════════════════════════════════════════════════════════════════
-$currentUri = $_SERVER['REQUEST_URI'] ?? '';
-$currentFile = basename(parse_url($currentUri, PHP_URL_PATH) ?: '');
-
-if (!is_file(CONFIG_PATH . '/database.php') && $currentFile !== 'install.php') {
-    header('Location: install.php');
-    exit;
+if (!is_file(CONFIG_PATH . '/database.php')) {
+    http_response_code(500);
+    die('Falta config/database.php. Sigue docs/INSTALL.md para configurar la base de datos.');
 }
 
 // ═══════════════════════════════════════════════════════════════════

@@ -69,12 +69,12 @@ if ($cfg['debug'] ?? false) {
 
 // ═══════════════════════════════════════════════════════════════════
 // 3. VERIFICAR BASE DE DATOS
+//    Sin instalador web: se retiró de la raíz por seguridad
+//    (constitución v1.0.0, principio 16). Guía: docs/INSTALL.md.
 // ═══════════════════════════════════════════════════════════════════
 if (!is_file(CONFIG_PATH . '/database.php')) {
-    if (basename($_SERVER['REQUEST_URI'] ?? '') !== 'install.php') {
-        header('Location: install.php');
-        exit;
-    }
+    http_response_code(500);
+    die('Falta config/database.php. Sigue docs/INSTALL.md para configurar la base de datos.');
 }
 
 // ═══════════════════════════════════════════════════════════════════
