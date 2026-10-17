@@ -34,4 +34,4 @@ seguridad.
 | [`INSTALL.md`](INSTALL.md) | La guía de instalación de verdad |
 | [`ROUTES.md`](ROUTES.md) | Rutas de la aplicación |
 | [`PARTIAL_ESTRUCTURE.md`](PARTIAL_ESTRUCTURE.md) | Mapa de carpetas |
-| `../02-DOCS/wiki/` | Memoria del proyecto: constitución, decisiones y fichas de cada cambio |
+| [`../02-DOCS/wiki/index.md`](../02-DOCS/wiki/index.md) | La memoria del proyecto: por dónde empezar a leerla |

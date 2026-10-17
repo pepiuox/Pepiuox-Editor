@@ -140,3 +140,31 @@ rather than "fix it" — consistent, and worth recording as a decision rather th
 Checked before moving anything, because the working tree holds unrelated uncommitted work:
 `private/index.php` was byte-identical to `HEAD`, so the move carried none of it. Constitution moved
 to v1.0.6.
+
+## 2026-10-17 — El índice del wiki (FTD)
+
+Feature document: `02-DOCS/wiki/ftd/el-indice-del-wiki.md`.
+
+Debt 5 was "no `02-DOCS/wiki/index.md` exists, so nothing points a reader at this file", noted as
+"the `harness` skill owns the wiki index". Reading that skill turned up two different things under
+one name:
+
+- `references/wiki-index-template.md` describes the index of the OKF engine: topics holding
+  articles, each with a `Score` produced by a Maintenance Pass, and `.base` views as the human
+  navigation.
+- `references/wiki-protocol.md`'s Initialization creates that engine's whole scaffold — `inbox/`,
+  `raw/`, `log.md`, `gaps.md`, `scores.json`, `.ingested.json`, `.rscignore`, `attachments/`, the
+  `.base` views.
+
+None of it exists here: `02-DOCS/` holds only `wiki/{sdd,harness,ftd}`, which is the SDD/FTD
+structure, not the OKF one. So the template could not be used verbatim — its own header block
+describes `.base` views and scores that would have had to be invented.
+
+| Decision | Options considered | Chosen | Why |
+|----------|--------------------|--------|-----|
+| Which index | (a) a knowledge map of what this wiki actually holds · (b) build the full OKF scaffold first · (c) leave debt 5 open | (a) | The debt asks for a way in, not for a knowledge engine. (b) is a behaviour change of its own — a drop zone, an ingest pipeline, a ledger, a sync — that the owner did not ask for and that the harness did not build at install. (c) leaves a wiki nobody can enter. |
+| Where the pointer lives | (a) `docs/README.md`'s documentation table · (b) a `## Knowledge map` section in `AGENTS.md` · (c) both | (a) | `AGENTS.md` is managed by rsc: it is in `governedPaths` with an `artifactDigests` entry, so a hand-written section there risks being reported as drift or lost on update. `docs/README.md` is the project's own entry point and where a reader already lands. |
+
+If the OKF engine is ever wanted, its Initialization "creates only what is missing and never
+overwrites existing files", so this index survives and can be merged into that format then.
+Constitution moved to v1.0.7.
