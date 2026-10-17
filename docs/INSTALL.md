@@ -47,8 +47,9 @@ Aquí está la decisión que más importa para la seguridad. El proyecto se sirv
 En las dos formas, esto **nunca** debe ser alcanzable: `config/`, `app/`, `views/`, `storage/`,
 `db/`, `01-TOOLS/`, `02-DOCS/` y ningún `.env`.
 
-> `private/` es un tercer punto de entrada que el `.htaccess` de la raíz no sirve (lo manda a `404`)
-> y que además falla al arrancar. No lo uses; está anotado como deuda 10.
+> `private/` ya no tiene punto de entrada: el suyo se retiró el 2026-10-17 y está en
+> `01-TOOLS/diagnostics/`. Conserva una copia antigua de los assets, que el código no referencia:
+> los vivos son `public/assets/` (`asset('css/maker.css')` resuelve ahí). Anotado como deuda 12.
 
 ---
 

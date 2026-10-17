@@ -1,4 +1,17 @@
 <?php
+/**
+ * RETIRADO de la raíz web el 2026-10-17.
+ *
+ * Era un tercer punto de entrada, duplicado del de la raíz y del de public/, y no
+ * funcionaba: bajo el .htaccess de la raíz no se sirve (todo se reescribe a public/),
+ * y cuando se alcanzaba devolvía HTTP 200 con «Uncaught ArgumentCountError» en
+ * config/routes.php:44 y la traza a la vista. Nada lo referenciaba.
+ * Deuda 10 de la constitución.
+ *
+ * Se conserva por historial, no para usarlo. Sus rutas son relativas
+ * (__DIR__ . '/../config/...'), así que después del traslado no se ejecuta.
+ * El punto de entrada de verdad es public/index.php; para instalar, docs/INSTALL.md.
+ */
 // ═══════════════════════════════════════════════════════════════════
 // PUNTO DE ENTRADA DE LA APLICACIÓN
 // ═══════════════════════════════════════════════════════════════════
