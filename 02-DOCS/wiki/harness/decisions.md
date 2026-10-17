@@ -20,3 +20,17 @@ Artifact: `02-DOCS/wiki/sdd/constitution.md`. Interview answers given by the rep
 Findings surfaced at ratification and left open, each with its own change: the tracked password
 (1), the web-reachable scripts (2), the PHP version drift against `docs/README.md` (3), the absence
 of tests and CI (4), and the missing `02-DOCS/wiki/index.md` knowledge map (5).
+
+## 2026-10-17 — Credenciales fuera de git y scripts fuera de la raíz web (FTD)
+
+Feature document: `02-DOCS/wiki/ftd/credenciales-y-scripts-fuera-de-la-raiz-web.md`.
+
+| Decision | Options considered | Chosen | Why |
+|----------|--------------------|--------|-----|
+| Where the credentials live | (a) `.env` inside `01-TOOLS`, read by `config/env.php` · (b) Composer + a dotenv library · (c) secrets only as process environment variables | (a) | Principle 3 forbids Composer. `env.php` is about 60 lines with no dependency. The process wins over the file, so production needs no `.env` at all. |
+| What to do with `install.php` | (a) retire it to `01-TOOLS/diagnostics/` · (b) repair it · (c) delete it | (a) | It is broken (it reads `db/db.sql` and `db/migrations.sql`, which do not exist) and its own success message asked to delete it. Retiring it satisfies principle 16 without losing the code. |
+| What happens when `config/database.php` is missing | (a) HTTP 500 with instructions · (b) remove the check · (c) keep redirecting to a web installer that no longer exists | (a) | With no web installer, a redirect to nothing is worse than a message. `docs/INSTALL.md` is the real guide and stays current. |
+
+Finding discovered during the change: `docs/INSTALL.md` lists Composer as a requirement, against
+principle 3. Recorded as debt 6. The constitution moved to v1.0.1 (debt status only; no principle
+changed).
