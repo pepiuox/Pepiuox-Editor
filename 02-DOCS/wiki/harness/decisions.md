@@ -119,3 +119,24 @@ inventing it.
 Corrected while writing: the requirements table said "MySQL 8.0 / MariaDB 10.5" and PHP 8.1/8.2. The
 dump cannot be imported into MySQL because of the `uca1400` collations, and principle 1 fixes PHP
 8.3+. Both now say what is true. Constitution moved to v1.0.5.
+
+## 2026-10-17 — Retirar el tercer punto de entrada (FTD)
+
+Feature document: `02-DOCS/wiki/ftd/retirar-el-tercer-punto-de-entrada.md`.
+
+The owner chose between repairing `private/index.php` and retiring it, once the measurements were on
+the table. Retiring won: nothing referenced it, the root `.htaccess` never serves it, and it answered
+200 with a stack trace when it was reached. It moved to `01-TOOLS/diagnostics/private-index.php` with
+the same retirement header as the four scripts retired earlier, plus a row in that folder's README.
+
+This is the second time the answer to a broken script has been "retire it, keep it for history"
+rather than "fix it" — consistent, and worth recording as a decision rather than an accident.
+
+| Decision | Options considered | Chosen | Why |
+|----------|--------------------|--------|-----|
+| Repair or retire `private/index.php` | (a) retire it to `01-TOOLS/diagnostics/` · (b) repair it (same guard as the others, plus the `ArgumentCountError`) · (c) leave it | (a) | Repairing means maintaining a third copy of an entry point that duplicates the other two and that no rule serves. Retiring removes the breakage without losing the file. |
+| Whether to touch `private/assets/` in the same change | (a) leave it and record it · (b) delete it along with the entry point | (a) | The owner authorised retiring the entry point, not deleting 440 KB of assets. They are unreferenced — `asset(...)` resolves to `public/assets/` — so they become debt 12 and the owner decides. |
+
+Checked before moving anything, because the working tree holds unrelated uncommitted work:
+`private/index.php` was byte-identical to `HEAD`, so the move carried none of it. Constitution moved
+to v1.0.6.
