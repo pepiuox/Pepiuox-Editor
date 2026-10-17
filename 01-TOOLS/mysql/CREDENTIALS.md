@@ -55,5 +55,36 @@ Para rotar la de `web_editor_app`:
 
 ## La cuenta `root`
 
-En esta máquina `root` de MySQL entra con la contraseña `root`. Es una credencial débil y sigue
-pendiente de decisión: cambiarla puede romper otras herramientas locales que la tengan guardada.
+Es la cuenta de administración del **servidor**, no del proyecto: sirve a las 13 bases que hay en
+esta máquina, no solo a `web_editor_db`.
+
+Su contraseña vive en `01-TOOLS/mysql/.env`, en `DB_ROOT_PASSWORD` (con `DB_ROOT_USER` al lado).
+**Nunca en este archivo**, que sí se confirma en git.
+
+Se rotó el 2026-10-17. Antes era `root`, la primera contraseña que prueba cualquiera. El hash viejo
+(`*81F5E21E…`) sigue en el historial de git, pero ya no abre nada. La rotación cubrió las cuatro
+cuentas que existían: `root@localhost`, `root@127.0.0.1`, `root@::1` y `root@<nombre-del-equipo>`.
+
+Qué la usa, y qué hay que tocar al rotarla:
+
+- **phpMyAdmin** (`C:\ZampGUI\www\pma\config.inc.php`, con `auth_type = config`) guarda esta misma
+  contraseña en su configuración. Al rotarla hay que actualizar también esa línea, o phpMyAdmin deja
+  de entrar. Es el único consumidor vivo que se encontró.
+- **Disparadores y rutinas.** Cuatro disparadores y cinco rutinas de `web_editor_db` tienen
+  `definer=root@localhost`. El `definer` guarda el nombre, no la contraseña: mientras la cuenta
+  exista, rotar la contraseña no los afecta.
+- **Dos páginas de prueba** en `C:\ZampGUI\apache\htdocs` (`dbtest.php` y `test.php`) llevan
+  `root`/`root` escrito y **son alcanzables por web**. Desde la rotación devuelven un error de acceso
+  con la traza a la vista. No se les puso la contraseña nueva a propósito: sería dejar la credencial
+  del superusuario en un archivo que sirve Apache. Sobran: deuda 13.
+
+Para rotarla, las cuatro cuentas a la vez:
+
+```sql
+ALTER USER 'root'@'localhost'   IDENTIFIED BY 'nueva-contraseña-larga-y-aleatoria';
+ALTER USER 'root'@'127.0.0.1'   IDENTIFIED BY 'nueva-contraseña-larga-y-aleatoria';
+ALTER USER 'root'@'::1'         IDENTIFIED BY 'nueva-contraseña-larga-y-aleatoria';
+ALTER USER 'root'@'nombre-equipo' IDENTIFIED BY 'nueva-contraseña-larga-y-aleatoria';
+```
+
+Y actualizar `DB_ROOT_PASSWORD` en el `.env` **y** phpMyAdmin, o te quedas fuera de los dos.

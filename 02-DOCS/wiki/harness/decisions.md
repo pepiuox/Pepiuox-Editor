@@ -168,3 +168,36 @@ describes `.base` views and scores that would have had to be invented.
 If the OKF engine is ever wanted, its Initialization "creates only what is missing and never
 overwrites existing files", so this index survives and can be merged into that format then.
 Constitution moved to v1.0.7.
+
+## 2026-10-17 — Rotar la contraseña de `root` (FTD)
+
+Feature document: `02-DOCS/wiki/ftd/rotar-la-contrasena-de-root.md`.
+
+The last weak credential left. It was not a numbered debt: it lived in
+`01-TOOLS/mysql/CREDENTIALS.md` and in two feature documents, noted as "pending the owner's
+decision, because changing it can break other local tools". The owner decided, after the inventory
+below was on the table.
+
+What the inventory found before anything was changed: the server serves 13 databases, there are four
+`root` accounts (`localhost`, `127.0.0.1`, `::1`, the machine name) all answering to `root`, and
+exactly one live consumer of that password — phpMyAdmin's `config.inc.php`. Two further consumers
+exist and are already dead: `opticas` and `pepiuox-maker` connect as `root` with `Tru3L@ve`, which
+does not authenticate, and their databases (`opticas`, `grapescms`) do not exist.
+
+| Decision | Options considered | Chosen | Why |
+|----------|--------------------|--------|-----|
+| Whether to rotate at all | (a) rotate · (b) leave it, the local stack needs it | (a) | `root` is the first password anyone tries, and the account is the whole server, not this project. The inventory proved the breakage was one tool, fixable in the same change. |
+| Where the new password lives | (a) `01-TOOLS/mysql/.env` (`DB_ROOT_PASSWORD`, gitignored) · (b) `CREDENTIALS.md` · (c) only inside phpMyAdmin's config | (a) | `CREDENTIALS.md` is tracked, so (b) repeats the mistake this project already paid for once. (c) hides the credential inside a third-party tool. (a) is the file the project already points at, and `CREDENTIALS.md` explains it without containing it. |
+| How phpMyAdmin keeps working | (a) update the password in its `config.inc.php` · (b) switch it to `auth_type = cookie` so it stores no password | (a) | (b) is better security — phpMyAdmin would hold no superuser credential at all — but it changes how the owner uses the tool (a login prompt every time). That is the owner's call, not a side effect of a rotation: offered, not imposed. |
+| The two pages in Apache's document root | (a) delete them · (b) put the new password in them · (c) leave them and record it | (c) | (b) was rejected outright: it would keep the superuser credential in a file Apache serves. (a) is not the project's file to delete. Recorded as debt 13. |
+
+A mistake of mine, disclosed rather than papered over: the first attempt left phpMyAdmin with an
+**empty** password, because `parse_ini_file()` cannot read this `.env` (its comments contain
+parentheses) and the replacement string in `config.inc.php` interpolated `$cfg` and `$i`. It was
+caught by verifying the stored value, restored from the backup taken before the edit, and redone with
+a purpose-built `.env` reader and `preg_replace_callback`. The verification now checks the stored
+password and an HTTP response, not just `php -l`.
+
+Also corrected here, found while checking the client path: `docs/INSTALL.md` told the reader to run
+`mysql -u pepiuox -p …`, but this machine has no `mysql` on the PATH (the client lives in
+`C:\ZampGUI\mariadb\bin\`). The command failed as written. Constitution moved to v1.0.8.

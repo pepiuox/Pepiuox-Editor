@@ -83,6 +83,10 @@ Copy-Item 01-TOOLS\mysql\.env.example 01-TOOLS\mysql\.env
 Rellena en `01-TOOLS/mysql/.env`: `DB_NAME`, `DB_USER` y `DB_PASSWORD`. El `.env` está ignorado por
 git; compruébalo tú mismo con `git check-ignore -v 01-TOOLS/mysql/.env`.
 
+Si vas a administrar el servidor —importar volcados, correr migraciones, rotar la contraseña de
+`root`— guarda también ahí `DB_ROOT_USER` y `DB_ROOT_PASSWORD`, en el mismo archivo ignorado. El
+detalle está en `01-TOOLS/mysql/CREDENTIALS.md`; la aplicación no lee esas dos.
+
 **Precedencia:** las variables del proceso ganan sobre el archivo. Si defines `DB_NAME`, `DB_USER` y
 `DB_PASSWORD` como variables de entorno reales (`SetEnv` de Apache, `systemd`, Docker), el `.env` ni
 se mira: en producción puedes no tener `.env`.
@@ -98,7 +102,9 @@ El volcado es `db/db-full.sql` (848 KB): 54 sentencias `CREATE TABLE` y 30 `INSE
 MariaDB 12.3.2, y su propia cabecera lo dice.
 
 ```powershell
-mysql -u pepiuox -p web_editor_db < db\db-full.sql
+# En esta máquina el cliente de MariaDB no está en el PATH: se llama por su ruta.
+# Si el tuyo sí está en el PATH, vale el corto: `mysql -u pepiuox -p web_editor_db < db\db-full.sql`.
+C:\ZampGUI\mariadb\bin\mysql.exe -u pepiuox -p web_editor_db < db\db-full.sql
 ```
 
 > No existen `db/db.sql` ni `db/migrations.sql`. El instalador retirado los buscaba y por eso estaba
