@@ -68,13 +68,20 @@ if ($cfg['debug'] ?? false) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// 3. VERIFICAR BASE DE DATOS
-//    Sin instalador web: se retiró de la raíz por seguridad
-//    (constitución v1.0.0, principio 16). Guía: docs/INSTALL.md.
+// 3. VERIFICAR QUE ESTÁ LA CONFIGURACIÓN DE BD
+//    config/database.php solo LEE las credenciales: viven en
+//    01-TOOLS/mysql/.env (git lo ignora) o en variables del proceso.
+//    Como no hay instalador web (constitución, principio 16), este
+//    mensaje es la única ayuda que ve quien llega sin configurar.
+//    Guía completa: docs/INSTALL.md
 // ═══════════════════════════════════════════════════════════════════
 if (!is_file(CONFIG_PATH . '/database.php')) {
     http_response_code(500);
-    die('Falta config/database.php. Sigue docs/INSTALL.md para configurar la base de datos.');
+    die(
+        'Falta config/database.php. Ese archivo lee las credenciales; no las lleva. '
+        . 'Copia 01-TOOLS/mysql/.env.example a 01-TOOLS/mysql/.env y rellena DB_NAME, '
+        . 'DB_USER y DB_PASSWORD. Guía: docs/INSTALL.md'
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════

@@ -54,13 +54,20 @@ if ($cfg['debug'] ?? false) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// 5. VERIFICAR QUE EXISTE LA CONFIGURACIÓN DE BD
-//    No hay instalador web: se retiró de la raíz por seguridad
-//    (constitución v1.0.0, principio 16). Guía: docs/INSTALL.md.
+// 5. VERIFICAR QUE ESTÁ LA CONFIGURACIÓN DE BD
+//    config/database.php solo LEE las credenciales: viven en
+//    01-TOOLS/mysql/.env (git lo ignora) o en variables del proceso.
+//    Como no hay instalador web (constitución, principio 16), este
+//    mensaje es la única ayuda que ve quien llega sin configurar.
+//    Guía completa: docs/INSTALL.md
 // ═══════════════════════════════════════════════════════════════════
 if (!is_file(CONFIG_PATH . '/database.php')) {
     http_response_code(500);
-    die('Falta config/database.php. Sigue docs/INSTALL.md para configurar la base de datos.');
+    die(
+        'Falta config/database.php. Ese archivo lee las credenciales; no las lleva. '
+        . 'Copia 01-TOOLS/mysql/.env.example a 01-TOOLS/mysql/.env y rellena DB_NAME, '
+        . 'DB_USER y DB_PASSWORD. Guía: docs/INSTALL.md'
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -120,45 +127,9 @@ try {
     }
 }
 
-
-
-function listarCarpeta($ruta, $nivel = 0)
-{
-    $elementos = array_diff(scandir($ruta), ['.', '..']);
-
-    $carpetas = [];
-    $archivos = [];
-
-    foreach ($elementos as $elemento) {
-        $rutaCompleta = $ruta . DIRECTORY_SEPARATOR . $elemento;
-
-        if (is_dir($rutaCompleta)) {
-            $carpetas[] = $elemento;
-        } else {
-            $archivos[] = $elemento;
-        }
-    }
-
-    // Orden alfabético
-    natcasesort($carpetas);
-    natcasesort($archivos);
-
-    // Primero carpetas
-    foreach ($carpetas as $carpeta) {
-        $rutaCompleta = $ruta . DIRECTORY_SEPARATOR . $carpeta;
-
-        echo str_repeat('&nbsp;&nbsp;&nbsp;&nbsp;', $nivel);
-        echo "📁 <strong>$carpeta</strong><br>";
-
-        listarCarpeta($rutaCompleta, $nivel + 1);
-    }
-
-    // Después archivos
-    foreach ($archivos as $archivo) {
-        echo str_repeat('&nbsp;&nbsp;&nbsp;&nbsp;', $nivel);
-        echo "📄 $archivo<br>";
-    }
-}
-
-listarCarpeta(__DIR__);
+// Aquí vivía listarCarpeta(), una ayuda de desarrollo que se llamaba al final de
+// CADA petición y volcaba el árbol de archivos del proyecto dentro de la página.
+// Con el document root en la raíz, eso publicaba config/, db/ y 01-TOOLS/ a
+// cualquiera que abriese el sitio. Se quitó el 2026-10-17. Si necesitas ver el
+// árbol, usa `tree` o `ls -R`: no hace falta que lo imprima la aplicación.
 
