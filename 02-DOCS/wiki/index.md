@@ -43,6 +43,7 @@ con lo que quedó sin cubrir dicho en voz alta. De la más nueva a la más vieja
 
 | Documento | Qué es | Actualizado |
 |-----------|--------|-------------|
+| [`ftd/rotar-la-contrasena-de-root.md`](ftd/rotar-la-contrasena-de-root.md) | La cuenta `root` de MySQL deja de entrar con `root`; el inventario de lo que eso rompe queda medido. Deuda 13. | 2026-10-17 |
 | [`ftd/el-indice-del-wiki.md`](ftd/el-indice-del-wiki.md) | Este índice existe, para que la sesión siguiente sepa por dónde entrar. Deuda 5. | 2026-10-17 |
 | [`ftd/retirar-el-tercer-punto-de-entrada.md`](ftd/retirar-el-tercer-punto-de-entrada.md) | `private/index.php` sale de la raíz web: estaba roto y nadie lo usaba. Deuda 10. | 2026-10-17 |
 | [`ftd/instalacion-documentada-y-puntos-de-entrada.md`](ftd/instalacion-documentada-y-puntos-de-entrada.md) | La guía de instalación pasa a ser real y los puntos de entrada dejan de mentir. Además: la portada publicaba el árbol de archivos del proyecto. Deudas 3 y 9. | 2026-10-17 |
