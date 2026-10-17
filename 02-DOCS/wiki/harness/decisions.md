@@ -98,3 +98,24 @@ since the initial commit, its index promises 11 sections and 2 exist, and it pre
 `docs/README.md` has been 10 lines and ends mid-`sql`-block. `private/index.php` is a third front
 controller that redirects to `install.php`, a file that never existed under `private/` — dead before
 the installer was retired. Constitution moved to v1.0.4.
+
+## 2026-10-17 — La instalación documentada y los puntos de entrada (FTD)
+
+Feature document: `02-DOCS/wiki/ftd/instalacion-documentada-y-puntos-de-entrada.md`.
+
+Requirements gathered before writing: what the guide has to be true about. That meant measuring the
+machine (PHP 8.4.25, the nine extensions, MariaDB 12.3.3), the dump (54 `CREATE TABLE`, 30 `INSERT`),
+the three collations in use, and what each entry point actually answers. The guide is written from
+those measurements, and says explicitly what it does not cover (nginx, deployment) instead of
+inventing it.
+
+| Decision | Options considered | Chosen | Why |
+|----------|--------------------|--------|-----|
+| Where to point the 500 message | (a) the file that is missing, spelled out, plus the guide · (b) keep pointing only at `INSTALL.md` · (c) remove the guard as unreachable | (a) | The guard fires when `config/database.php` is gone, and it should say what to put back, not send the reader to a document. It stays because it is a real (if rare) condition — the file is tracked, so a clone always has it, which is why the fresh-install case is covered by the exception in `config/database.php` instead. Two mechanisms, each with one job. |
+| What to do with `listarCarpeta()` in the root `index.php` | (a) remove it · (b) gate it behind `debug` · (c) move it to `01-TOOLS/diagnostics/` | (a) | Nothing called it but itself, and it ran at the end of every request: 39 lines of dev aid turning every page into a listing of the project's files. Gating it on `debug` would have left it on — `debug` is `true` in the repo — and a filesystem dump has no safe production form. `tree` and `ls -R` already do this job, outside the web server. |
+| Whether to also repair `private/index.php` in this change | (a) record the new evidence and decide separately · (b) repair it · (c) delete it | (a) | It is not reachable under the root `.htaccess` and it fatally errors when it is. Repairing a dead, duplicated entry point without asking, or deleting the owner's file, are both decisions bigger than this change. Debt 10 rewritten with the measurements. |
+| Whether to fix the collation mix now | (a) record it · (b) rebuild the dump | (a) | It is a schema migration of its own: 45 tables in one collation, 4 in another, 3 in `utf8mb3`. Correctly documented in the guide's requirements table instead of asserted as fine. Debt 11. |
+
+Corrected while writing: the requirements table said "MySQL 8.0 / MariaDB 10.5" and PHP 8.1/8.2. The
+dump cannot be imported into MySQL because of the `uca1400` collations, and principle 1 fixes PHP
+8.3+. Both now say what is true. Constitution moved to v1.0.5.
