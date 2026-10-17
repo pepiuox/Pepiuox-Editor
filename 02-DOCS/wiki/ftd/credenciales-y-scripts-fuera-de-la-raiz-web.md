@@ -47,7 +47,7 @@ quien escribía la contraseña en claro en `config/database.php`.
 - [x] `01-TOOLS/mysql/.env.example` sin secretos, y sí confirmado.
       `git status` lo lista como `?? 01-TOOLS/mysql/.env.example`; `.env` no aparece.
 - [x] `config/database.php` no contiene ningún secreto y lee del entorno.
-      Buscar `Tru3L` y `pepiuox` en el archivo no devuelve nada; `php -l` limpio.
+      Buscar la contraseña y el usuario en el archivo no devuelve nada; `php -l` limpio.
 - [x] La aplicación sigue conectando a MySQL.
       `OK: conecta a pepiuox@127.0.0.1:3306/web_editor_db. Tablas visibles: 54`
 - [x] Sin `.env`, el fallo explica qué hacer.
