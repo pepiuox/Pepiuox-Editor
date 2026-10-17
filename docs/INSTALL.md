@@ -32,7 +32,6 @@
 | **MySQL/MariaDB** | 8.0 / 10.5 | 10.6+ |
 | **Apache** | 2.4 | 2.4+ con mod_rewrite |
 | **Nginx** | 1.18 | 1.20+ |
-| **Composer** | 2.0 | 2.5+ |
 
 ### 📦 Extensiones PHP requeridas
 

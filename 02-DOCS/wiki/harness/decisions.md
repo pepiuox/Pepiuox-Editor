@@ -82,3 +82,19 @@ and `GRANT` are all denied; the app answers 200. `test_connection.php` switched 
 Noted but not acted on: every user on this MySQL inherits a `PUBLIC` grant of full rights over
 databases named `test` or `test_%`. It is local server configuration, outside the repository, and
 none of those databases exist.
+
+## 2026-10-17 — Los requisitos de instalación sin Composer (FTD)
+
+Feature document: `02-DOCS/wiki/ftd/instalacion-sin-composer.md`.
+
+| Decision | Options considered | Chosen | Why |
+|----------|--------------------|--------|-----|
+| Which half of the contradiction is false | (a) the doc row · (b) principle 3 | (a) | Measured, not argued. There is no `composer.json`, no `composer.lock`, no `vendor/` anywhere, and no `vendor/autoload` or `Composer\` reference in the code: the app autoloads itself with PSR-4. A requirement nobody satisfies is a doc defect; rewriting the principle to match a tool the project has never used would have been backwards. |
+| How much of the requirements table to touch | (a) only the Composer row · (b) also the PHP row directly above it | (a) | The PHP row is debt 3 and contradicts principle 1. It is a separate decision with its own change, and fixing it here would have quietly closed a debt the owner had not chosen. |
+| What to do about `INSTALL.md` being a stump | (a) rewrite it in this change · (b) record it and remove only the false requirement | (b) | The owner asked to close one debt. A rewrite that invents nine sections is a change of its own. Recorded as debt 9, together with the sharper finding: the 500 message in the entry points sends the reader to a document that cannot answer the question it is being asked. |
+
+Findings surfaced by the check, none of them new to this commit: `docs/INSTALL.md` has been 41 lines
+since the initial commit, its index promises 11 sections and 2 exist, and it predates the `.env`.
+`docs/README.md` has been 10 lines and ends mid-`sql`-block. `private/index.php` is a third front
+controller that redirects to `install.php`, a file that never existed under `private/` — dead before
+the installer was retired. Constitution moved to v1.0.4.
