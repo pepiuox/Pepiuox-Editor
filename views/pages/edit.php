@@ -8,9 +8,11 @@
 
 $pageTitle = 'Editar: ' . ($page['title'] ?? 'Página');
 $seo = $seo ?? ['basic' => [], 'og' => [], 'twitter' => []];
+$templates = $templates ?? [];
+$pages = $pages ?? [];
 ?>
 
-<div class="d-flex justify-between align-center mb-3 flex-wrap gap-2">
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
     <h2 class="mb-0">
         <i class="bi bi-file-earmark-text text-primary"></i> 
         <?= e($page['title'] ?? 'Editar página') ?>
@@ -155,7 +157,7 @@ $seo = $seo ?? ['basic' => [], 'og' => [], 'twitter' => []];
                     
                     <hr class="my-4">
                     
-                    <div class="d-flex justify-end gap-2">
+                    <div class="d-flex justify-content-end gap-2">
                         <a class="btn btn-ghost" href="<?= url('admin/pages') ?>">Cancelar</a>
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-check-circle"></i> Guardar cambios
@@ -177,7 +179,7 @@ $seo = $seo ?? ['basic' => [], 'og' => [], 'twitter' => []];
             <div class="card-body">
                 <form method="post" action="<?= url("admin/pages/{$page['id']}") ?>" id="seoForm">
                     <?= \App\Core\CSRF::field() ?>
-                    <input type="hidden" name="mode" value="seo">
+                    <input type="hidden" name="mode" value="metadata">
                     
                     <h5 class="text-small text-muted mb-2">Básico</h5>
                     
@@ -273,18 +275,6 @@ $seo = $seo ?? ['basic' => [], 'og' => [], 'twitter' => []];
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-check-circle"></i> Guardar SEO
                         </button>
-                        
-                        <a class="btn btn-outline" href="<?= url("admin/seo/{$page['id']}/analyze") ?>">
-                            <i class="bi bi-clipboard-data"></i> Analizar SEO
-                        </a>
-                        
-                        <a class="btn btn-outline" href="<?= url("admin/seo/{$page['id']}/competitor") ?>">
-                            <i class="bi bi-trophy"></i> Análisis de competencia
-                        </a>
-                        
-                        <a class="btn btn-outline" href="<?= url("admin/seo/{$page['id']}/meta-generator") ?>">
-                            <i class="bi bi-magic"></i> Generar meta description
-                        </a>
                     </div>
                 </form>
             </div>
@@ -296,28 +286,45 @@ $seo = $seo ?? ['basic' => [], 'og' => [], 'twitter' => []];
                 <h3><i class="bi bi-info-circle"></i> Información</h3>
             </div>
             <div class="card-body">
-                <div class="d-flex justify-between mb-2">
+                <div class="d-flex justify-content-between mb-2">
                     <span class="text-muted text-small">ID</span>
                     <strong>#<?= (int)$page['id'] ?></strong>
                 </div>
-                <div class="d-flex justify-between mb-2">
+                <div class="d-flex justify-content-between mb-2">
                     <span class="text-muted text-small">Creada</span>
                     <strong class="text-small"><?= e($page['created_at'] ?? '—') ?></strong>
                 </div>
-                <div class="d-flex justify-between mb-2">
+                <div class="d-flex justify-content-between mb-2">
                     <span class="text-muted text-small">Actualizada</span>
                     <strong class="text-small"><?= e($page['updated_at'] ?? '—') ?></strong>
                 </div>
-                <div class="d-flex justify-between mb-2">
+                <div class="d-flex justify-content-between mb-2">
                     <span class="text-muted text-small">Estado</span>
                     <span class="badge badge-<?= $page['status'] ?? 'draft' ?>">
                         <?= e(ucfirst($page['status'] ?? 'draft')) ?>
                     </span>
                 </div>
-                <div class="d-flex justify-between">
+                <div class="d-flex justify-content-between">
                     <span class="text-muted text-small">Slug</span>
                     <code class="text-small">/<?= e($page['slug'] ?? '') ?></code>
                 </div>
+                
+                <?php if (!empty($versions)): ?>
+                <hr>
+                <div class="mt-2">
+                    <span class="text-muted text-small">Últimas versiones</span>
+                    <?php foreach (array_slice($versions, 0, 3) as $v): ?>
+                        <div class="d-flex justify-content-between text-small mt-1">
+                            <span>v<?= (int)$v['version_number'] ?></span>
+                            <span class="text-muted"><?= e($v['note'] ?? 'Sin nota') ?></span>
+                            <span class="text-muted"><?= e(date('d/m/Y H:i', strtotime($v['created_at']))) ?></span>
+                        </div>
+                    <?php endforeach; ?>
+                    <a href="<?= url("admin/pages/{$page['id']}/versions") ?>" class="btn btn-ghost btn-sm mt-2">
+                        Ver todas las versiones
+                    </a>
+                </div>
+                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -335,15 +342,13 @@ document.addEventListener('DOMContentLoaded', function() {
         if (seoTitle && ccTitle) {
             const len = seoTitle.value.length;
             ccTitle.textContent = len + '/60';
-            ccTitle.classList.toggle('warning', len > 60);
-            ccTitle.classList.toggle('danger', len > 70);
+            ccTitle.className = 'char-counter' + (len > 60 ? ' warning' : '') + (len > 70 ? ' danger' : '');
         }
         
         if (seoDesc && ccDesc) {
             const len = seoDesc.value.length;
             ccDesc.textContent = len + '/160';
-            ccDesc.classList.toggle('warning', len > 150);
-            ccDesc.classList.toggle('danger', len > 160);
+            ccDesc.className = 'char-counter' + (len > 150 ? ' warning' : '') + (len > 160 ? ' danger' : '');
         }
     }
     
@@ -353,3 +358,8 @@ document.addEventListener('DOMContentLoaded', function() {
     updateCounters();
 });
 </script>
+
+<style>
+.char-counter.warning { color: #f59e0b; }
+.char-counter.danger { color: #ef4444; }
+</style>

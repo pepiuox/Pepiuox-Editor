@@ -69,7 +69,7 @@ $router->get('/page/{slug}', function() use ($request) {
 $router->get('/login', [App\Controllers\AuthController::class, 'showLogin']);
 $router->post('/login', [App\Controllers\AuthController::class, 'login'], $rateLimitLogin);
 $router->get('/logout', [App\Controllers\AuthController::class, 'logout']);
-$router->get('/register', [App\Controllers\PasswordController::class, 'registertForm']);
+$router->get('/register', [App\Controllers\PasswordController::class, 'registerForm']);
 $router->post('/register', [App\Controllers\PasswordController::class, 'registerSend'], $rateLimitRegister);
 // ── 1.4. Recuperación de contraseña ─────────────────────────────
 $router->get('/forgot', [App\Controllers\PasswordController::class, 'forgotForm']);

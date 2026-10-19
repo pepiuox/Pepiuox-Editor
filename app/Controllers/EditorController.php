@@ -57,7 +57,8 @@ class EditorController
         $jsonJs = json_encode($page['content_js'] ?? '', JSON_UNESCAPED_UNICODE);
         $jsonAssets = json_encode($existingAssets, JSON_UNESCAPED_SLASHES);
 
-        Response::render(View::render('pages.editor', compact(
+        // La vista es un documento HTML completo: se renderiza sin layout.
+        Response::render(View::renderStandalone('pages.editor', compact(
             'page', 'jsonHtml', 'jsonCss', 'jsonPhp', 'jsonJs', 'jsonAssets'
         )));
     }

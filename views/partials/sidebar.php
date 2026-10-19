@@ -112,8 +112,8 @@ if (isset($current['id'])) {
     </div>
     <?php endif; ?>
 
-    <!-- ── ADMINISTRACIÓN ── -->
-    <div class="nav-label">Administración</div>
+    <!-- ── USUARIOS ── -->
+    <div class="nav-label">Usuarios</div>
 
     <?php if (!isset($current['id']) || can('users.view')): ?>
     <a class="nav-link <?= is_active('/admin/users', 'active') ?>" href="<?= url('admin/users') ?>">
@@ -136,7 +136,8 @@ if (isset($current['id'])) {
       <i class="bi bi-shield-lock"></i>
       <span>Roles y permisos</span>
     </a>
-
+<!-- ── ADMINISTRACIÓN ── -->
+    <div class="nav-label">Administración</div>
     <?php if (!isset($current['id']) || can('settings.manage')): ?>
     <a class="nav-link <?= is_active('/admin/settings', 'active') ?>" href="<?= url('admin/settings') ?>">
       <i class="bi bi-gear"></i>

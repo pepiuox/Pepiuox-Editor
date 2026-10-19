@@ -2,6 +2,8 @@
 namespace App\Controllers;
 
 use App\Core\Request;
+use App\Core\Auth;
+use App\Core\View;
 use App\Services\PageRenderer;
 use App\Core\Response;
 
@@ -59,122 +61,38 @@ class PublicController
      */
     private function renderPage(array $page): void
     {
-        $title = $this->renderer->getPageTitle($page);
-        $description = $this->renderer->getPageDescription($page);
-        $slug = $this->renderer->getPageSlug($page);
-        
         // Construir HTML de la página
         $content = $this->renderer->buildPageHtml($page);
-        
+
         // Obtener menú
         $menu = $this->renderer->getMenu();
-        $menuHtml = $this->renderer->renderMenuHtml($menu);
-        
+
         // Renderizar la vista completa
-        $this->renderLayout($title, $description, $slug, $content, $menuHtml);
+        $this->renderLayout($page, $menu, $content);
     }
 
     /**
-     * Renderiza el layout completo de la página
+     * Renderiza el layout público: navbar + contenido + footer.
+     *
+     * La navbar decide sus acciones con Auth::check():
+     *  - Visitante: «Iniciar sesión» y «Crear cuenta».
+     *  - Con sesión: acceso al panel de administración, sin ingreso ni registro.
      */
-    private function renderLayout(string $title, string $description, string $slug, string $content, string $menuHtml): void
+    private function renderLayout(array $page, array $menu, string $content): void
     {
-        // Aquí puedes incluir tu layout principal
-        // Este es un ejemplo básico
-        ?>
-        <!DOCTYPE html>
-        <html lang="es">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title><?= htmlspecialchars($title) ?></title>
-            <meta name="description" content="<?= htmlspecialchars($description) ?>">
-            <link rel="canonical" href="<?= BASE_URL . '/' . $slug ?>">
-            
-            <!-- Bootstrap CSS -->
-            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-            
-            <!-- Estilos personalizados -->
-            <style>
-                /* Estilos básicos del sitio */
-                body {
-                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-                    line-height: 1.6;
-                    color: #212529;
-                }
-                .navbar {
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                }
-                .page-content {
-                    min-height: 60vh;
-                }
-                .page-body {
-                    padding: 2rem 0;
-                }
-                footer {
-                    background: #f8f9fa;
-                    padding: 2rem 0;
-                    margin-top: 3rem;
-                }
-            </style>
-        </head>
-        <body>
-            <!-- Header con menú -->
-            <header>
-                <nav class="navbar navbar-expand-lg navbar-light bg-light">
-                    <div class="container">
-                        <a class="navbar-brand" href="<?= BASE_URL ?>">Mi Sitio Web</a>
-                        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
-                            <span class="navbar-toggler-icon"></span>
-                        </button>
-                        <div class="collapse navbar-collapse" id="navbarMain">
-                            <?= $menuHtml ?>
-                        </div>
-                    </div>
-                </nav>
-            </header>
+        $isLoggedIn = Auth::check();
 
-            <!-- Contenido principal -->
-            <main>
-                <div class="container">
-                    <?= $content ?>
-                </div>
-            </main>
-
-            <!-- Footer -->
-            <footer>
-                <div class="container">
-                    <p class="text-center text-muted">&copy; <?= date('Y') ?> Mi Sitio Web. Todos los derechos reservados.</p>
-                </div>
-            </footer>
-
-            <!-- Scripts -->
-            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-            
-            <!-- Scripts para el menú -->
-            <script>
-                document.addEventListener('DOMContentLoaded', function() {
-                    // Manejador para dropdowns en móvil
-                    document.querySelectorAll('.dropdown-toggle, .dropdown-caret, .submenu-caret').forEach(function(btn) {
-                        btn.addEventListener('click', function(e) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            
-                            const parent = this.closest('.has-submenu');
-                            if (parent) {
-                                const dropdown = parent.querySelector('.dropdown-menu');
-                                if (dropdown) {
-                                    dropdown.classList.toggle('show');
-                                }
-                            }
-                        });
-                    });
-                });
-            </script>
-        </body>
-        </html>
-        <?php
+        View::partial('public.layout', [
+            'page' => [
+                'title'       => $this->renderer->getPageTitle($page),
+                'description' => $this->renderer->getPageDescription($page),
+                'slug'        => $this->renderer->getPageSlug($page),
+            ],
+            'menu'     => $menu,
+            'content'  => $content,
+            'appName'  => $GLOBALS['cfg']['app_name'] ?? 'PePiuoX Editor',
+            'authUser' => $isLoggedIn ? Auth::user() : null,
+        ]);
     }
 
     /**
@@ -183,12 +101,14 @@ class PublicController
     private function show404(string $slug): void
     {
         http_response_code(404);
-        $title = 'Página no encontrada';
         $content = '<div class="text-center py-5"><h1 class="display-1">404</h1><p class="lead">La página solicitada no existe.</p></div>';
         $menu = $this->renderer->getMenu();
-        $menuHtml = $this->renderer->renderMenuHtml($menu);
-        
-        $this->renderLayout($title, 'Página no encontrada', '404', $content, $menuHtml);
+
+        $this->renderLayout([
+            'title'       => 'Página no encontrada',
+            'description' => 'Página no encontrada',
+            'slug'        => '404',
+        ], $menu, $content);
     }
 
     /**
@@ -198,9 +118,12 @@ class PublicController
     {
         $content = '<div class="text-center py-5"><h1>' . htmlspecialchars($title) . '</h1><p>' . htmlspecialchars($description) . '</p></div>';
         $menu = $this->renderer->getMenu();
-        $menuHtml = $this->renderer->renderMenuHtml($menu);
-        
-        $this->renderLayout($title, $description, 'home', $content, $menuHtml);
+
+        $this->renderLayout([
+            'title'       => $title,
+            'description' => $description,
+            'slug'        => 'home',
+        ], $menu, $content);
     }
 
     /**

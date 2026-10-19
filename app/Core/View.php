@@ -40,6 +40,28 @@ class View
     }
 
     /**
+     * Renderiza una vista que YA es un documento HTML completo.
+     *
+     * A diferencia de render(), no la envuelve en ningún layout: la vista trae
+     * su propio <!DOCTYPE>, <html>, <head> y <body>. Envolverla produciría un
+     * documento anidado y el navegador descartaría el <body> interior con sus
+     * estilos y su altura.
+     */
+    public static function renderStandalone(string $view, array $data = []): string
+    {
+        extract($data, EXTR_SKIP);
+
+        $viewFile = self::path($view);
+        if (!is_file($viewFile)) {
+            Response::abort(500, "Vista no encontrada: {$view}");
+        }
+
+        ob_start();
+        include $viewFile;
+        return (string) ob_get_clean();
+    }
+
+    /**
      * Renderiza un partial (sin layout)
      */
     public static function partial(string $view, array $data = []): void

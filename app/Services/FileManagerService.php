@@ -216,7 +216,7 @@ class FileManagerService
 /**
  * Obtiene archivos con filtros avanzados incluyendo metadata
  */
-public function searchFiles(array $filters = [], int $userId = null): array
+public function searchFiles(array $filters = [], ?int $userId = null): array
 {
     $query = "SELECT * FROM files WHERE deleted_at IS NULL";
     $params = [];

@@ -29,11 +29,14 @@ $seo = $seo ?? ['basic' => [], 'og' => [], 'twitter' => []];
 $pageTitle = 'Builder: ' . ($page['title'] ?? 'Nueva página');
 
 // Codificar contenido para JavaScript
-$jsonHtml = json_encode($page['content_html'] ?? '<div style="padding:40px;text-align:center;"><h1>Mi Nueva Página</h1><p>Comienza a editar tu contenido aquí.</p></div>', JSON_UNESCAPED_UNICODE);
-$jsonCss  = json_encode($page['content_css'] ?? "body {\n  font-family: 'Inter', sans-serif;\n  margin: 0;\n  padding: 0;\n  background: #ffffff;\n  color: #333333;\n}", JSON_UNESCAPED_UNICODE);
-$jsonPhp  = json_encode($page['content_php'] ?? '', JSON_UNESCAPED_UNICODE);
-$jsonJs   = json_encode($page['content_js'] ?? '', JSON_UNESCAPED_UNICODE);
-$jsonAssets = json_encode($existingAssets, JSON_UNESCAPED_SLASHES);
+// JSON_HEX_TAG evita que un </script> dentro del contenido rompa el documento.
+$jsonFlags = JSON_UNESCAPED_UNICODE | JSON_HEX_TAG;
+$jsonHtml = json_encode($page['content_html'] ?? '<div style="padding:40px;text-align:center;"><h1>Mi Nueva Página</h1><p>Comienza a editar tu contenido aquí.</p></div>', $jsonFlags);
+$jsonCss  = json_encode($page['content_css'] ?? "body {\n  font-family: 'Inter', sans-serif;\n  margin: 0;\n  padding: 0;\n  background: #ffffff;\n  color: #333333;\n}", $jsonFlags);
+$jsonPhp  = json_encode($page['content_php'] ?? '', $jsonFlags);
+$jsonJs   = json_encode($page['content_js'] ?? '', $jsonFlags);
+$jsonGrapes = json_encode($page['grapesjs_data'] ?? null, $jsonFlags);
+$jsonAssets = json_encode($existingAssets, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG);
 
 // URLs del sistema
 $uploadUrl  = url('admin/pages/' . $page['id'] . '/builder/upload');
@@ -1046,6 +1049,70 @@ body.builder-body {
     margin: 0;
 }
 
+/* Panel que crea comments.js: overlay a la derecha, plegado por defecto.
+   Antes se añadía al vuelo sin estilos y quedaba suelto al final del layout. */
+#commentsPanel {
+    position: fixed;
+    top: var(--builder-topbar-h);
+    right: 0;
+    bottom: 0;
+    width: 340px;
+    max-width: 92vw;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    background: var(--builder-bg-2);
+    border-left: 1px solid var(--builder-border);
+    box-shadow: -8px 0 24px rgba(0, 0, 0, .35);
+    transition: transform var(--builder-transition);
+}
+
+#commentsPanel.collapsed {
+    transform: translateX(100%);
+}
+
+#commentsPanel .comments-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--builder-border);
+}
+
+#commentsPanel .comments-header h3 {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+#commentsPanel .comments-filters {
+    display: flex;
+    border-bottom: 1px solid var(--builder-border);
+}
+
+#commentsPanel .filter-btn {
+    flex: 1 1 0;
+    padding: 0.5rem 0.4rem;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: var(--builder-text-muted);
+    font: inherit;
+    font-size: 0.78rem;
+    cursor: pointer;
+}
+
+#commentsPanel .filter-btn.active {
+    color: var(--builder-accent);
+    border-bottom-color: var(--builder-accent);
+}
+
+#commentsPanel .comments-list {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 0.75rem;
+}
+
 /* ═══ TOASTS ═══ */
 .toast-container {
     position: fixed;
@@ -1604,8 +1671,13 @@ SCRIPTS — GrapesJS
 <script src="https://cdn.jsdelivr.net/npm/grapesjs-tabs@1.0.6/dist/index.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/grapesjs-custom-code@1.0.2/dist/index.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/grapesjs-touch@0.1.1/dist/index.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/grapesjs-parser-postcss@1.0.0/dist/index.min.js"></script>
+<!-- grapesjs-parser-postcss@1.0.0 NO existe en el CDN (solo 1.0.3 / 1.0.1 / 0.1.1).
+     El 404 hacía fallar grapesjs.init() con "Plugin not found". GrapesJS ya
+     parsea CSS de forma nativa, así que el plugin no hace falta. -->
 <script src="https://cdn.jsdelivr.net/npm/grapesjs-plugin-export@1.0.12/dist/index.min.js"></script>
+
+<!-- Sistema de comentarios: define la clase CommentsManager que usa el builder -->
+<script src="<?= e(ASSETS_URL) ?>/js/comments.js"></script>
 
 <!-- ═══════════════════════════════════════════════════════════════
 SCRIPT PRINCIPAL DEL BUILDER
@@ -1632,6 +1704,7 @@ const pageData = {
     css: <?= $jsonCss ?>,
     php: <?= $jsonPhp ?>,
     js: <?= $jsonJs ?>,
+    grapes: <?= $jsonGrapes ?>,
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -1664,17 +1737,29 @@ const tabLabels = {
 // INICIALIZACIÓN
 // ═══════════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', function() {
-    try {
-        initCodeMirror();
-        initGrapesJS();
-        bindEvents();
-        startAutoSave();
-        initComments();
-        console.log('✅ Builder inicializado correctamente');
-    } catch (err) {
-        console.error('❌ Error inicializando builder:', err);
-        showToast('✗ Error al inicializar el editor: ' + err.message, 'error');
+    // Cada subsistema arranca por separado: si una librería del CDN falla, el
+    // resto del builder sigue usable en vez de quedarse en blanco.
+    var failed = [];
+    var safeInit = function(label, fn) {
+        try {
+            fn();
+        } catch (err) {
+            console.error('❌ Builder · falló ' + label + ':', err);
+            failed.push(label);
+        }
+    };
+
+    safeInit('CodeMirror', initCodeMirror);
+    safeInit('lienzo visual', initGrapesJS);
+    safeInit('eventos', bindEvents);
+    safeInit('autoguardado', startAutoSave);
+
+    if (failed.length) {
+        showToast('✗ No se pudo iniciar: ' + failed.join(', '), 'error');
     }
+
+    // Los comentarios se inicializan en su propio bloque, cuando gjsEditor existe.
+    console.log('✅ Builder inicializado correctamente');
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -1843,7 +1928,6 @@ function initGrapesJS() {
             'grapesjs-tabs',
             'grapesjs-custom-code',
             'grapesjs-touch',
-            'grapesjs-parser-postcss',
             'grapesjs-plugin-export'
         ],
         pluginsOpts: {
@@ -1884,7 +1968,27 @@ function initGrapesJS() {
         colorPicker: { appendTo: 'parent' }
     });
 
+    // Restaurar el proyecto guardado: conserva ids, estilos y componentes que
+    // el HTML/CSS plano no puede representar. Sin esto el canvas se reconstruía
+    // desde cero en cada carga.
+    if (pageData.grapes) {
+        try {
+            var project = typeof pageData.grapes === 'string'
+                ? JSON.parse(pageData.grapes)
+                : pageData.grapes;
+            if (project && project.pages) {
+                gjsEditor.loadProjectData(project);
+            }
+        } catch (err) {
+            console.warn('No se pudo restaurar el proyecto del canvas:', err);
+        }
+    }
+
     gjsEditor.on('update', function() {
+        // Marcar cambios reales del canvas: sin esto el autoguardado nunca
+        // se disparaba al editar visualmente.
+        isDirty = true;
+        updateAutoSaveIndicator();
         if (isSyncing) return;
         isSyncing = true;
         try {
@@ -2383,9 +2487,11 @@ function stopAutoSave() {
 }
 
 function updateAutoSaveIndicator() {
-    var indicatorTop = document.getElementById('autoSaveStatusTop');
+    // El id real en la barra superior es autoSaveStatus (antes se buscaba
+    // autoSaveStatusTop, que no existe: el indicador nunca se actualizaba).
+    var indicatorTop = document.getElementById('autoSaveStatus');
     var indicatorBottom = document.getElementById('autoSaveStatusBottom');
-    if (!indicatorTop) return;
+    if (!indicatorTop && !indicatorBottom) return;
 
     var html = '';
     if (isAutoSaving) {
@@ -2400,7 +2506,7 @@ function updateAutoSaveIndicator() {
         html = '<i class="bi bi-check-circle" style="color:var(--builder-success)"></i> Todo guardado';
     }
 
-    indicatorTop.innerHTML = html;
+    if (indicatorTop) indicatorTop.innerHTML = html;
     if (indicatorBottom) indicatorBottom.innerHTML = html;
 }
 
@@ -2445,6 +2551,45 @@ function performAutoSave() {
         isAutoSaving = false;
         updateAutoSaveIndicator();
     });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// VISTA PREVIA
+// ═══════════════════════════════════════════════════════════════
+// La vista previa no existía: la barra y los accesos rápidos llamaban a
+// preview() y el navegador lanzaba "preview is not defined".
+function preview() {
+    var html = cmHtml ? cmHtml.getValue() : '';
+    var css = cmCss ? cmCss.getValue() : '';
+    var js = cmJs ? cmJs.getValue() : '';
+
+    // Si se está editando en el lienzo, se previsualiza lo último del canvas.
+    if (gjsEditor && currentTab === 'visual') {
+        try {
+            html = gjsEditor.getHtml();
+            css = gjsEditor.getCss();
+        } catch (err) {
+            console.warn('No se pudo leer el canvas para la vista previa:', err);
+        }
+    }
+
+    var doc = '<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">'
+        + '<meta name="viewport" content="width=device-width, initial-scale=1">'
+        + '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">'
+        + '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">'
+        + '<style>' + css + '</style></head><body>' + html
+        + (js ? '<script>' + js + '<\/script>' : '')
+        + '</body></html>';
+
+    var blob = new Blob([doc], { type: 'text/html;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var win = window.open(url, '_blank');
+
+    if (!win) {
+        showToast('✗ El navegador bloqueó la ventana de vista previa', 'error');
+    }
+
+    setTimeout(function() { URL.revokeObjectURL(url); }, 60000);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -2539,9 +2684,18 @@ window.addEventListener('load', function() {
 <script>
 // Inicializar CommentsManager después de GrapesJS
 document.addEventListener('DOMContentLoaded', function() {
-    const initComments = setInterval(function() {
-        if (typeof gjsEditor !== 'undefined' && gjsEditor) {
-            clearInterval(initComments);
+    var initComments = setInterval(function() {
+        if (typeof gjsEditor === 'undefined' || !gjsEditor) return;
+
+        clearInterval(initComments);
+
+        // comments.js puede no haber cargado: sin él no hay gestor de comentarios.
+        if (typeof CommentsManager === 'undefined') {
+            console.warn('comments.js no cargó: los comentarios quedan desactivados.');
+            return;
+        }
+
+        try {
             commentsManager = new CommentsManager(
                 <?= (int)$page['id'] ?>,
                 gjsEditor,
@@ -2550,6 +2704,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     csrfToken: '<?= e(csrf_token()) ?>',
                 }
             );
+
+            // El panel se crea abierto; se deja plegado hasta que se pida.
+            var panel = document.getElementById('commentsPanel');
+            if (panel) panel.classList.add('collapsed');
+        } catch (err) {
+            console.error('Error inicializando comentarios:', err);
         }
     }, 100);
 });

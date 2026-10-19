@@ -66,7 +66,7 @@ if (!empty($t['grapesjs_data'])) {
 }
 ?>
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -83,251 +83,563 @@ if (!empty($t['grapesjs_data'])) {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/theme/dracula.min.css">
     
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
     <style>
-        /* Estilos generales */
-        body {
-            background: #f5f7fa;
+        /* Misma paleta y componentes que el builder de páginas */
+        :root {
+            --tpl-bg: #0d1117;
+            --tpl-bg-2: #161b22;
+            --tpl-bg-3: #1c2333;
+            --tpl-border: #30363d;
+            --tpl-border-soft: rgba(255, 255, 255, .07);
+            --tpl-text: #e6edf3;
+            --tpl-muted: #8b949e;
+            --tpl-accent: #00d4aa;
+            --tpl-accent-dark: #00a88a;
+            --tpl-danger: #ef4444;
+            --tpl-radius: 8px;
+            --tpl-topbar-h: 56px;
+            --tpl-t: .18s ease;
+            --tpl-mono: 'JetBrains Mono', monospace;
         }
-        
-        .card {
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+
+        * { box-sizing: border-box; }
+
+        body.tpl-body {
+            margin: 0;
+            background: var(--tpl-bg);
+            color: var(--tpl-text);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 14px;
+            min-height: 100vh;
         }
-        
-        .card-header {
-            background: white;
-            border-bottom: 1px solid #e9ecef;
-            border-radius: 12px 12px 0 0 !important;
+
+        a { color: var(--tpl-accent); text-decoration: none; }
+        a:hover { color: var(--tpl-accent-dark); }
+
+        :where(a, button, .btn-tpl, input, textarea):focus-visible {
+            outline: 2px solid var(--tpl-accent);
+            outline-offset: 2px;
+            border-radius: var(--tpl-radius);
         }
-        
-        /* Estilos de Tabs */
-        .nav-tabs .nav-link {
-            cursor: pointer;
-            background: transparent;
+
+        /* ═══ Barra superior ═══ */
+        .tpl-topbar {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            min-height: var(--tpl-topbar-h);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: .5rem 1rem;
+            background: rgba(22, 27, 34, .92);
+            -webkit-backdrop-filter: saturate(180%) blur(14px);
+            backdrop-filter: saturate(180%) blur(14px);
+            border-bottom: 1px solid var(--tpl-border);
+        }
+
+        .tpl-topbar-left,
+        .tpl-topbar-right {
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+            min-width: 0;
+        }
+
+        .tpl-logo {
+            display: grid;
+            place-items: center;
+            width: 34px;
+            height: 34px;
+            flex: 0 0 auto;
+            border-radius: var(--tpl-radius);
+            color: #04120f;
+            background: linear-gradient(135deg, var(--tpl-accent), var(--tpl-accent-dark));
+            transition: transform var(--tpl-t);
+        }
+
+        .tpl-logo:hover { transform: scale(1.05); color: #04120f; }
+
+        .tpl-title {
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+            min-width: 0;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .tpl-title i { color: var(--tpl-accent); }
+
+        .tpl-title > span:nth-child(2) {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .tpl-badge {
+            font-size: .72rem;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: var(--tpl-bg-3);
+            border: 1px solid var(--tpl-border);
+            color: var(--tpl-muted);
+            font-weight: 500;
+        }
+
+        /* ═══ Botones ═══ */
+        .btn-tpl {
+            display: inline-flex;
+            align-items: center;
+            gap: .4rem;
+            padding: .45rem .8rem;
             border: 1px solid transparent;
-            color: #6c757d;
-            padding: 10px 20px;
-            transition: all 0.2s;
-            border-radius: 8px 8px 0 0;
+            border-radius: var(--tpl-radius);
+            font: inherit;
+            font-size: .82rem;
+            font-weight: 500;
+            color: var(--tpl-text);
+            background: transparent;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background-color var(--tpl-t), border-color var(--tpl-t), color var(--tpl-t);
         }
-        
-        .nav-tabs .nav-link:hover {
-            color: #0d6efd;
-            background: rgba(13, 110, 253, 0.05);
+
+        .btn-tpl.btn-ghost {
+            color: var(--tpl-muted);
+            border-color: var(--tpl-border);
+            background: transparent;
         }
-        
-        .nav-tabs .nav-link.active {
-            background: white;
-            border-color: #dee2e6 #dee2e6 transparent;
-            color: #0d6efd;
+
+        .btn-tpl.btn-ghost:hover {
+            color: var(--tpl-text);
+            background: rgba(255, 255, 255, .06);
+        }
+
+        .btn-tpl.btn-primary,
+        .btn-tpl.btn-info {
+            background: var(--tpl-accent);
+            color: #04120f;
+            font-weight: 600;
+            border-color: transparent;
+        }
+
+        .btn-tpl.btn-primary:hover,
+        .btn-tpl.btn-info:hover {
+            background: var(--tpl-accent-dark);
+            color: #fff;
+        }
+
+        .btn-tpl.btn-outline {
+            border-color: var(--tpl-accent);
+            color: var(--tpl-accent);
+            background: transparent;
+        }
+
+        .btn-tpl.btn-outline:hover {
+            background: rgba(0, 212, 170, .12);
+            border-color: var(--tpl-accent-dark);
+            color: var(--tpl-accent-dark);
+        }
+
+        /* ═══ Contenedor ═══ */
+        .tpl-main {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.25rem 1rem 2.5rem;
+        }
+
+        .tpl-panel {
+            background: var(--tpl-bg-2);
+            border: 1px solid var(--tpl-border);
+            border-radius: 12px;
+            padding: 1.25rem;
+        }
+
+        /* ═══ Metadatos ═══ */
+        .tpl-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: .9rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .field label {
+            display: block;
+            margin-bottom: .3rem;
+            font-size: .76rem;
+            font-weight: 600;
+            color: var(--tpl-muted);
+            text-transform: uppercase;
+            letter-spacing: .03em;
+        }
+
+        .field label .req { color: var(--tpl-danger); }
+
+        .field input[type="text"],
+        .field input[type="url"],
+        .field textarea,
+        .field select {
+            width: 100%;
+            padding: .5rem .65rem;
+            border: 1px solid var(--tpl-border);
+            border-radius: 6px;
+            background: var(--tpl-bg);
+            color: var(--tpl-text);
+            font: inherit;
+            font-size: .85rem;
+        }
+
+        .field input::placeholder,
+        .field textarea::placeholder { color: #5b6572; }
+
+        .field input:focus,
+        .field textarea:focus,
+        .field select:focus {
+            outline: 2px solid rgba(0, 212, 170, .35);
+            outline-offset: 1px;
+            border-color: var(--tpl-accent);
+            box-shadow: none;
+        }
+
+        /* ═══ Pestañas ═══ */
+        .tpl-tabs {
+            display: flex;
+            gap: .25rem;
+            padding: .35rem;
+            margin-bottom: .9rem;
+            background: var(--tpl-bg);
+            border: 1px solid var(--tpl-border);
+            border-radius: var(--tpl-radius);
+            overflow-x: auto;
+        }
+
+        .tpl-tabs .nav-link {
+            display: inline-flex;
+            align-items: center;
+            gap: .4rem;
+            padding: .45rem .9rem;
+            border: 0;
+            border-radius: 6px;
+            background: transparent;
+            color: var(--tpl-muted);
+            font: inherit;
+            font-size: .82rem;
+            font-weight: 500;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background-color var(--tpl-t), color var(--tpl-t);
+        }
+
+        .tpl-tabs .nav-link i { margin: 0; font-size: .95rem; }
+
+        .tpl-tabs .nav-link:hover {
+            color: var(--tpl-text);
+            background: rgba(255, 255, 255, .05);
+        }
+
+        .tpl-tabs .nav-link.active {
+            color: var(--tpl-accent);
+            background: rgba(0, 212, 170, .12);
             font-weight: 600;
         }
-        
-        .nav-tabs .nav-link i {
-            margin-right: 6px;
-        }
-        
-        /* Contenido de Tabs */
+
+        /* ═══ Área de edición ═══ */
         .tab-content {
-            background: white;
-            border-radius: 0 0 8px 8px;
+            background: var(--tpl-bg);
+            border: 1px solid var(--tpl-border);
+            border-radius: var(--tpl-radius);
+            overflow: hidden;
         }
-        
+
         .tab-pane {
             display: none;
-            padding: 20px 0 0 0;
+            padding: 0;
         }
-        
+
         .tab-pane.active {
             display: block;
         }
-        
+
         /* CodeMirror */
         .CodeMirror {
-            height: 600px;
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            font-size: 14px;
+            height: 620px;
+            border: 0;
+            border-radius: 0;
+            font-family: var(--tpl-mono);
+            font-size: 13px;
         }
-        
-        /* GrapesJS */
+
+        .CodeMirror-gutters {
+            border-right: 1px solid var(--tpl-border);
+        }
+
+        /* GrapesJS: el lienzo conserva fondo claro para editar la plantilla,
+           el marco es oscuro como el resto del editor. */
         #gjs-editor {
-            height: 600px;
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
+            height: 620px;
+            border: 0;
+            border-radius: 0;
             overflow: hidden;
         }
-        
+
         .gjs-cv-canvas {
             background: #ffffff !important;
         }
-        
-        /* Notificaciones */
+
+        /* ═══ Pie del panel ═══ */
+        .tpl-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: .9rem;
+            margin-top: 1.25rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--tpl-border);
+        }
+
+        .tpl-options {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1.1rem;
+        }
+
+        .tpl-options .form-check {
+            display: flex;
+            align-items: center;
+            gap: .45rem;
+            margin: 0;
+        }
+
+        .tpl-options .form-check-input {
+            width: 16px;
+            height: 16px;
+            margin: 0;
+            background-color: var(--tpl-bg);
+            border-color: var(--tpl-border);
+            accent-color: var(--tpl-accent);
+        }
+
+        .tpl-options .form-check-input:checked {
+            background-color: var(--tpl-accent);
+            border-color: var(--tpl-accent);
+        }
+
+        .tpl-options .form-check-label {
+            font-size: .84rem;
+            color: var(--tpl-muted);
+            cursor: pointer;
+        }
+
+        .tpl-actions {
+            display: flex;
+            gap: .5rem;
+            flex-wrap: wrap;
+        }
+
+        .tpl-actions .btn-tpl {
+            padding: .55rem 1rem;
+        }
+
+        /* ═══ Avisos: mismo lenguaje que los toasts del builder ═══ */
         .alert-fixed {
             position: fixed;
-            top: 20px;
-            right: 20px;
+            top: calc(var(--tpl-topbar-h) + 12px);
+            right: 16px;
             z-index: 9999;
-            min-width: 300px;
-            max-width: 500px;
-            border-radius: 12px;
+            min-width: 280px;
+            max-width: 460px;
+            padding: .65rem .9rem;
+            border: 1px solid var(--tpl-border);
+            border-left: 3px solid var(--tpl-accent);
+            border-radius: var(--tpl-radius);
+            background: var(--tpl-bg-2);
+            color: var(--tpl-text);
+            font-size: .84rem;
+            box-shadow: 0 10px 28px rgba(0, 0, 0, .45);
         }
-        
-        .btn-ghost {
-            background: transparent;
-            border: 1px solid #dee2e6;
-            color: #6c757d;
+
+        .alert-fixed.alert-success { border-left-color: #22c55e; }
+        .alert-fixed.alert-danger { border-left-color: var(--tpl-danger); }
+        .alert-fixed.alert-warning { border-left-color: #f59e0b; }
+        .alert-fixed.alert-info { border-left-color: #3b82f6; }
+
+        .alert-fixed .btn-close {
+            filter: invert(1) grayscale(1) brightness(2);
+            opacity: .6;
+            padding: .6rem;
         }
-        
-        .btn-ghost:hover {
-            background: #f8f9fa;
-            color: #0d6efd;
-        }
-        
-        /* Responsive */
+
+        .alert-fixed .btn-close:hover { opacity: 1; }
+
+        /* ═══ Responsive ═══ */
         @media (max-width: 768px) {
-            .CodeMirror, #gjs-editor {
-                height: 400px;
+            .CodeMirror,
+            #gjs-editor {
+                height: 440px;
+            }
+
+            .tpl-panel { padding: 1rem; }
+
+            .tpl-footer {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .tpl-actions .btn-tpl { flex: 1 1 auto; justify-content: center; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                transition-duration: .001ms !important;
+                animation-duration: .001ms !important;
             }
         }
     </style>
 </head>
-<body>
-<div class="container-fluid py-4">
-    <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <h3 class="mb-0"><i class="bi bi-layout-text-window"></i> <?= e($pageTitle) ?></h3>
-            <div class="d-flex gap-2">
-                <?php if ($template): ?>
-                    <a href="<?= url('admin/templates/' . (int)$t['id'] . '/versions') ?>" class="btn btn-info btn-sm">
-                        <i class="bi bi-clock-history"></i> Versiones
-                    </a>
-                <?php endif; ?>
-                <a href="<?= url('admin/templates') ?>" class="btn btn-ghost btn-sm">
-                    <i class="bi bi-arrow-left"></i> Volver
-                </a>
-            </div>
-        </div>
+<body class="tpl-body">
 
-        <div class="card-body">
-            <form method="post"
-                  action="<?= url($template ? "admin/templates/{$t['id']}" : 'admin/templates') ?>"
-                  id="templateForm">
-                <?= \App\Core\CSRF::field() ?>
-
-                <!-- ═══ METADATOS ═══ -->
-                <div class="row g-3 mb-4">
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Nombre <span class="text-danger">*</span></label>
-                        <input type="text" name="name" class="form-control"
-                               value="<?= e($t['name']) ?>" required>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Descripción</label>
-                        <input type="text" name="description" class="form-control"
-                               value="<?= e($t['description']) ?>">
-                    </div>
-                </div>
-
-                <!-- ═══ TABS ═══ -->
-                <ul class="nav nav-tabs" id="editorTabs" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button type="button" class="nav-link active" data-tab="visual" role="tab">
-                            <i class="bi bi-palette"></i> Visual
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button type="button" class="nav-link" data-tab="html" role="tab">
-                            <i class="bi bi-code-slash"></i> HTML
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button type="button" class="nav-link" data-tab="css" role="tab">
-                            <i class="bi bi-palette2"></i> CSS
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button type="button" class="nav-link" data-tab="js" role="tab">
-                            <i class="bi bi-braces"></i> JS
-                        </button>
-                    </li>
-                    <?php if ($canEditPhp): ?>
-                    <li class="nav-item" role="presentation">
-                        <button type="button" class="nav-link" data-tab="php" role="tab">
-                            <i class="bi bi-filetype-php"></i> PHP
-                        </button>
-                    </li>
-                    <?php endif; ?>
-                </ul>
-
-                <!-- ═══ CONTENIDO DE TABS ═══ -->
-                <div class="tab-content">
-                    <!-- Visual (GrapesJS) -->
-                    <div class="tab-pane active" id="pane-visual" data-tab="visual" role="tabpanel">
-                        <div id="gjs-editor"></div>
-                    </div>
-
-                    <!-- HTML -->
-                    <div class="tab-pane" id="pane-html" data-tab="html" role="tabpanel">
-                        <textarea name="content_html" id="cm-html"><?= e($initialHtml) ?></textarea>
-                    </div>
-
-                    <!-- CSS -->
-                    <div class="tab-pane" id="pane-css" data-tab="css" role="tabpanel">
-                        <textarea name="content_css" id="cm-css"><?= e($initialCss) ?></textarea>
-                    </div>
-
-                    <!-- JS -->
-                    <div class="tab-pane" id="pane-js" data-tab="js" role="tabpanel">
-                        <textarea name="content_js" id="cm-js"><?= e($t['content_js'] ?? '') ?></textarea>
-                    </div>
-
-                    <!-- PHP -->
-                    <?php if ($canEditPhp): ?>
-                    <div class="tab-pane" id="pane-php" data-tab="php" role="tabpanel">
-                        <textarea name="content_php" id="cm-php"><?= e($t['content_php'] ?? '') ?></textarea>
-                    </div>
-                    <?php endif; ?>
-                </div>
-
-                <!-- ═══ CAMPO OCULTO GRAPESJS ═══ -->
-                <input type="hidden" name="grapesjs_data" id="grapesjs-data"
-                       value="<?= e(is_array($grapesjsData) ? json_encode($grapesjsData) : $grapesjsData) ?>">
-
-                <!-- ═══ OPCIONES ═══ -->
-                <div class="d-flex gap-3 mt-4 flex-wrap">
-                    <div class="form-check">
-                        <input type="checkbox" name="is_active" value="1" class="form-check-input" id="isActive"
-                               <?= !empty($t['is_active']) ? 'checked' : '' ?>>
-                        <label class="form-check-label" for="isActive">Activo</label>
-                    </div>
-                    <div class="form-check">
-                        <input type="checkbox" name="is_default" value="1" class="form-check-input" id="isDefault"
-                               <?= !empty($t['is_default']) ? 'checked' : '' ?>>
-                        <label class="form-check-label" for="isDefault">Por defecto</label>
-                    </div>
-                    <div class="form-check">
-                        <input type="checkbox" name="create_version" value="1" class="form-check-input" id="createVersion" checked>
-                        <label class="form-check-label" for="createVersion">Guardar versión</label>
-                    </div>
-                </div>
-
-                <!-- ═══ ACCIONES ═══ -->
-                <div class="d-flex gap-2 mt-4 pt-3 border-top">
-                    <button type="submit" class="btn btn-primary" id="btnSave">
-                        <i class="bi bi-check-lg"></i> Guardar
-                    </button>
-                    <?php if ($template): ?>
-                    <button type="button" class="btn btn-info" id="btnSaveVersion">
-                        <i class="bi bi-clock-history"></i> Guardar versión
-                    </button>
-                    <?php endif; ?>
-                    <a href="<?= url('admin/templates') ?>" class="btn btn-ghost">Cancelar</a>
-                </div>
-            </form>
+<!-- ═══ BARRA SUPERIOR ═══ -->
+<header class="tpl-topbar">
+    <div class="tpl-topbar-left">
+        <a href="<?= url('admin/templates') ?>" class="tpl-logo" title="Volver a plantillas">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <div class="tpl-title">
+            <i class="bi bi-layout-text-window"></i>
+            <span><?= e($pageTitle) ?></span>
+            <?php if ($template): ?>
+                <span class="tpl-badge">#<?= (int)$t['id'] ?></span>
+            <?php endif; ?>
         </div>
     </div>
-</div>
+
+    <div class="tpl-topbar-right">
+        <?php if ($template): ?>
+            <a href="<?= url('admin/templates/' . (int)$t['id'] . '/versions') ?>" class="btn-tpl btn-ghost">
+                <i class="bi bi-clock-history"></i><span class="btn-label">Versiones</span>
+            </a>
+        <?php endif; ?>
+        <button type="submit" form="templateForm" class="btn-tpl btn-primary" id="btnSave">
+            <i class="bi bi-check-lg"></i><span class="btn-label">Guardar</span>
+        </button>
+    </div>
+</header>
+
+<!-- ═══ CONTENIDO ═══ -->
+<main class="tpl-main">
+    <form method="post"
+          action="<?= url($template ? "admin/templates/{$t['id']}" : 'admin/templates') ?>"
+          id="templateForm"
+          class="tpl-panel">
+        <?= \App\Core\CSRF::field() ?>
+
+        <!-- ═══ METADATOS ═══ -->
+        <section class="tpl-meta">
+            <div class="field">
+                <label for="tplName">Nombre <span class="req">*</span></label>
+                <input type="text" name="name" id="tplName" value="<?= e($t['name']) ?>" required
+                       placeholder="Nombre de la plantilla">
+            </div>
+            <div class="field">
+                <label for="tplDescription">Descripción</label>
+                <input type="text" name="description" id="tplDescription"
+                       value="<?= e($t['description']) ?>" placeholder="Para qué sirve esta plantilla">
+            </div>
+        </section>
+
+        <!-- ═══ PESTAÑAS ═══ -->
+        <nav class="tpl-tabs" id="editorTabs" role="tablist" aria-label="Modo de edición">
+            <button type="button" class="nav-link active" data-tab="visual" role="tab">
+                <i class="bi bi-palette"></i> Visual
+            </button>
+            <button type="button" class="nav-link" data-tab="html" role="tab">
+                <i class="bi bi-code-slash"></i> HTML
+            </button>
+            <button type="button" class="nav-link" data-tab="css" role="tab">
+                <i class="bi bi-palette2"></i> CSS
+            </button>
+            <button type="button" class="nav-link" data-tab="js" role="tab">
+                <i class="bi bi-braces"></i> JS
+            </button>
+            <?php if ($canEditPhp): ?>
+            <button type="button" class="nav-link" data-tab="php" role="tab">
+                <i class="bi bi-filetype-php"></i> PHP
+            </button>
+            <?php endif; ?>
+        </nav>
+
+        <!-- ═══ CONTENIDO DE PESTAÑAS ═══ -->
+        <div class="tab-content">
+            <!-- Visual (GrapesJS) -->
+            <div class="tab-pane active" id="pane-visual" data-tab="visual" role="tabpanel">
+                <div id="gjs-editor"></div>
+            </div>
+
+            <!-- HTML -->
+            <div class="tab-pane" id="pane-html" data-tab="html" role="tabpanel">
+                <textarea name="content_html" id="cm-html"><?= e($initialHtml) ?></textarea>
+            </div>
+
+            <!-- CSS -->
+            <div class="tab-pane" id="pane-css" data-tab="css" role="tabpanel">
+                <textarea name="content_css" id="cm-css"><?= e($initialCss) ?></textarea>
+            </div>
+
+            <!-- JS -->
+            <div class="tab-pane" id="pane-js" data-tab="js" role="tabpanel">
+                <textarea name="content_js" id="cm-js"><?= e($t['content_js'] ?? '') ?></textarea>
+            </div>
+
+            <!-- PHP -->
+            <?php if ($canEditPhp): ?>
+            <div class="tab-pane" id="pane-php" data-tab="php" role="tabpanel">
+                <textarea name="content_php" id="cm-php"><?= e($t['content_php'] ?? '') ?></textarea>
+            </div>
+            <?php endif; ?>
+        </div>
+
+        <!-- ═══ CAMPO OCULTO GRAPESJS ═══ -->
+        <input type="hidden" name="grapesjs_data" id="grapesjs-data"
+               value="<?= e(is_array($grapesjsData) ? json_encode($grapesjsData) : $grapesjsData) ?>">
+
+        <!-- ═══ OPCIONES Y ACCIONES ═══ -->
+        <footer class="tpl-footer">
+            <div class="tpl-options">
+                <div class="form-check">
+                    <input type="checkbox" name="is_active" value="1" class="form-check-input" id="isActive"
+                           <?= !empty($t['is_active']) ? 'checked' : '' ?>>
+                    <label class="form-check-label" for="isActive">Activo</label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" name="is_default" value="1" class="form-check-input" id="isDefault"
+                           <?= !empty($t['is_default']) ? 'checked' : '' ?>>
+                    <label class="form-check-label" for="isDefault">Por defecto</label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" name="create_version" value="1" class="form-check-input" id="createVersion" checked>
+                    <label class="form-check-label" for="createVersion">Guardar versión</label>
+                </div>
+            </div>
+
+            <div class="tpl-actions">
+                <?php if ($template): ?>
+                <button type="button" class="btn-tpl btn-outline" id="btnSaveVersion">
+                    <i class="bi bi-clock-history"></i> Guardar versión
+                </button>
+                <?php endif; ?>
+                <a href="<?= url('admin/templates') ?>" class="btn-tpl btn-ghost">Cancelar</a>
+            </div>
+        </footer>
+    </form>
+</main>
 
 <!-- ═══════════════════════════════════════════════════════════════════
      DEPENDENCIAS CDN

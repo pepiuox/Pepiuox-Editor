@@ -256,6 +256,63 @@ class CacheService
         }
     }
 
+    /**
+     * Devuelve la instancia registrada o crea una si aún no existe.
+     */
+    private static function instanceOrCreate(): ?self
+    {
+        if (self::$instance !== null) {
+            return self::$instance;
+        }
+
+        try {
+            self::$instance = new self(new Database());
+        } catch (Throwable $e) {
+            error_log('[CacheService] No se pudo crear la instancia: ' . $e->getMessage());
+        }
+
+        return self::$instance;
+    }
+
+    /**
+     * ✅ MÉTODO ESTÁTICO: Invalida la caché de una página concreta.
+     * Permite llamadas como CacheService::invalidatePage($id), que es como lo
+     * usan PageService, PagesController, PageController, SeoController y
+     * VersionsController. Antes no existía y lanzaba "Call to undefined method".
+     */
+    public static function invalidatePage(int $pageId): void
+    {
+        $instance = self::instanceOrCreate();
+        if ($instance === null) {
+            return;
+        }
+        $instance->clearPageCache($pageId);
+    }
+
+    /**
+     * ✅ MÉTODO ESTÁTICO: Invalida las páginas que usan una plantilla.
+     */
+    public static function invalidateTemplatePages(int $templateId): void
+    {
+        $instance = self::instanceOrCreate();
+        if ($instance === null) {
+            return;
+        }
+        $instance->doInvalidateTemplatePages($templateId);
+    }
+
+    /**
+     * ✅ MÉTODO ESTÁTICO: Guarda el HTML renderizado de una página en caché.
+     */
+    public static function putPage(int $pageId, string $content, ?int $duration = null): bool
+    {
+        $instance = self::instanceOrCreate();
+        if ($instance === null) {
+            return false;
+        }
+        return $instance->setPage($pageId, $content, $duration);
+    }
+
     public function invalidateRelatedPages(string $slug): void
     {
         try {
@@ -271,7 +328,10 @@ class CacheService
         }
     }
 
-    public function invalidateTemplatePages(int $templateId): void
+    /**
+     * Implementación real de invalidación por plantilla (instancia)
+     */
+    public function doInvalidateTemplatePages(int $templateId): void
     {
         try {
             if (!class_exists(Page::class)) return;

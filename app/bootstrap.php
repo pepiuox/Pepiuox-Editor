@@ -101,7 +101,9 @@ function buildServiceContainer(): array
 
         if (class_exists(PageService::class)) {
             try {
-                $pageService = new PageService($db);
+                // PageService exige Database Y PageModel: con solo $db lanzaba
+                // ArgumentCountError y el servicio quedaba en null.
+                $pageService = new PageService($db, new \App\Models\PageModel($db));
             } catch (\Throwable $e) {
                 error_log('[bootstrap] PageService no disponible: ' . $e->getMessage());
             }
@@ -167,10 +169,21 @@ function registerDependencies(Router $router, array $services): void
     $router->setResolver(function (string $class) use ($services) {
         $bindings = [
             // ═══ PÁGINAS ═══
+            
             App\Controllers\PagesController::class => function() use ($services) {
                 return new App\Controllers\PagesController(
-                    $services['pageService'] ?? null,
-                    $services['fileService'] ?? null
+                    $services['db'],
+                    $services['pageService'] ?? null
+                );
+            },
+
+            // ═══ PAGE CONTROLLER (público) ═══
+            App\Controllers\PageController::class => function() use ($services) {
+                return new App\Controllers\PageController(
+                    $services['pageModel'] ?? null,
+                    $services['pageStatsModel'] ?? null,
+                    $services['pageRenderer'] ?? null,
+                    $services['pagePublicService'] ?? null
                 );
             },
 

@@ -2,11 +2,22 @@
 namespace App\Controllers;
 
 use App\Core\{Request, Response, View, Session, CSRF, Database, Auth};
-use App\Models\{Page, Template, MetaTag};
+use App\Models\{Page, PageModel, Template, MetaTag};
 use App\Services\{PageService, AuditService};
 
 class PagesController
 {
+    private Database $db;
+    private PageService $pageService;
+
+    public function __construct(?Database $db = null, ?PageService $pageService = null)
+    {
+        $this->db = $db ?? new Database();
+        // PageService::save() es un método de instancia: llamarlo de forma
+        // estática lanzaba "Non-static method cannot be called statically".
+        $this->pageService = $pageService ?? new PageService($this->db, new PageModel($this->db));
+    }
+
     public function index(Request $req): void
     {
         $status = $req->get('status');
@@ -49,7 +60,7 @@ class PagesController
             Response::redirect(url('admin/pages/create'));
         }
 
-        $id = PageService::create($data);
+        $id = $this->pageService->create($data);
         if (!$id) {
             Session::flash('flash.error', 'Error al crear la página.');
             Response::redirect(url('admin/pages/create'));
@@ -83,33 +94,57 @@ class PagesController
 
         $mode = $req->post('mode', 'code');
 
+        $title       = (string) $req->post('title', $page['title']);
+        $description = (string) $req->post('description', $page['description']);
+
+        // `title` y `description` son varchar(255). Sin esta comprobación el
+        // guardado fallaba con "Data too long" y un mensaje genérico.
+        $tooLong = null;
+        if (mb_strlen($title) > 255) {
+            $tooLong = 'El título no puede superar los 255 caracteres.';
+        } elseif (mb_strlen($description) > 255) {
+            $tooLong = 'La descripción no puede superar los 255 caracteres.';
+        }
+
+        if ($tooLong !== null) {
+            if ($req->isAjax()) {
+                Response::json(['success' => false, 'message' => $tooLong], 422);
+            }
+            Session::flash('flash.error', $tooLong);
+            Response::redirect(url("admin/pages/$id/edit"));
+        }
+
         $data = [
             'template_id'  => $req->post('template_id') ?: null,
-            'parent_id'    => $req->post('parent_id') ?: null,
-            'title'        => $req->post('title', $page['title']),
+            // El builder no envía parent_id: sin fallback se perdía la jerarquía.
+            'parent_id'    => $req->post('parent_id', $page['parent_id'] ?? null) ?: null,
+            'title'        => $title,
             'slug'         => $req->post('slug', $page['slug']),
-            'description'  => $req->post('description', $page['description']),
-            'h1'           => $req->post('h1'),
+            'description'  => $description,
+            // El builder no envía h1: sin este fallback se borraría al guardar.
+            'h1'           => $req->post('h1', $page['h1'] ?? null),
             'startpage'    => (int)$req->post('startpage', 0),
-            'is_published' => (int)$req->post('is_published', 0),
+            // El builder tampoco envía is_published: sin fallback, guardar
+            // despublicaba la página en cada guardado.
+            'is_published' => (int)$req->post('is_published', $page['is_published'] ?? 0),
             'status'       => $req->post('status', $page['status']),
             'publish_at'   => $req->post('publish_at') ?: null,
         ];
 
+        // El contenido se persiste igual en ambos modos: el builder visual
+        // también edita JS y PHP, y antes se descartaban al guardar.
+        $data['content_html'] = $req->post('content_html', $page['content_html']);
+        $data['content_css']  = $req->post('content_css', $page['content_css']);
+        $data['content_js']   = $req->post('content_js', $page['content_js']);
+        $data['content_php']  = Auth::can('pages.edit')
+            ? $req->post('content_php', $page['content_php'])
+            : $page['content_php'];
+
         if ($mode === 'visual') {
-            $data['grapesjs_data'] = $req->post('grapesjs_data');
-            $data['content_html'] = $req->post('content_html', $page['content_html']);
-            $data['content_css'] = $req->post('content_css', $page['content_css']);
-        } else {
-            $data['content_html'] = $req->post('content_html', $page['content_html']);
-            $data['content_css'] = $req->post('content_css', $page['content_css']);
-            $data['content_js'] = $req->post('content_js', $page['content_js']);
-            $data['content_php'] = Auth::can('pages.edit') 
-                ? $req->post('content_php', $page['content_php']) 
-                : $page['content_php'];
+            $data['grapesjs_data'] = $req->post('grapesjs_data', $page['grapesjs_data'] ?? null);
         }
 
-        if (!PageService::save($id, $data, $req->post('version_note'))) {
+        if (!$this->pageService->save($id, $data, $req->post('version_note'))) {
             if ($req->isAjax()) {
                 Response::json(['success' => false, 'message' => 'Error al guardar']);
             }
@@ -219,7 +254,10 @@ class PagesController
         $existingAssets = $this->getExistingAssets();
         $seo = MetaTag::forPage($id);
 
-        Response::render(View::render('pages.builder', compact(
+        // El builder es un documento HTML completo (lleva su propio <!DOCTYPE>),
+        // así que se renderiza sin layout. Envolverlo en layouts.admin anidaba un
+        // segundo <body>: el navegador lo descarta y el lienzo queda sin altura.
+        Response::render(View::renderStandalone('pages.builder', compact(
             'page', 'templates', 'existingAssets', 'seo'
         )));
     }
@@ -228,92 +266,77 @@ class PagesController
     {
         if (!Auth::can('pages.edit')) {
             Response::json(['success' => false, 'errors' => ['Sin permisos']], 403);
+            return;
         }
 
         $files = $_FILES['files'] ?? null;
-        if (!$files) {
+        if (!$files || !isset($files['name'])) {
             Response::json(['success' => false, 'errors' => ['No se recibieron archivos']]);
+            return;
         }
 
         $uploaded = [];
-        $errors = [];
-        $names = (array)$files['name'];
+        $errors   = [];
+        $names    = (array) $files['name'];
+        $allowed  = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+        $maxBytes = 5 * 1024 * 1024;
 
-        for ($i = 0; $i < count($names); $i++) {
-            $single = [
-                'name' => $names[$i],
-                'type' => is_array($files['type']) ? $files['type'][$i] : $files['type'],
-                'tmp_name' => is_array($files['tmp_name']) ? $files['tmp_name'][$i] : $files['tmp_name'],
-                'error' => is_array($files['error']) ? $files['error'][$i] : $files['error'],
-                'size' => is_array($files['size']) ? $files['size'][$i] : $files['size'],
-            ];
+        for ($i = 0, $count = count($names); $i < $count; $i++) {
+            $originalName = (string) $names[$i];
+            $error    = is_array($files['error']) ? $files['error'][$i] : $files['error'];
+            $tmpName  = is_array($files['tmp_name']) ? $files['tmp_name'][$i] : $files['tmp_name'];
+            $size     = (int) (is_array($files['size']) ? $files['size'][$i] : $files['size']);
+            $ext      = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
 
-            if ($single['error'] !== UPLOAD_ERR_OK) {
-                $errors[] = 'Error al subir: ' . $single['name'];
+            if ($error !== UPLOAD_ERR_OK) {
+                $errors[] = 'Error al subir: ' . $originalName;
                 continue;
             }
-
-            $ext = strtolower(pathinfo($single['name'], PATHINFO_EXTENSION));
-            $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
             if (!in_array($ext, $allowed, true)) {
-                $errors[] = 'Tipo no permitido: ' . $single['name'];
+                $errors[] = 'Tipo no permitido: ' . $originalName;
                 continue;
             }
-
-            if ($single['size'] > 5 * 1024 * 1024) {
-                $errors[] = 'Archivo demasiado grande (máx 5MB): ' . $single['name'];
+            if ($size > $maxBytes) {
+                $errors[] = 'Archivo demasiado grande (máx 5MB): ' . $originalName;
                 continue;
             }
 
             $finfo = new \finfo(FILEINFO_MIME_TYPE);
-            $mime = $finfo->file($single['tmp_name']);
+            $mime = (string) $finfo->file($tmpName);
             if (!str_starts_with($mime, 'image/')) {
-                $errors[] = 'MIME inválido: ' . $single['name'];
+                $errors[] = 'MIME inválido: ' . $originalName;
                 continue;
             }
 
             $yearMonth = date('Y/m');
-            $dir = UPLOADS_PATH . '/' . $yearMonth;
-            if (!is_dir($dir)) @mkdir($dir, 0775, true);
+            $dir = rtrim(UPLOADS_PATH, '/\\') . '/' . $yearMonth;
+            if (!is_dir($dir) && !@mkdir($dir, 0775, true) && !is_dir($dir)) {
+                $errors[] = 'No se pudo crear el directorio de subida';
+                break;
+            }
 
-            $filename = bin2hex(random_bytes(16)) . '.' . $ext;
+            // Se conserva el nombre original; si ya existe se añade -1, -2...
+            $filename = $this->uniqueAssetName($dir, $originalName);
             $dest = $dir . '/' . $filename;
 
-            if (!move_uploaded_file($single['tmp_name'], $dest)) {
-                $errors[] = 'No se pudo mover: ' . $single['name'];
+            if (!move_uploaded_file($tmpName, $dest)) {
+                $errors[] = 'No se pudo guardar: ' . $originalName;
                 continue;
             }
+            @chmod($dest, 0644);
 
-            $width = 0;
-            $height = 0;
-            if ($ext === 'svg') {
-                $svgContent = @file_get_contents($dest);
-                if ($svgContent && preg_match('/viewBox=["\']([^"\']+)["\']/', $svgContent, $matches)) {
-                    $viewBox = explode(' ', $matches[1]);
-                    if (count($viewBox) === 4) {
-                        $width = (int)$viewBox[2];
-                        $height = (int)$viewBox[3];
-                    }
-                }
-            } else {
-                $imgInfo = @getimagesize($dest);
-                if ($imgInfo) {
-                    $width = $imgInfo[0];
-                    $height = $imgInfo[1];
-                }
-            }
-
+            [$width, $height] = $this->assetDimensions($dest, $ext);
             $relPath = $yearMonth . '/' . $filename;
-            $publicUrl = url('uploads/' . $relPath);
 
             $uploaded[] = [
-                'src' => $publicUrl,
-                'name' => $single['name'],
-                'type' => 'image',
-                'width' => $width,
-                'height' => $height,
-                'size' => $single['size'],
-                'uploaded_at' => date('Y-m-d H:i:s'),
+                'src'           => url('uploads/' . $relPath),
+                'name'          => $filename,
+                'original_name' => $originalName,
+                'type'          => 'image',
+                'width'         => $width,
+                'height'        => $height,
+                'size'          => $size,
+                'uploaded_at'   => date('Y-m-d H:i:s'),
             ];
         }
 
@@ -322,6 +345,66 @@ class PagesController
             'data' => $uploaded,
             'errors' => $errors,
         ]);
+    }
+
+    /**
+     * Nombre de archivo seguro para URL que conserva el original.
+     * Si ya existe en el directorio, añade un sufijo numérico.
+     */
+    private function uniqueAssetName(string $dir, string $originalName): string
+    {
+        $ext  = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+        $base = pathinfo($originalName, PATHINFO_FILENAME);
+
+        // Sin acentos, sin separadores de ruta y con espacios convertidos en guiones.
+        if (function_exists('iconv')) {
+            $ascii = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $base);
+            if ($ascii !== false) {
+                $base = $ascii;
+            }
+        }
+        $base = preg_replace('/[^A-Za-z0-9._-]+/', '-', $base) ?? '';
+        $base = trim(str_replace(['..', '/', '\\'], '', $base), '-._');
+
+        if ($base === '') {
+            $base = 'imagen';
+        }
+        $base = substr($base, 0, 80);
+
+        $candidate = $base . '.' . $ext;
+        $suffix = 1;
+        while (is_file($dir . '/' . $candidate)) {
+            $candidate = $base . '-' . $suffix . '.' . $ext;
+            $suffix++;
+            if ($suffix > 999) {
+                $candidate = $base . '-' . bin2hex(random_bytes(4)) . '.' . $ext;
+                break;
+            }
+        }
+
+        return $candidate;
+    }
+
+    /**
+     * Dimensiones de una imagen o de un SVG (por viewBox).
+     *
+     * @return array{0:int,1:int}
+     */
+    private function assetDimensions(string $path, string $ext): array
+    {
+        if ($ext === 'svg') {
+            $svg = @file_get_contents($path);
+            if ($svg && preg_match('/viewBox=["\']([^"\']+)["\']/', $svg, $matches)) {
+                $viewBox = preg_split('/[\s,]+/', trim($matches[1])) ?: [];
+                if (count($viewBox) === 4) {
+                    return [(int) $viewBox[2], (int) $viewBox[3]];
+                }
+            }
+            return [0, 0];
+        }
+
+        $info = @getimagesize($path);
+        return $info ? [(int) $info[0], (int) $info[1]] : [0, 0];
     }
 
     public function getAssets(Request $req): void
@@ -350,24 +433,7 @@ class PagesController
             $relativePath = str_replace($uploadDir . '/', '', $file->getPathname());
             $publicUrl = url('uploads/' . $relativePath);
 
-            $width = 0;
-            $height = 0;
-            if ($ext === 'svg') {
-                $svgContent = @file_get_contents($file->getPathname());
-                if ($svgContent && preg_match('/viewBox=["\']([^"\']+)["\']/', $svgContent, $matches)) {
-                    $viewBox = explode(' ', $matches[1]);
-                    if (count($viewBox) === 4) {
-                        $width = (int)$viewBox[2];
-                        $height = (int)$viewBox[3];
-                    }
-                }
-            } else {
-                $imgInfo = @getimagesize($file->getPathname());
-                if ($imgInfo) {
-                    $width = $imgInfo[0];
-                    $height = $imgInfo[1];
-                }
-            }
+            [$width, $height] = $this->assetDimensions($file->getPathname(), $ext);
 
             $assets[] = [
                 'src' => $publicUrl,

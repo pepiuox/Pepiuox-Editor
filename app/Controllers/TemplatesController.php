@@ -66,7 +66,8 @@ class TemplatesController
             Response::abort(403, 'No tienes permisos para crear templates');
         }
 
-        Response::render(View::render('templates.edit', ['template' => null]));
+        // La vista es un documento HTML completo: se renderiza sin layout.
+        Response::render(View::renderStandalone('templates.edit', ['template' => null]));
     }
 
     /**
@@ -117,8 +118,8 @@ class TemplatesController
             Response::abort(404, 'Template no encontrado');
         }
 
-        // Vista: templates.edit → views/templates/edit.php
-        Response::render(View::render('templates.edit', compact('template')));
+        // Vista: templates.edit → views/templates/edit.php (documento completo, sin layout)
+        Response::render(View::renderStandalone('templates.edit', compact('template')));
     }
 
     /**

@@ -1,6 +1,4 @@
 <?php
-// views/files/edit.php
-
 $pageTitle = 'Editar Archivo';
 ?>
 

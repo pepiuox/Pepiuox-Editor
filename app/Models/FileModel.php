@@ -96,7 +96,7 @@ public function updateMetadata(int $id, int $userId, array $metadata): bool
 /**
  * Obtiene archivos con filtro por metadata
  */
-public function getByMetadata(string $key, $value, int $userId = null): array
+public function getByMetadata(string $key, $value, ?int $userId = null): array
 {
     $query = "SELECT * FROM files 
               WHERE JSON_EXTRACT(metadata, '$." . $key . "') = ?
