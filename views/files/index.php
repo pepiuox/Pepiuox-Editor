@@ -61,6 +61,12 @@ $cat = $cat ?? null;
                     <i class="bi bi-list-ul"></i>
                 </button>
             </div>
+            <form method="post" action="<?= url('admin/files/sync') ?>" style="display:inline">
+                <?= \App\Core\CSRF::field() ?>
+                <button class="btn btn-outline btn-sm" title="Registra en el gestor los archivos que ya están en uploads/ (por ejemplo, los subidos desde el editor visual)">
+                    <i class="bi bi-arrow-repeat"></i> Sincronizar con disco
+                </button>
+            </form>
             <form method="post" action="<?= url('admin/files/upload') ?>" enctype="multipart/form-data" class="d-flex gap-2 flex-wrap">
                 <?= \App\Core\CSRF::field() ?>
                 <input type="file" name="files[]" class="form-control form-control-sm" multiple required style="max-width:250px">
@@ -69,8 +75,26 @@ $cat = $cat ?? null;
         </div>
     </div>
     <div class="card-body">
+        <?php if (isset($stats)): ?>
+            <div class="d-flex gap-3 flex-wrap mb-3" style="font-size:.85rem;color:#666">
+                <span><i class="bi bi-database"></i> <?= (int) $stats['in_db'] ?> en el gestor</span>
+                <span><i class="bi bi-hdd"></i> <?= (int) $stats['on_disk'] ?> en uploads/</span>
+                <?php if ((int) $stats['missing'] > 0): ?>
+                    <span style="color:#b45309">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <?= (int) $stats['missing'] ?> sin archivo en disco
+                    </span>
+                <?php endif; ?>
+                <?php if ((int) $stats['on_disk'] > (int) $stats['in_db']): ?>
+                    <span style="color:#0f766e">
+                        <i class="bi bi-info-circle"></i> hay archivos en disco fuera del gestor: pulsa «Sincronizar con disco»
+                    </span>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+
         <!-- ✅ Filtros por categoría -->
-        <div class="d-flex gap-2 mb-3 flex-wrap">
+        <div class="d-flex gap-2 mb-3 flex-wrap align-items-center">
             <a class="btn btn-sm <?= !$cat ? 'btn-primary' : 'btn-ghost' ?>" href="<?= url('admin/files') ?>">
                 <i class="bi bi-folder"></i> Todos
             </a>
@@ -90,6 +114,22 @@ $cat = $cat ?? null;
                     <i class="bi bi-<?= _fileIcon($c) ?>"></i> <?= e($label) ?>
                 </a>
             <?php endforeach; ?>
+
+            <form method="get" action="<?= url('admin/files') ?>" class="d-flex gap-2 ms-auto">
+                <?php if ($cat): ?>
+                    <input type="hidden" name="category" value="<?= e($cat) ?>">
+                <?php endif; ?>
+                <input type="search" name="q" class="form-control form-control-sm"
+                       value="<?= e($q ?? '') ?>" placeholder="Buscar por nombre…" style="max-width:220px">
+                <button class="btn btn-sm btn-ghost" title="Buscar"><i class="bi bi-search"></i></button>
+                <?php if (!empty($q)): ?>
+                    <a class="btn btn-sm btn-ghost" href="<?= url('admin/files' . ($cat ? '?category=' . urlencode($cat) : '')) ?>"
+                       title="Quitar búsqueda"><i class="bi bi-x-lg"></i></a>
+                <?php endif; ?>
+            </form>
+            <a class="btn btn-sm btn-ghost" href="<?= url('admin/files/search/advanced') ?>" title="Búsqueda avanzada">
+                <i class="bi bi-funnel"></i> Avanzada
+            </a>
         </div>
 
         <!-- ✅ Vista en Cuadrícula -->
@@ -103,9 +143,9 @@ $cat = $cat ?? null;
                 <?php foreach ($files as $f): ?>
                     <?php if (!is_array($f)) continue; ?>
                     <div class="file-card border rounded p-2" style="background:#fff;transition:all 0.2s;">
-                        <?php if (($f['category'] ?? '') === 'image' && !empty($f['file_path'])): ?>
+                        <?php if (($f['category'] ?? '') === 'image' && !empty($f['preview_url'])): ?>
                             <div class="file-preview" style="height:150px;overflow:hidden;border-radius:4px;background:#f8f9fa;">
-                                <img src="<?= url('uploads/' . ltrim($f['file_path'], '/')) ?>" 
+                                <img src="<?= e($f['preview_url'] ?? '') ?>" 
                                      alt="<?= e($f['original_name'] ?? '') ?>" 
                                      style="width:100%;height:100%;object-fit:cover;">
                             </div>
@@ -116,13 +156,20 @@ $cat = $cat ?? null;
                             </div>
                         <?php endif; ?>
                         <div class="file-info p-2">
-                            <div class="file-name" style="font-weight:500;font-size:0.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                            <div class="file-name" style="font-weight:500;font-size:0.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
+                                 title="<?= e($f['relative_path'] ?? '') ?>">
                                 <?= e($f['original_name'] ?? '') ?>
                             </div>
                             <div class="file-meta d-flex justify-content-between text-muted" style="font-size:0.8rem;">
                                 <span class="file-ext badge bg-secondary"><?= strtoupper(_fileExtension($f['original_name'] ?? '')) ?></span>
-                                <span class="file-size"><?= _formatFileSize($f['file_size'] ?? 0) ?></span>
+                                <span class="file-size"><?= e($f['size_human'] ?? _formatFileSize($f['file_size'] ?? 0)) ?></span>
                             </div>
+                            <?php if (isset($f['exists_on_disk']) && !$f['exists_on_disk']): ?>
+                                <div class="badge bg-warning text-dark" style="font-size:.7rem"
+                                     title="El registro existe pero el archivo no está en uploads/">
+                                    <i class="bi bi-exclamation-triangle"></i> sin archivo
+                                </div>
+                            <?php endif; ?>
                         </div>
                         <div class="file-actions d-flex justify-content-end gap-1 p-1 border-top">
                             <a href="<?= url("admin/files/{$f['id']}/download") ?>" class="btn btn-ghost btn-sm" title="Descargar">
@@ -170,9 +217,9 @@ $cat = $cat ?? null;
                                 <?php if (!is_array($f)) continue; ?>
                                 <tr>
                                     <td>
-                                        <?php if (($f['category'] ?? '') === 'image' && !empty($f['file_path'])): ?>
+                                        <?php if (($f['category'] ?? '') === 'image' && !empty($f['preview_url'])): ?>
                                             <div class="file-thumb" style="width:40px;height:40px;overflow:hidden;border-radius:4px;">
-                                                <img src="<?= url('uploads/' . ltrim($f['file_path'], '/')) ?>" 
+                                                <img src="<?= e($f['preview_url'] ?? '') ?>" 
                                                      alt="" style="width:100%;height:100%;object-fit:cover;">
                                             </div>
                                         <?php else: ?>

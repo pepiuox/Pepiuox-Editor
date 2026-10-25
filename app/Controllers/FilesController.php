@@ -223,21 +223,117 @@ class FilesController
                 $filters['category'] = $cat;
             }
 
+            // Búsqueda por nombre o descripción (antes solo existía la avanzada).
+            $search = trim((string) $request->get('q', ''));
+            if ($search !== '') {
+                $filters['search'] = $search;
+            }
+
             // ✅ Usar FileManagerService
-            $files = $this->fileManager->getUserFiles($userId, $filters);
+            // Quien puede administrar archivos ve TODO uploads/; el resto, solo
+            // los suyos. Antes se filtraba siempre por propietario y los archivos
+            // subidos desde el editor visual no aparecían para otros usuarios.
+            $canManageAll = Auth::can('files.manage');
+            $files = $this->fileManager->getUserFiles($canManageAll ? null : $userId, $filters);
+
+            // Datos de presentación: ruta relativa, URL de vista previa, tamaño
+            // legible y si el archivo físico existe realmente. Antes la vista
+            // componía la URL con `file_path` tal cual, y las filas heredadas
+            // guardan rutas absolutas de Windows (imagen rota).
+            foreach ($files as &$file) {
+                $stored = (string) ($file['file_path'] ?? '');
+                $file['relative_path'] = $this->fileManager->relativePath($stored);
+                $file['preview_url'] = $this->fileManager->urlFor($stored);
+                $file['exists_on_disk'] = $this->fileManager->fileExists($stored);
+                $file['size_human'] = $this->fileManager->formatFileSize((int) ($file['file_size'] ?? 0));
+            }
+            unset($file);
+
+            // Contadores para el panel: lo que hay en la tabla y lo que hay en disco.
+            $stats = [
+                'in_db' => count($files),
+                'on_disk' => $this->countDiskFiles(),
+                'missing' => count(array_filter($files, static fn (array $f): bool => !$f['exists_on_disk'])),
+            ];
 
             // ✅ Vista correcta
             Response::render(View::render('files.index', [
                 'files' => $files,
                 'cat' => $cat,
+                'q' => $search,
+                'stats' => $stats,
             ]));
         } catch (Throwable $e) {
             error_log('[FilesController] Error en index: ' . $e->getMessage());
             Response::render(View::render('files.index', [
                 'files' => [],
                 'cat' => null,
+                'q' => '',
+                'stats' => ['in_db' => 0, 'on_disk' => 0, 'missing' => 0],
             ]));
         }
+    }
+
+    /**
+     * Sincroniza la tabla `files` con lo que hay en uploads/.
+     *
+     * Ruta: POST /admin/files/sync
+     *
+     * Sin esto, lo que se sube desde el editor visual (o se copia a mano a la
+     * carpeta) no aparece en el gestor, porque el gestor lista la tabla y el
+     * editor escribe en disco.
+     */
+    public function sync(Request $request): void
+    {
+        CSRF::guard();
+
+        if (!Auth::can('files.upload')) {
+            if ($request->isAjax()) {
+                Response::json(['success' => false, 'error' => 'Sin permisos para sincronizar archivos'], 403);
+                return;
+            }
+            Response::abort(403, 'No tienes permisos para sincronizar archivos');
+        }
+
+        $result = $this->fileManager->syncFromDisk(Auth::id());
+
+        $message = sprintf(
+            'Sincronizado: %d archivo(s) registrado(s), %d ruta(s) normalizada(s), %d registro(s) sin archivo.',
+            (int) $result['registered'],
+            (int) $result['normalized'],
+            (int) $result['missing']
+        );
+
+        if ($request->isAjax()) {
+            Response::json($result + ['message' => $message]);
+            return;
+        }
+
+        Session::flash($result['success'] ? 'flash.success' : 'flash.error', $message);
+        Response::redirect(url('admin/files'));
+    }
+
+    /**
+     * Cuenta los archivos reales que hay en uploads/.
+     */
+    private function countDiskFiles(): int
+    {
+        $base = defined('UPLOADS_PATH') ? rtrim(UPLOADS_PATH, '/') : (ROOT_PATH . '/uploads');
+        if (!is_dir($base)) {
+            return 0;
+        }
+
+        $allowed = defined('ALLOWED_EXTENSIONS') ? ALLOWED_EXTENSIONS : ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+        $count = 0;
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($base, \RecursiveDirectoryIterator::SKIP_DOTS)
+        );
+        foreach ($iterator as $file) {
+            if ($file->isFile() && in_array(strtolower($file->getExtension()), $allowed, true)) {
+                $count++;
+            }
+        }
+        return $count;
     }
 
     /**
@@ -423,20 +519,22 @@ class FilesController
         }
 
         $userId = Auth::id();
-        $file = $this->fileManager->getFile($id, $userId);
+        // Quien administra archivos puede descargar cualquiera; el resto, solo
+        // los suyos o los públicos.
+        $file = $this->fileManager->getFile($id, Auth::can('files.manage') ? null : $userId);
 
         if (!$file) {
             Response::abort(404, 'Archivo no encontrado');
         }
 
-        // ✅ Verificar permisos
-        if (!$this->checkDownloadPermissions($file, $userId)) {
+        // ✅ Verificar permisos (quien administra archivos puede descargar todo)
+        if (!$this->checkDownloadPermissions($file, $userId) && !Auth::can('files.manage')) {
             Response::abort(403, 'No tienes permisos para descargar este archivo');
         }
 
-        // ✅ Verificar que el archivo físico existe
-        $path = $file['file_path'] ?? '';
-        if (empty($path) || !is_file($path)) {
+        // ✅ Verificar que el archivo físico existe (resolviendo rutas heredadas)
+        $path = $this->fileManager->absolutePath((string) ($file['file_path'] ?? ''));
+        if ($path === '' || !is_file($path)) {
             Response::abort(404, 'Archivo físico no encontrado');
         }
 
@@ -654,7 +752,23 @@ class FilesController
             return;
         }
 
-        $result = $this->fileManager->delete($id, Auth::id());
+        // Quien administra archivos puede eliminar los de cualquier usuario:
+        // se borra con el id del propietario para respetar la regla del modelo.
+        $canManageAll = Auth::can('files.manage');
+        $file = $this->fileManager->getFile($id, $canManageAll ? null : Auth::id());
+
+        if (!$file) {
+            if ($request->isAjax()) {
+                Response::json(['success' => false, 'error' => 'Archivo no encontrado']);
+            } else {
+                Session::flash('flash.error', 'Archivo no encontrado');
+                Response::redirect(url('admin/files'));
+            }
+            return;
+        }
+
+        $ownerId = $canManageAll ? (int) $file['user_id'] : Auth::id();
+        $result = $this->fileManager->delete($id, $ownerId);
 
         if ($result['success']) {
             $this->auditService->log(

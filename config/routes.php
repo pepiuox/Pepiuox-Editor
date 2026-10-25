@@ -301,20 +301,15 @@ $router->post('/admin/seo/{id}/apply-meta', [App\Controllers\SeoController::clas
 $router->get('/admin/files', [App\Controllers\FilesController::class, 'index'], $auth);
 $router->post('/admin/files/upload', [App\Controllers\FilesController::class, 'upload'], $auth);
 $router->post('/admin/files/wysiwyg-upload', [App\Controllers\FilesController::class, 'wysiwygUpload'], $auth);
-$router->get('/admin/files/search', [App\Controllers\FilesController::class, 'search'], $auth);
-$router->post('/admin/files/search', [App\Controllers\FilesController::class, 'search'], $auth); // ✅ POST para búsquedas complejas
-$router->get('/admin/files/stats', [App\Controllers\FilesController::class, 'stats'], $auth);
-$router->get('/admin/files/editor', [App\Controllers\FilesController::class, 'getEditorFiles'], $auth);
-
-// ✅ Ruta especial para compartir (con {share_id})
-$router->post('/admin/files/share/{share_id}/revoke', [App\Controllers\FilesController::class, 'revokeShare'], $auth);
+// Registra en la tabla `files` lo que ya está en uploads/ (subido desde el editor
+// visual o copiado a mano). Sin esto el gestor no los veía.
+$router->post('/admin/files/sync', [App\Controllers\FilesController::class, 'sync'], $auth);
 
 // ✅ RUTAS PARAMETRIZADAS (AL FINAL)
 $router->get('/admin/files/{id}/download', [App\Controllers\FilesController::class, 'download'], $auth);
 $router->get('/admin/files/{id}/share', [App\Controllers\FilesController::class, 'shareView'], $auth);
 $router->post('/admin/files/{id}/share', [App\Controllers\FilesController::class, 'share'], $auth);
 $router->post('/admin/files/{id}/delete', [App\Controllers\FilesController::class, 'delete'], $auth);
-$router->post('/admin/files/{id}/hard-delete', [App\Controllers\FilesController::class, 'hardDelete'], $auth);
 
 // ✅ Búsqueda avanzada con metadata
 $router->get('/admin/files/search/advanced', [App\Controllers\FilesController::class, 'advancedSearch'], $auth);
@@ -322,9 +317,6 @@ $router->post('/admin/files/search/advanced', [App\Controllers\FilesController::
 
 // ✅ Actualizar metadata
 $router->post('/admin/files/{id}/metadata', [App\Controllers\FilesController::class, 'updateMetadata'], $auth);
-
-// ✅ Obtener metadata de un archivo
-$router->get('/admin/files/{id}/metadata', [App\Controllers\FilesController::class, 'getMetadata'], $auth);
 
 // ✅ Exportar archivos con metadata
 $router->get('/admin/files/export', [App\Controllers\FilesController::class, 'export'], $auth);

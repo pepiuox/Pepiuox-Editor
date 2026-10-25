@@ -97,6 +97,241 @@ class FileManagerService
         }
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    //  RUTAS DE ARCHIVO (una sola forma de resolverlas)
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * Ruta relativa a uploads/ (barras normales), apta para `url('uploads/…')`.
+     *
+     * `files.file_path` debería guardar la ruta relativa (`2026/10/foto.jpg`),
+     * pero hay filas antiguas con rutas absolutas de Windows
+     * (`C:\…\uploads\images\foto.jpg`). Se aceptan ambas formas.
+     *
+     * @return string Vacío si la ruta está vacía o intenta salir de uploads/
+     */
+    public function relativePath(string $storedPath): string
+    {
+        $path = trim(str_replace('\\', '/', $storedPath));
+        if ($path === '') {
+            return '';
+        }
+
+        // Ruta heredada: quedarse con lo que va después de /uploads/
+        if (preg_match('~/uploads/(.+)$~i', $path, $matches) === 1) {
+            $path = $matches[1];
+        }
+
+        $path = ltrim(preg_replace('~/+~', '/', $path) ?? $path, '/');
+
+        if ($path === '' || preg_match('~(^|/)\.\.(/|$)~', $path) === 1) {
+            return '';
+        }
+
+        return $path;
+    }
+
+    /**
+     * Ruta absoluta canónica dentro de uploads/.
+     */
+    public function absolutePath(string $storedPath): string
+    {
+        $relative = $this->relativePath($storedPath);
+        return $relative === '' ? '' : rtrim($this->uploadsDir, '/') . '/' . $relative;
+    }
+
+    /**
+     * ¿El archivo existe en disco?
+     */
+    public function fileExists(string $storedPath): bool
+    {
+        $absolute = $this->absolutePath($storedPath);
+        return $absolute !== '' && is_file($absolute);
+    }
+
+    /**
+     * URL pública del archivo (la sirve public/uploads.php).
+     */
+    public function urlFor(string $storedPath): string
+    {
+        $relative = $this->relativePath($storedPath);
+        return $relative === '' ? '' : url('uploads/' . $relative);
+    }
+
+    /**
+     * Sincroniza la tabla `files` con el contenido real de uploads/.
+     *
+     * 1. Normaliza las rutas heredadas (absolutas) a relativas.
+     * 2. Marca como borrados los registros cuyo archivo ya no existe.
+     * 3. Registra los archivos que están en disco y no estaban en la tabla.
+     *
+     * Es la pieza que faltaba: el gestor de archivos listaba solo la tabla y el
+     * gestor de medios del builder listaba solo el disco, así que lo subido
+     * desde el editor no aparecía en /admin/files.
+     *
+     * @return array{success:bool,registered:int,normalized:int,missing:int,total_disk:int,total_db:int,errors:array<int,string>}
+     */
+    public function syncFromDisk(?int $userId = null): array
+    {
+        $errors = [];
+        $registered = 0;
+        $normalized = 0;
+        $missing = 0;
+
+        try {
+            $ownerId = (int) ($userId ?? Auth::id() ?? 0);
+            if ($ownerId <= 0) {
+                $ownerId = 1;
+            }
+
+            $base = rtrim($this->uploadsDir, '/');
+
+            // 1 y 2) Normalizar y detectar registros sin archivo.
+            $known = [];
+            foreach ($this->db->fetchAll('SELECT id, file_path FROM files') as $row) {
+                $relative = $this->relativePath((string) $row['file_path']);
+
+                if ($relative === '' || !is_file($base . '/' . $relative)) {
+                    $this->db->execute(
+                        "UPDATE files SET deleted_at = COALESCE(deleted_at, NOW()) WHERE id = ?",
+                        [(int) $row['id']]
+                    );
+                    $missing++;
+                    continue;
+                }
+
+                if ($relative !== (string) $row['file_path']) {
+                    $this->db->execute(
+                        'UPDATE files SET file_path = ? WHERE id = ?',
+                        [$relative, (int) $row['id']]
+                    );
+                    $normalized++;
+                }
+
+                $known[$relative] = (int) $row['id'];
+            }
+
+            // 3) Registrar lo que está en disco.
+            $allowed = defined('ALLOWED_EXTENSIONS')
+                ? ALLOWED_EXTENSIONS
+                : ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'pdf'];
+
+            if (is_dir($base)) {
+                $iterator = new \RecursiveIteratorIterator(
+                    new \RecursiveDirectoryIterator($base, \RecursiveDirectoryIterator::SKIP_DOTS)
+                );
+
+                foreach ($iterator as $file) {
+                    if (!$file->isFile()) {
+                        continue;
+                    }
+                    $extension = strtolower($file->getExtension());
+                    if (!in_array($extension, $allowed, true)) {
+                        continue;
+                    }
+
+                    $relative = ltrim(str_replace('\\', '/', substr($file->getPathname(), strlen($base))), '/');
+                    if (isset($known[$relative])) {
+                        continue;
+                    }
+
+                    try {
+                        $this->registerDiskFile($file->getPathname(), $relative, $ownerId);
+                        $registered++;
+                    } catch (Throwable $e) {
+                        $errors[] = $relative . ': ' . $e->getMessage();
+                    }
+                }
+            }
+
+            $totalDisk = is_dir($base) ? count(glob($base . '/*') ?: []) : 0;
+
+            return [
+                'success' => true,
+                'registered' => $registered,
+                'normalized' => $normalized,
+                'missing' => $missing,
+                'total_disk' => $totalDisk,
+                'total_db' => (int) ($this->db->fetch('SELECT COUNT(*) c FROM files WHERE deleted_at IS NULL')['c'] ?? 0),
+                'errors' => $errors,
+            ];
+        } catch (Throwable $e) {
+            error_log('[FileManagerService] Error en syncFromDisk: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'registered' => $registered,
+                'normalized' => $normalized,
+                'missing' => $missing,
+                'total_disk' => 0,
+                'total_db' => 0,
+                'errors' => array_merge($errors, [$e->getMessage()]),
+            ];
+        }
+    }
+
+    /**
+     * Registra en `files` un archivo que ya está en disco.
+     */
+    private function registerDiskFile(string $absolute, string $relative, int $userId): int
+    {
+        $name = basename($absolute);
+        $extension = strtolower(pathinfo($absolute, PATHINFO_EXTENSION));
+        $mime = @mime_content_type($absolute) ?: 'application/octet-stream';
+        $category = $this->categoryForMime($mime, $extension);
+
+        $metadata = [];
+        if ($category === 'image' && $extension !== 'svg') {
+            $info = @getimagesize($absolute);
+            if ($info) {
+                $metadata = ['width' => (int) $info[0], 'height' => (int) $info[1]];
+            }
+        }
+
+        return $this->fileModel->create([
+            'user_id' => $userId,
+            'filename' => $name,
+            'original_name' => $name,
+            'file_path' => $relative,
+            'file_size' => (int) (@filesize($absolute) ?: 0),
+            'file_type' => $extension,
+            'mime_type' => $mime,
+            'category' => $category,
+            // El nombre original se pierde al subir desde el editor visual.
+            'description' => 'Importado desde uploads/',
+            'is_public' => 0,
+            'metadata' => $metadata,
+        ]);
+    }
+
+    /**
+     * Categoría del gestor a partir del MIME y la extensión.
+     */
+    private function categoryForMime(string $mime, string $extension): string
+    {
+        if (str_starts_with($mime, 'image/')) {
+            return 'image';
+        }
+        if (str_starts_with($mime, 'audio/')) {
+            return 'audio';
+        }
+        if (str_starts_with($mime, 'video/')) {
+            return 'video';
+        }
+        if (in_array($extension, ['zip', 'rar', 'tar', 'gz', '7z'], true)) {
+            return 'archive';
+        }
+        if (str_starts_with($mime, 'text/')
+            || str_contains($mime, 'pdf')
+            || str_contains($mime, 'word')
+            || str_contains($mime, 'excel')
+            || str_contains($mime, 'presentation')
+            || str_contains($mime, 'officedocument')) {
+            return 'document';
+        }
+
+        return 'other';
+    }
+
     /**
      * Sube un archivo al sistema
      */
@@ -154,6 +389,12 @@ class FileManagerService
             $categoryDir = $this->getCategoryDirectory($category);
             $uploadPath = $categoryDir . '/' . $uniqueName;
 
+            // ✅ En la base de datos se guarda la ruta RELATIVA a uploads/.
+            // Antes se guardaba la absoluta de Windows
+            // (`C:\…\uploads\images\foto.png`), que rompía la vista previa, la
+            // descarga y el borrado físico, y obligaba a repararla después.
+            $relativePath = $this->relativePath($uploadPath) ?: basename($categoryDir) . '/' . $uniqueName;
+
             // ✅ Mover archivo
             if (!move_uploaded_file($file['tmp_name'], $uploadPath)) {
                 throw new Exception('Error al guardar el archivo en el servidor');
@@ -172,7 +413,7 @@ class FileManagerService
                 'user_id' => $userId,
                 'filename' => $uniqueName,
                 'original_name' => $file['name'],
-                'file_path' => $uploadPath,
+                'file_path' => $relativePath,
                 'file_size' => $size,
                 'file_type' => $extension,
                 'mime_type' => $mimeType,
@@ -351,6 +592,8 @@ public function getDetailedStats(?int $userId = null): array
             $category = 'image'; // ✅ Coherente con la base de datos (ENUM)
             $categoryDir = $this->getCategoryDirectory($category);
             $uploadPath = $categoryDir . '/' . $uniqueName;
+            // Ruta relativa a uploads/ para la base de datos (ver upload()).
+            $relativePath = $this->relativePath($uploadPath) ?: basename($categoryDir) . '/' . $uniqueName;
 
             // ✅ Guardar archivo
             if (file_put_contents($uploadPath, $binaryData) === false) {
@@ -364,7 +607,7 @@ public function getDetailedStats(?int $userId = null): array
                 'user_id' => $userId,
                 'filename' => $uniqueName,
                 'original_name' => $options['name'] ?? 'base64_image_' . time() . '.' . $extension,
-                'file_path' => $uploadPath,
+                'file_path' => $relativePath,
                 'file_size' => strlen($binaryData),
                 'file_type' => $extension,
                 'mime_type' => $mimeType,
@@ -395,11 +638,20 @@ public function getDetailedStats(?int $userId = null): array
     /**
      * Obtiene archivos de un usuario
      */
-    public function getUserFiles(int $userId, array $filters = []): array
+    public function getUserFiles(?int $userId, array $filters = []): array
     {
         try {
-            $query = "SELECT * FROM files WHERE user_id = ? AND deleted_at IS NULL";
-            $params = [$userId];
+            // Con $userId = null se listan los archivos de todos los usuarios
+            // (solo lo usa el gestor para quien tiene permiso de administrarlos:
+            // los archivos que sube el editor visual no pertenecen a nadie en
+            // concreto y tienen que verse igual).
+            $query = 'SELECT * FROM files WHERE deleted_at IS NULL';
+            $params = [];
+
+            if ($userId !== null) {
+                $query .= ' AND user_id = ?';
+                $params[] = $userId;
+            }
 
             // ✅ Filtrar por categoría (coherente con ENUM)
             if (!empty($filters['category'])) {
@@ -567,9 +819,10 @@ public function getDetailedStats(?int $userId = null): array
                 return ['success' => false, 'error' => 'Archivo no encontrado'];
             }
 
-            // ✅ Eliminar archivo físico
-            if (is_file($file['file_path'])) {
-                @unlink($file['file_path']);
+            // ✅ Eliminar archivo físico (resolviendo también rutas heredadas)
+            $absolute = $this->absolutePath((string) ($file['file_path'] ?? ''));
+            if ($absolute !== '' && is_file($absolute)) {
+                @unlink($absolute);
             }
 
             // ✅ Eliminar de la base de datos
