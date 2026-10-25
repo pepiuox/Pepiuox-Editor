@@ -5,7 +5,7 @@
 return [
     'app_name'      => 'PePiuoX Editor',
     'app_version'   => '1.0.0',
-    'app_url'       => 'http://localhost:170/public', // sin trailing slash
+    'app_url'       => 'http://localhost:170', // sin trailing slash ni /public
     'timezone'      => 'Europe/Madrid',
     'locale'        => 'es_ES',
     'debug'         => true, // false en producción

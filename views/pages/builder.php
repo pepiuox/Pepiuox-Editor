@@ -1637,6 +1637,7 @@ FORMULARIO OCULTO PARA GUARDAR
     <input type="hidden" name="content_php" id="formPhp">
     <input type="hidden" name="content_js" id="formJs">
     <input type="hidden" name="status" id="formStatus">
+    <input type="hidden" name="is_published" id="formIsPublished">
     <input type="hidden" name="startpage" id="formStartpage">
     <input type="hidden" name="grapesjs_data" id="formGrapesData">
     <input type="hidden" name="seo_title" id="formSeoTitle">
@@ -2622,7 +2623,13 @@ function savePage() {
     document.getElementById('formCss').value = cmCss ? cmCss.getValue() : '';
     document.getElementById('formPhp').value = cmPhp ? cmPhp.getValue() : '';
     document.getElementById('formJs').value = cmJs ? cmJs.getValue() : '';
-    document.getElementById('formStatus').value = document.getElementById('pageStatus').value;
+    // El builder tiene un único control de publicación (el select «Estado»), así
+    // que is_published se deriva de él. Sin esto solo se enviaba `status`: la
+    // página quedaba con status=published pero is_published=0, y el frontend
+    // —que exige los dos— la trataba como inexistente y devolvía 404.
+    var statusValue = document.getElementById('pageStatus').value;
+    document.getElementById('formStatus').value = statusValue;
+    document.getElementById('formIsPublished').value = (statusValue === 'published') ? '1' : '0';
     document.getElementById('formStartpage').value = document.getElementById('pageStartpage').checked ? '1' : '0';
     document.getElementById('formGrapesData').value = gjsEditor ? JSON.stringify(gjsEditor.getProjectData()) : '';
     document.getElementById('formSeoTitle').value = document.getElementById('seoTitle').value;

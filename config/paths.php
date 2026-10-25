@@ -63,7 +63,15 @@ $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
 $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
 $basePath = ($scriptDir === '/' || $scriptDir === '\\') ? '' : $scriptDir;
 
-// URL base de la aplicación (ej: http://localhost:170/public)
+// `/public` es un detalle interno del despliegue: el .htaccess de la raíz
+// reescribe las URLs limpias hacia public/. Si se dejara dentro de BASE_URL,
+// cada enlace, asset y formulario generado por la aplicación mostraría /public/
+// en el navegador. Se recorta para que la URL pública sea la raíz del sitio.
+if ($basePath === '/public' || str_ends_with($basePath, '/public')) {
+    $basePath = substr($basePath, 0, -strlen('/public'));
+}
+
+// URL base de la aplicación (ej: http://localhost:170)
 define('BASE_URL', $protocol . $host . $basePath);
 
 
