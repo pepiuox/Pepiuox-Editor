@@ -1,6 +1,6 @@
 <?php
 namespace App\Controllers;
-use App\Core\{Request, Response, View, Session, CSRF};
+use App\Core\{Request, Response, View, Session, CSRF, Auth};
 use App\Models\{PageVersion, Page};
 use App\Services\{CacheService, AuditService};
 
@@ -32,7 +32,7 @@ class VersionsController
         PageVersion::restore($vid);
         CacheService::invalidatePage((int)$v['page_id']);
         \App\Services\SitemapService::generate();
-        AuditService::log('page_restored', "Versión #$vid restaurada", 'pages', (int)$v['page_id']);
+        AuditService::log(Auth::id(), 'page_restored', "Versión #$vid restaurada", 'pages', (int)$v['page_id']);
         Session::flash('flash.success', 'Versión restaurada.');
         Response::redirect(url("admin/pages/{$v['page_id']}/edit"));
     }

@@ -63,7 +63,7 @@ class TwoFactorRecoveryService
 
             // Registrar en auditoría
             AuditService::log(
-                '2fa_recovery_generated',
+                Auth::id(), '2fa_recovery_generated',
                 "Generados " . self::CODES_PER_USER . " códigos de recuperación",
                 'security',
                 $userId
@@ -111,7 +111,7 @@ class TwoFactorRecoveryService
 
                 // Auditoría
                 AuditService::log(
-                    '2fa_recovery_used',
+                    Auth::id(), '2fa_recovery_used',
                     "Código de recuperación usado",
                     'security',
                     $userId

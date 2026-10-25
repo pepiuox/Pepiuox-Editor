@@ -61,11 +61,12 @@ class BannedUsersController
             $success = BanService::unban($userId, $notes, $reactivate);
             
             if ($success) {
+                // Firma real: log(?int $userId, string $action, ?string $details, ?string $context).
                 AuditService::log(
+                    Auth::id(),
                     'user_unbanned',
-                    "Usuario desbaneado: {$user['username']}",
-                    'users',
-                    $userId
+                    "Usuario desbaneado: {$user['username']} (ID $userId)",
+                    'users'
                 );
                 Session::flash('flash.success', "Usuario {$user['username']} desbaneado correctamente.");
             } else {

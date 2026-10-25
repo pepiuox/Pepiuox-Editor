@@ -34,7 +34,7 @@ class CommentService
         }
 
         AuditService::log(
-            'comment_created',
+            Auth::id(), 'comment_created',
             "Comentario creado en página ID $pageId",
             'comments',
             $commentId
@@ -82,7 +82,7 @@ class CommentService
         $success = ComponentComment::resolve($commentId, $userId);
 
         if ($success) {
-            AuditService::log('comment_resolved', "Comentario #$commentId resuelto", 'comments', $commentId);
+            AuditService::log(Auth::id(), 'comment_resolved', "Comentario #$commentId resuelto", 'comments', $commentId);
         }
 
         return $success;
@@ -95,7 +95,7 @@ class CommentService
     {
         $success = ComponentComment::reopen($commentId);
         if ($success) {
-            AuditService::log('comment_reopened', "Comentario #$commentId reabierto", 'comments', $commentId);
+            AuditService::log(Auth::id(), 'comment_reopened', "Comentario #$commentId reabierto", 'comments', $commentId);
         }
         return $success;
     }
@@ -116,7 +116,7 @@ class CommentService
 
         $success = ComponentComment::delete($commentId);
         if ($success) {
-            AuditService::log('comment_deleted', "Comentario #$commentId eliminado", 'comments', $commentId);
+            AuditService::log(Auth::id(), 'comment_deleted', "Comentario #$commentId eliminado", 'comments', $commentId);
         }
         return $success;
     }

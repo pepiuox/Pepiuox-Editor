@@ -31,15 +31,31 @@ class AuditService
     // ═══════════════════════════════════════════════════════════════
 
     /**
-     * ✅ Permite llamadas como AuditService::log(...)
+     * Registra una acción de auditoría sin instanciar el servicio.
+     *
+     * El primer argumento es siempre el usuario (null si es anónimo/sistema).
+     * Muchas llamadas antiguas tenían la acción en esa posición y reventaban con
+     * un TypeError antes de llegar aquí; por eso el contrato se documenta.
+     *
+     * @param int|null    $userId   Usuario que ejecuta la acción (null = sistema)
+     * @param string      $action   Acción ('page_updated', 'login_failed', …)
+     * @param string|null $details  Detalle legible
+     * @param string|null $context  Módulo o contexto ('pages', 'security', …)
+     * @param int|null    $recordId Id del registro afectado, si se conoce
+     * @return bool True si se registró
      */
-    public static function log(?int $userId, string $action, ?string $details = null, ?string $context = null): bool
-    {
+    public static function log(
+        ?int $userId,
+        string $action,
+        ?string $details = null,
+        ?string $context = null,
+        ?int $recordId = null
+    ): bool {
         if (self::$instance === null) {
             error_log('[AuditService] No hay instancia registrada para llamada estática');
             return false;
         }
-        return self::$instance->logInstance($userId, $action, $details, $context);
+        return self::$instance->logInstance($userId, $action, $details, $context, $recordId);
     }
 
     public static function setInstance(self $instance): void
@@ -57,20 +73,33 @@ class AuditService
     // ═══════════════════════════════════════════════════════════════
 
     /**
-     * Registra una acción de auditoría (instancia)
+     * Registra una acción de auditoría (instancia).
+     *
+     * @param int|null    $userId   Usuario que ejecuta la acción
+     * @param string      $action   Acción
+     * @param string|null $details  Detalle legible
+     * @param string|null $context  Módulo o contexto
+     * @param int|null    $recordId Id del registro afectado
+     * @return bool
      */
-    public function logInstance(?int $userId, string $action, ?string $details = null, ?string $context = null): bool
-    {
+    public function logInstance(
+        ?int $userId,
+        string $action,
+        ?string $details = null,
+        ?string $context = null,
+        ?int $recordId = null
+    ): bool {
         try {
             return (bool)$this->db->execute(
                 "INSERT INTO {$this->table}
-                 (user_id, action, details, context, ip_address, user_agent, created_at)
-                 VALUES (?, ?, ?, ?, ?, ?, NOW())",
+                 (user_id, action, details, context, record_id, ip_address, user_agent, created_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, NOW())",
                 [
                     $userId,
                     $action,
                     $details,
                     $context,
+                    $recordId,
                     $this->getClientIp(),
                     $this->getUserAgent(),
                 ]

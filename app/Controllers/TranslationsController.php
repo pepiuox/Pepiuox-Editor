@@ -1,6 +1,6 @@
 <?php
 namespace App\Controllers;
-use App\Core\{Request, Response, View, Session, CSRF, Database};
+use App\Core\{Request, Response, View, Session, CSRF, Database, Auth};
 use App\Services\{TranslationService, AuditService};
 
 class TranslationsController
@@ -31,7 +31,7 @@ class TranslationsController
         foreach ($entries as $key => $value) {
             TranslationService::set($key, (string)$value, $lang, $group);
         }
-        AuditService::log('translations_updated', "Traducciones actualizadas ($lang/$group)", 'translations');
+        AuditService::log(Auth::id(), 'translations_updated', "Traducciones actualizadas ($lang/$group)", 'translations');
         Session::flash('flash.success', t('saved_successfully'));
         Response::redirect(url("admin/translations?lang=$lang&group=$group"));
     }

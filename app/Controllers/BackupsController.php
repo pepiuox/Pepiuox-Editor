@@ -19,11 +19,11 @@ class BackupsController
         $type = $req->post('type', 'full');
         try {
             $result = BackupService::create($type, true);
-            AuditService::log('backup_created', "Backup creado: $type", 'backups', $result['id']);
+            AuditService::log(Auth::id(), 'backup_created', "Backup creado: $type (ID {$result['id']})", 'backups');
             NotificationService::notify(Auth::id(), 'success', 'Backup creado', "Se generó un backup $type correctamente.", url('admin/backups'), 'check-circle');
             Session::flash('flash.success', 'Backup creado correctamente.');
         } catch (\Throwable $e) {
-            AuditService::log('backup_failed', "Error: " . $e->getMessage(), 'backups');
+            AuditService::log(Auth::id(), 'backup_failed', 'Error: ' . $e->getMessage(), 'backups');
             Session::flash('flash.error', 'Error al crear backup: ' . $e->getMessage());
         }
         Response::redirect(url('admin/backups'));
@@ -43,7 +43,7 @@ class BackupsController
         }
         try {
             BackupService::restore((int)$params['id']);
-            AuditService::log('backup_restored', "Backup restaurado ID {$params['id']}", 'backups', (int)$params['id']);
+            AuditService::log(Auth::id(), 'backup_restored', "Backup restaurado ID {$params['id']}", 'backups');
             Session::flash('flash.success', 'Backup restaurado. Se recomienda cerrar sesión y volver a entrar.');
         } catch (\Throwable $e) {
             Session::flash('flash.error', 'Error al restaurar: ' . $e->getMessage());

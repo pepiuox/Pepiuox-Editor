@@ -72,7 +72,7 @@ class BanService
 
             // Auditoría
             AuditService::log(
-                'user_banned',
+                Auth::id(), 'user_banned',
                 "Usuario baneado: {$user['username']}. Motivo: $reason" . ($duration ? " ({$duration} días)" : " (permanente)"),
                 'users',
                 $userId,
@@ -138,7 +138,7 @@ class BanService
             );
 
             AuditService::log(
-                'user_unbanned',
+                Auth::id(), 'user_unbanned',
                 "Usuario desbaneado: {$user['username']}",
                 'users',
                 $userId
@@ -191,7 +191,7 @@ class BanService
             [$userId, $additionalDays, $newExpires, Auth::id(), $notes]
         );
 
-        AuditService::log('ban_extended', "Baneo extendido +{$additionalDays} días para {$user['username']}", 'users', $userId);
+        AuditService::log(Auth::id(), 'ban_extended', "Baneo extendido +{$additionalDays} días para {$user['username']}", 'users', $userId);
         return true;
     }
 

@@ -32,7 +32,7 @@ class RolesController
         ]);
         $perms = $req->post('permissions') ?? [];
         Permission::syncRole($id, is_array($perms) ? $perms : []);
-        AuditService::log('role_created', "Rol creado: ".$req->post('name'), 'roles', $id);
+        AuditService::log(Auth::id(), 'role_created', "Rol creado: ".$req->post('name'), 'roles', $id);
         Session::flash('flash.success', 'Rol creado.');
         Response::redirect(url('admin/roles'));
     }
@@ -61,7 +61,7 @@ class RolesController
         ]);
         $perms = $req->post('permissions') ?? [];
         Permission::syncRole($id, is_array($perms) ? $perms : []);
-        AuditService::log('role_updated', "Rol actualizado: ".$req->post('name'), 'roles', $id);
+        AuditService::log(Auth::id(), 'role_updated', "Rol actualizado: ".$req->post('name'), 'roles', $id);
         Session::flash('flash.success', 'Rol actualizado.');
         Response::redirect(url('admin/roles'));
     }
@@ -77,7 +77,7 @@ class RolesController
             Response::redirect(url('admin/roles'));
         }
         Role::delete($id);
-        AuditService::log('role_deleted', "Rol eliminado: {$role['name']}", 'roles', $id);
+        AuditService::log(Auth::id(), 'role_deleted', "Rol eliminado: {$role['name']}", 'roles', $id);
         Session::flash('flash.success', 'Rol eliminado.');
         Response::redirect(url('admin/roles'));
     }

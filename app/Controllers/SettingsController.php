@@ -1,6 +1,6 @@
 <?php
 namespace App\Controllers;
-use App\Core\{Request, Response, View, Session, CSRF};
+use App\Core\{Request, Response, View, Session, CSRF, Auth};
 use App\Models\Setting;
 use App\Services\{SettingService, AuditService};
 
@@ -45,10 +45,10 @@ class SettingsController
             Setting::updateBatch($updateData);
             SettingService::clearCache(); // Limpiar caché para la siguiente petición
             
-            AuditService::log('settings_updated', 'Configuración del sistema actualizada', 'settings');
+            AuditService::log(Auth::id(), 'settings_updated', 'Configuración del sistema actualizada', 'settings');
             Session::flash('flash.success', 'Configuración guardada correctamente.');
         } catch (\Throwable $e) {
-            AuditService::log('settings_error', 'Error al guardar configuración: ' . $e->getMessage(), 'settings');
+            AuditService::log(Auth::id(), 'settings_error', 'Error al guardar configuración: ' . $e->getMessage(), 'settings');
             Session::flash('flash.error', 'Error al guardar la configuración.');
         }
 

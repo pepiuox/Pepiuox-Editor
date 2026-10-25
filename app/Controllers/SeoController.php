@@ -62,7 +62,7 @@ class SeoController
         foreach ($fields as $f) {
             SettingService::set('seo', $f, $req->post($f, ''), 'string');
         }
-        AuditService::log('seo_global_updated', 'SEO global actualizado', 'settings');
+        AuditService::log(Auth::id(), 'seo_global_updated', 'SEO global actualizado', 'settings');
         Session::flash('flash.success', 'Configuración SEO global guardada.');
         Response::redirect(url('admin/seo/global'));
     }
@@ -97,7 +97,7 @@ class SeoController
                 Auth::id(),
             ]
         );
-        AuditService::log('redirect_created', "Redirect: ".$req->post('from_path'), 'redirects');
+        AuditService::log(Auth::id(), 'redirect_created', "Redirect: ".$req->post('from_path'), 'redirects');
         Session::flash('flash.success', 'Redirección creada.');
         Response::redirect(url('admin/seo/redirects'));
     }
@@ -115,7 +115,7 @@ class SeoController
     {
         CSRF::guard();
         SitemapService::generate();
-        AuditService::log('sitemap_regenerated', 'Sitemap regenerado', 'seo');
+        AuditService::log(Auth::id(), 'sitemap_regenerated', 'Sitemap regenerado', 'seo');
         Session::flash('flash.success', 'Sitemap regenerado correctamente.');
         Response::redirect(url('admin/seo'));
     }
@@ -183,7 +183,7 @@ public function applyMeta(Request $req, array $params): void
     \App\Services\CacheService::invalidatePage($pageId);
     \App\Services\SitemapService::generate();
     
-    \App\Services\AuditService::log('meta_generated', "Meta description generada automáticamente", 'pages', $pageId);
+    \App\Services\AuditService::log(Auth::id(), 'meta_generated', "Meta description generada automáticamente", 'pages', $pageId);
     
     Response::json(['success' => true, 'message' => 'Meta description aplicada']);
 }

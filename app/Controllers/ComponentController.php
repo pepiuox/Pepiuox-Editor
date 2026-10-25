@@ -30,7 +30,8 @@ class ComponentsController
             'is_active' => (int)$req->post('is_active', 1),
             'created_by' => Auth::id(),
         ]);
-        AuditService::log('component_created', "Component: ".$req->post('name'), 'components', $id);
+        // Firma real: log(?int $userId, string $action, ?string $details, ?string $context).
+        AuditService::log(Auth::id(), 'component_created', 'Component: ' . $req->post('name') . " (ID $id)", 'components');
         Session::flash('flash.success', 'Component created.');
         Response::redirect(url('admin/components'));
     }

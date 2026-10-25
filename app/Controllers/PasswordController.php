@@ -301,7 +301,7 @@ class PasswordController
             [$hash, $user['id']]
         );
 
-        AuditService::log('password_reset', 'Contraseña restablecida', 'users', (int)$user['id']);
+        AuditService::log(Auth::id(), 'password_reset', 'Contraseña restablecida', 'users', (int)$user['id']);
         Session::flash('flash.success', 'Contraseña actualizada. Ya puedes iniciar sesión.');
         Response::redirect(url('login'));
     }

@@ -124,7 +124,7 @@ class TrustedDeviceService
 
         // Auditoría
         AuditService::log(
-            'trusted_device_added',
+            Auth::id(), 'trusted_device_added',
             "Dispositivo de confianza añadido: $deviceName",
             'security',
             $userId,
@@ -233,7 +233,7 @@ class TrustedDeviceService
             }
 
             AuditService::log(
-                'trusted_device_revoked',
+                Auth::id(), 'trusted_device_revoked',
                 "Dispositivo revocado: {$device['device_name']}",
                 'security',
                 $userId
@@ -260,7 +260,7 @@ class TrustedDeviceService
             self::clearCookie();
 
             AuditService::log(
-                'trusted_devices_revoked_all',
+                Auth::id(), 'trusted_devices_revoked_all',
                 "Todos los dispositivos de confianza revocados ($count)",
                 'security',
                 $userId

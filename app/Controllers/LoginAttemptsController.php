@@ -79,7 +79,8 @@ class LoginAttemptsController
             [$ip, $reason, $days]
         );
         
-        \App\Services\AuditService::log('ip_blocked', "IP bloqueada: $ip por $days días", 'security');
+        // Firma real: log(?int $userId, string $action, ?string $details, ?string $context).
+        \App\Services\AuditService::log(Auth::id(), 'ip_blocked', "IP bloqueada: $ip por $days días", 'security');
         Session::flash('flash.success', "IP $ip bloqueada por $days días.");
         Response::redirect(url('admin/security/login-attempts'));
     }
@@ -88,7 +89,7 @@ class LoginAttemptsController
     {
         csrf_guard();
         Database::execute("DELETE FROM blocked_ips WHERE id = ?", [(int)$params['id']]);
-        \App\Services\AuditService::log('ip_unblocked', "IP desbloqueada ID {$params['id']}", 'security');
+        \App\Services\AuditService::log(Auth::id(), 'ip_unblocked', "IP desbloqueada ID {$params['id']}", 'security');
         Session::flash('flash.success', 'IP desbloqueada.');
         Response::redirect(url('admin/security/login-attempts'));
     }
@@ -101,7 +102,7 @@ class LoginAttemptsController
             "DELETE FROM login_attempts WHERE attempt_time < DATE_SUB(NOW(), INTERVAL ? DAY)",
             [$days]
         );
-        \App\Services\AuditService::log('login_attempts_cleaned', "Eliminados $deleted intentos de >$days días", 'security');
+        \App\Services\AuditService::log(Auth::id(), 'login_attempts_cleaned', "Eliminados $deleted intentos de >$days días", 'security');
         Session::flash('flash.success', "$deleted registros eliminados.");
         Response::redirect(url('admin/security/login-attempts'));
     }

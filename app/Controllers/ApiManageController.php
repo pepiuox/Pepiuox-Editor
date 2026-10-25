@@ -29,7 +29,8 @@ class ApiManageController
             'status' => 'active',
             'expires_at' => $req->post('expires_at') ?: null,
         ]);
-        AuditService::log('api_app_created', "API app: ".$req->post('app_name'), 'api', $result['id']);
+        // Firma real: log(?int $userId, string $action, ?string $details, ?string $context).
+        AuditService::log(Auth::id(), 'api_app_created', 'API app: ' . $req->post('app_name') . " (ID {$result['id']})", 'api');
         Session::flash('flash.success', 'API application created.');
         Response::redirect(url("admin/api/{$result['id']}"));
     }

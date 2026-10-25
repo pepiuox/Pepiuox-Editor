@@ -101,7 +101,7 @@ class UsersController
                 'is_active' => $isActive,
             ]);
 
-            AuditService::log('user_created', "Usuario creado: $username", 'users', $userId);
+            AuditService::log(Auth::id(), 'user_created', "Usuario creado: $username", 'users', $userId);
             Session::flash('flash.success', 'Usuario creado correctamente.');
             Response::redirect(url('admin/users'));
         } catch (\Throwable $e) {
@@ -203,7 +203,7 @@ class UsersController
                 'is_active' => $isActive,
             ]);
 
-            AuditService::log('user_updated', "Usuario actualizado: $username", 'users', $id);
+            AuditService::log(Auth::id(), 'user_updated', "Usuario actualizado: $username", 'users', $id);
             Session::flash('flash.success', 'Usuario actualizado correctamente.');
             Response::redirect(url("admin/users/$id/edit"));
         } catch (\Throwable $e) {
@@ -266,7 +266,7 @@ class UsersController
                 error_log('[UsersController] Error invalidando sesiones: ' . $e->getMessage());
             }
 
-            AuditService::log('user_password_changed', "Contraseña cambiada para: {$user['username']}", 'users', $id);
+            AuditService::log(Auth::id(), 'user_password_changed', "Contraseña cambiada para: {$user['username']}", 'users', $id);
             Session::flash('flash.success', 'Contraseña cambiada correctamente. Todas las sesiones del usuario han sido cerradas.');
             Response::redirect(url("admin/users/$id/edit"));
         } catch (\Throwable $e) {
@@ -308,7 +308,7 @@ class UsersController
 
         try {
             User::delete($id);
-            AuditService::log('user_deleted', "Usuario eliminado: {$user['username']}", 'users', $id);
+            AuditService::log(Auth::id(), 'user_deleted', "Usuario eliminado: {$user['username']}", 'users', $id);
             Session::flash('flash.success', 'Usuario eliminado correctamente.');
             Response::redirect(url('admin/users'));
         } catch (\Throwable $e) {

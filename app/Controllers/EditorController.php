@@ -169,7 +169,8 @@ class EditorController
                 ? 'Página publicada correctamente' 
                 : "Página guardada como $status";
 
-            AuditService::log('page_saved', "Página guardada: $title", 'pages', $pageId);
+            // Firma real: log(?int $userId, string $action, ?string $details, ?string $context).
+            AuditService::log(Auth::id(), 'page_saved', "Página guardada: $title (ID $pageId)", 'pages');
             Session::flash('flash.success', $msg);
 
             if ($req->isAjax()) {

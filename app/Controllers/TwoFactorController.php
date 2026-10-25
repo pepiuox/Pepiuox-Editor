@@ -72,7 +72,7 @@ class TwoFactorController
             // Guardar códigos en sesión temporal para mostrarlos UNA vez
             Session::set('2fa_new_recovery_codes', $recoveryCodes);
 
-            AuditService::log('2fa_enabled', '2FA activado', 'security', (int)$user['id']);
+            AuditService::log(Auth::id(), '2fa_enabled', '2FA activado', 'security', (int)$user['id']);
             
             // Redirigir a vista que muestra los códigos
             Response::redirect(url('admin/2fa/recovery-success'));
@@ -211,7 +211,7 @@ class TwoFactorController
 
             Database::commit();
 
-            AuditService::log('2fa_disabled', '2FA desactivado', 'security', (int)$user['id']);
+            AuditService::log(Auth::id(), '2fa_disabled', '2FA desactivado', 'security', (int)$user['id']);
             Session::flash('flash.success', '2FA desactivado correctamente.');
         } catch (\Throwable $e) {
             Database::rollback();

@@ -12,7 +12,8 @@ class CollaborationController
         $pageId = (int)$params['id'];
         $result = CollaborationService::join($pageId);
         
-        AuditService::log('collab_join', "Se unió a colaboración", 'pages', $pageId);
+        // Firma real: log(?int $userId, string $action, ?string $details, ?string $context).
+        AuditService::log(Auth::id(), 'collab_join', "Se unió a la colaboración de la página $pageId", 'pages');
         
         Response::json([
             'success' => true,

@@ -83,7 +83,7 @@ class ProfileController
             if (isset($data['locale'])) Session::set('user_locale', $data['locale']);
             if (isset($data['theme'])) Session::set('user_theme', $data['theme']);
 
-            AuditService::log('profile_updated', 'Perfil actualizado', 'users', $userId);
+            AuditService::log(Auth::id(), 'profile_updated', 'Perfil actualizado', 'users', $userId);
             Session::flash('flash.success', 'Perfil actualizado correctamente.');
         } catch (\Throwable $e) {
             error_log('[Profile] Error actualizando perfil: ' . $e->getMessage());
@@ -153,7 +153,7 @@ class ProfileController
                 error_log('[Profile] Error invalidando sesiones: ' . $e->getMessage());
             }
 
-            AuditService::log('password_changed', 'Contraseña cambiada desde perfil', 'users', $userId);
+            AuditService::log(Auth::id(), 'password_changed', 'Contraseña cambiada desde perfil', 'users', $userId);
             Session::flash('flash.success', 'Contraseña cambiada. Las otras sesiones han sido cerradas por seguridad.');
         } catch (\Throwable $e) {
             error_log('[Profile] Error cambiando contraseña: ' . $e->getMessage());
