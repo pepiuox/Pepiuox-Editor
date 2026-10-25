@@ -1,9 +1,22 @@
 <?php
 /**
- * Vista: Editor de Templates
- * GrapesJS + CodeMirror con sistema de versiones
+ * Vista: editor de plantillas (templates).
+ *
+ * Usa el MISMO modelo que el editor de páginas (views/pages/builder.php):
+ *   - GrapesJS con los mismos plugins, bloques y lienzo (views/partials/editor-assets-*).
+ *   - CodeMirror para HTML/CSS/JS/PHP con el mismo tema y atajos.
+ *   - Sincronización bidireccional lienzo ↔ código y guardado por fetch.
+ *
+ * Lo que es propio de plantillas: no hay autoguardado (no existe tabla para
+ * ello) y no hay subida de imágenes desde aquí (no hay endpoint; el gestor de
+ * assets muestra la biblioteca de medios ya subida).
+ *
+ * @package Views\Templates
  */
-$pageTitle = $template ? 'Editar template' : 'Nuevo template';
+
+use App\Core\Auth;
+
+$pageTitle = $template ? 'Editar plantilla' : 'Nueva plantilla';
 $t = $template ?? [
     'id' => null, 'name' => '', 'description' => '',
     'content_html' => '', 'content_css' => '', 'content_js' => '',
@@ -11,1062 +24,1079 @@ $t = $template ?? [
     'is_active' => 1, 'is_default' => 0, 'is_system_template' => 0,
 ];
 
-// ═══════════════════════════════════════════════════════════════════
-// HELPERS
-// ═══════════════════════════════════════════════════════════════════
-if (!function_exists('_can')) {
-    function _can(string $permission): bool
-    {
-        if (class_exists('\App\Core\Auth') && method_exists('\App\Core\Auth', 'can')) {
-            return \App\Core\Auth::can($permission);
-        }
-        return false;
+$templateId  = isset($t['id']) ? (int) $t['id'] : 0;
+$isNew       = $templateId === 0;
+$canEditPhp  = Auth::can('templates.edit_php');
+$csrfToken   = \App\Core\CSRF::token();
+
+// JSON_HEX_TAG evita que un </script> dentro del contenido rompa el documento.
+$jsonFlags   = JSON_UNESCAPED_UNICODE | JSON_HEX_TAG;
+$jsonHtml    = json_encode((string) ($t['content_html'] ?? ''), $jsonFlags);
+$jsonCss     = json_encode((string) ($t['content_css'] ?? ''), $jsonFlags);
+$jsonJs      = json_encode((string) ($t['content_js'] ?? ''), $jsonFlags);
+$jsonPhp     = json_encode((string) ($t['content_php'] ?? ''), $jsonFlags);
+$jsonGrapes  = json_encode($t['grapesjs_data'] ?? null, $jsonFlags);
+
+$saveUrl     = $isNew ? url('admin/templates') : url('admin/templates/' . $templateId);
+$versionsUrl = $isNew ? '' : url('admin/templates/' . $templateId . '/versions');
+$assetsUrl   = url('admin/pages/assets');
+$listUrl     = url('admin/templates');
+
+// Los mismos bloques que el builder de páginas: la lista se descubre en disco,
+// así que añadir un fichero en assets/js/blocks lo carga también aquí.
+$blockExcluded = ['bs-blocks.js', 'template.js'];
+$blockFiles = [];
+foreach (glob(ASSETS_PATH . '/js/blocks/*.js') ?: [] as $blockFile) {
+    $blockName = basename($blockFile);
+    if (in_array($blockName, $blockExcluded, true)) {
+        continue;
     }
+    $blockFiles[] = $blockName;
 }
-
-if (!function_exists('_tplCsrfToken')) {
-    function _tplCsrfToken(): string
-    {
-        if (class_exists('\App\Core\CSRF') && method_exists('\App\Core\CSRF', 'token')) {
-            return (string)\App\Core\CSRF::token();
-        }
-        return htmlspecialchars((string)($_SESSION['_csrf_token'] ?? ($_SESSION['csrf_token'] ?? '')));
-    }
-}
-
-$canEditPhp = _can('templates.edit_php');
-
-// ═══════════════════════════════════════════════════════════════════
-// PARSEO SEGURO DE grapesjs_data
-// ═══════════════════════════════════════════════════════════════════
-$initialHtml = $t['content_html'] ?? '';
-$initialCss = $t['content_css'] ?? '';
-$grapesjsData = $t['grapesjs_data'] ?? '';
-
-if (!empty($t['grapesjs_data'])) {
-    $decoded = json_decode((string)$t['grapesjs_data'], true);
-    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-        $grapesjsData = $decoded;
-        // Extraer componentes y estilos del proyecto GrapesJS
-        if (isset($decoded['pages']) && is_array($decoded['pages']) && isset($decoded['pages'][0])) {
-            $page = $decoded['pages'][0];
-            if (!empty($page['component'])) {
-                $initialHtml = $page['component'];
-            }
-            if (!empty($page['styles'])) {
-                $initialCss = $page['styles'];
-            }
-        } elseif (isset($decoded['components']) && !empty($decoded['components'])) {
-            $initialHtml = $decoded['components'];
-            if (!empty($decoded['styles'])) {
-                $initialCss = $decoded['styles'];
-            }
-        }
-    }
-}
+sort($blockFiles);
+$blockUrls = array_map(static fn (string $name): string => asset('js/blocks/' . $name), $blockFiles);
 ?>
 <!DOCTYPE html>
-<html lang="es" data-bs-theme="dark">
+<html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= e($pageTitle) ?> - Admin</title>
-    
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    
-    <!-- GrapesJS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/grapesjs@0.21.10/dist/css/grapes.min.css">
-    
-    <!-- CodeMirror -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/theme/dracula.min.css">
-    
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title><?= e($pageTitle) ?> · PePiuoX Editor</title>
 
-    <style>
-        /* Misma paleta y componentes que el builder de páginas */
-        :root {
-            --tpl-bg: #0d1117;
-            --tpl-bg-2: #161b22;
-            --tpl-bg-3: #1c2333;
-            --tpl-border: #30363d;
-            --tpl-border-soft: rgba(255, 255, 255, .07);
-            --tpl-text: #e6edf3;
-            --tpl-muted: #8b949e;
-            --tpl-accent: #00d4aa;
-            --tpl-accent-dark: #00a88a;
-            --tpl-danger: #ef4444;
-            --tpl-radius: 8px;
-            --tpl-topbar-h: 56px;
-            --tpl-t: .18s ease;
-            --tpl-mono: 'JetBrains Mono', monospace;
-        }
+<!-- Activos del editor: exactamente los mismos que el builder de páginas -->
+<?php $editorIncludeBootstrap = true; require VIEWS_PATH . '/partials/editor-assets-head.php'; ?>
 
-        * { box-sizing: border-box; }
+<style>
+/* ═══ Variables: misma paleta que el builder ═══ */
+:root {
+    --tpl-bg: #0d1117;
+    --tpl-bg-2: #161b22;
+    --tpl-bg-3: #1c2333;
+    --tpl-border: #30363d;
+    --tpl-text: #e6edf3;
+    --tpl-muted: #8b949e;
+    --tpl-accent: #00d4aa;
+    --tpl-accent-dark: #00a88a;
+    --tpl-danger: #ef4444;
+    --tpl-warning: #f59e0b;
+    --tpl-success: #22c55e;
+    --tpl-radius: 8px;
+    --tpl-topbar-h: 56px;
+    --tpl-t: .18s ease;
+    --tpl-mono: 'JetBrains Mono', monospace;
+}
 
-        body.tpl-body {
-            margin: 0;
-            background: var(--tpl-bg);
-            color: var(--tpl-text);
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            font-size: 14px;
-            min-height: 100vh;
-        }
+* { box-sizing: border-box; }
 
-        a { color: var(--tpl-accent); text-decoration: none; }
-        a:hover { color: var(--tpl-accent-dark); }
+body.tpl-body {
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--tpl-bg);
+    color: var(--tpl-text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 14px;
+}
 
-        :where(a, button, .btn-tpl, input, textarea):focus-visible {
-            outline: 2px solid var(--tpl-accent);
-            outline-offset: 2px;
-            border-radius: var(--tpl-radius);
-        }
+a { color: var(--tpl-accent); text-decoration: none; }
+a:hover { color: var(--tpl-accent-dark); }
 
-        /* ═══ Barra superior ═══ */
-        .tpl-topbar {
-            position: sticky;
-            top: 0;
-            z-index: 50;
-            min-height: var(--tpl-topbar-h);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-            padding: .5rem 1rem;
-            background: rgba(22, 27, 34, .92);
-            -webkit-backdrop-filter: saturate(180%) blur(14px);
-            backdrop-filter: saturate(180%) blur(14px);
-            border-bottom: 1px solid var(--tpl-border);
-        }
+:where(a, button, .btn-tpl, input, textarea, select):focus-visible {
+    outline: 2px solid var(--tpl-accent);
+    outline-offset: 2px;
+    border-radius: var(--tpl-radius);
+}
 
-        .tpl-topbar-left,
-        .tpl-topbar-right {
-            display: flex;
-            align-items: center;
-            gap: .5rem;
-            min-width: 0;
-        }
+/* ═══ Barra superior ═══ */
+.tpl-topbar {
+    min-height: var(--tpl-topbar-h);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: .5rem 1rem;
+    background: var(--tpl-bg-2);
+    border-bottom: 1px solid var(--tpl-border);
+    flex: 0 0 auto;
+}
 
-        .tpl-logo {
-            display: grid;
-            place-items: center;
-            width: 34px;
-            height: 34px;
-            flex: 0 0 auto;
-            border-radius: var(--tpl-radius);
-            color: #04120f;
-            background: linear-gradient(135deg, var(--tpl-accent), var(--tpl-accent-dark));
-            transition: transform var(--tpl-t);
-        }
+.tpl-topbar-left,
+.tpl-topbar-right {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    min-width: 0;
+}
 
-        .tpl-logo:hover { transform: scale(1.05); color: #04120f; }
+.tpl-logo {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 auto;
+    border-radius: var(--tpl-radius);
+    color: #04120f;
+    background: linear-gradient(135deg, var(--tpl-accent), var(--tpl-accent-dark));
+    transition: transform var(--tpl-t);
+}
 
-        .tpl-title {
-            display: flex;
-            align-items: center;
-            gap: .5rem;
-            min-width: 0;
-            font-weight: 600;
-            white-space: nowrap;
-            overflow: hidden;
-        }
+.tpl-logo:hover { transform: scale(1.05); color: #04120f; }
 
-        .tpl-title i { color: var(--tpl-accent); }
+.tpl-title {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    min-width: 0;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+}
 
-        .tpl-title > span:nth-child(2) {
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
+.tpl-title i { color: var(--tpl-accent); }
 
-        .tpl-badge {
-            font-size: .72rem;
-            padding: 2px 8px;
-            border-radius: 999px;
-            background: var(--tpl-bg-3);
-            border: 1px solid var(--tpl-border);
-            color: var(--tpl-muted);
-            font-weight: 500;
-        }
+.tpl-title > span:nth-child(2) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 
-        /* ═══ Botones ═══ */
-        .btn-tpl {
-            display: inline-flex;
-            align-items: center;
-            gap: .4rem;
-            padding: .45rem .8rem;
-            border: 1px solid transparent;
-            border-radius: var(--tpl-radius);
-            font: inherit;
-            font-size: .82rem;
-            font-weight: 500;
-            color: var(--tpl-text);
-            background: transparent;
-            cursor: pointer;
-            white-space: nowrap;
-            transition: background-color var(--tpl-t), border-color var(--tpl-t), color var(--tpl-t);
-        }
+.tpl-badge {
+    font-size: .72rem;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--tpl-bg-3);
+    border: 1px solid var(--tpl-border);
+    color: var(--tpl-muted);
+    font-weight: 500;
+}
 
-        .btn-tpl.btn-ghost {
-            color: var(--tpl-muted);
-            border-color: var(--tpl-border);
-            background: transparent;
-        }
+.tpl-state {
+    font-size: .78rem;
+    color: var(--tpl-muted);
+    font-style: italic;
+    min-width: 140px;
+}
 
-        .btn-tpl.btn-ghost:hover {
-            color: var(--tpl-text);
-            background: rgba(255, 255, 255, .06);
-        }
+/* ═══ Botones ═══ */
+.btn-tpl {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .45rem .8rem;
+    border: 1px solid transparent;
+    border-radius: var(--tpl-radius);
+    font: inherit;
+    font-size: .82rem;
+    font-weight: 500;
+    color: var(--tpl-text);
+    background: transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color var(--tpl-t), border-color var(--tpl-t), color var(--tpl-t);
+}
 
-        .btn-tpl.btn-primary,
-        .btn-tpl.btn-info {
-            background: var(--tpl-accent);
-            color: #04120f;
-            font-weight: 600;
-            border-color: transparent;
-        }
+.btn-tpl.btn-ghost {
+    color: var(--tpl-muted);
+    border-color: var(--tpl-border);
+    background: transparent;
+}
 
-        .btn-tpl.btn-primary:hover,
-        .btn-tpl.btn-info:hover {
-            background: var(--tpl-accent-dark);
-            color: #fff;
-        }
+.btn-tpl.btn-ghost:hover {
+    color: var(--tpl-text);
+    background: rgba(255, 255, 255, .06);
+    border-color: var(--tpl-accent);
+}
 
-        .btn-tpl.btn-outline {
-            border-color: var(--tpl-accent);
-            color: var(--tpl-accent);
-            background: transparent;
-        }
+.btn-tpl.btn-primary {
+    background: var(--tpl-accent);
+    color: #04120f;
+    font-weight: 600;
+}
 
-        .btn-tpl.btn-outline:hover {
-            background: rgba(0, 212, 170, .12);
-            border-color: var(--tpl-accent-dark);
-            color: var(--tpl-accent-dark);
-        }
+.btn-tpl.btn-primary:hover { background: var(--tpl-accent-dark); color: #fff; }
 
-        /* ═══ Contenedor ═══ */
-        .tpl-main {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 1.25rem 1rem 2.5rem;
-        }
+.btn-tpl.btn-outline {
+    border-color: var(--tpl-accent);
+    color: var(--tpl-accent);
+}
 
-        .tpl-panel {
-            background: var(--tpl-bg-2);
-            border: 1px solid var(--tpl-border);
-            border-radius: 12px;
-            padding: 1.25rem;
-        }
+.btn-tpl.btn-outline:hover { background: rgba(0, 212, 170, .12); color: var(--tpl-accent-dark); }
 
-        /* ═══ Metadatos ═══ */
-        .tpl-meta {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: .9rem;
-            margin-bottom: 1.25rem;
-        }
+.btn-tpl:disabled { opacity: .6; cursor: not-allowed; }
 
-        .field label {
-            display: block;
-            margin-bottom: .3rem;
-            font-size: .76rem;
-            font-weight: 600;
-            color: var(--tpl-muted);
-            text-transform: uppercase;
-            letter-spacing: .03em;
-        }
+/* ═══ Estructura: barra de metadatos + editor que ocupa el resto ═══ */
+.tpl-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: .75rem;
+    padding: .75rem 1rem;
+    background: var(--tpl-bg-2);
+    border-bottom: 1px solid var(--tpl-border);
+    flex: 0 0 auto;
+}
 
-        .field label .req { color: var(--tpl-danger); }
+.field label {
+    display: block;
+    margin-bottom: .25rem;
+    font-size: .72rem;
+    font-weight: 600;
+    color: var(--tpl-muted);
+    text-transform: uppercase;
+    letter-spacing: .03em;
+}
 
-        .field input[type="text"],
-        .field input[type="url"],
-        .field textarea,
-        .field select {
-            width: 100%;
-            padding: .5rem .65rem;
-            border: 1px solid var(--tpl-border);
-            border-radius: 6px;
-            background: var(--tpl-bg);
-            color: var(--tpl-text);
-            font: inherit;
-            font-size: .85rem;
-        }
+.field label .req { color: var(--tpl-danger); }
 
-        .field input::placeholder,
-        .field textarea::placeholder { color: #5b6572; }
+.field input[type="text"] {
+    width: 100%;
+    padding: .45rem .6rem;
+    border: 1px solid var(--tpl-border);
+    border-radius: 6px;
+    background: var(--tpl-bg);
+    color: var(--tpl-text);
+    font: inherit;
+    font-size: .85rem;
+}
 
-        .field input:focus,
-        .field textarea:focus,
-        .field select:focus {
-            outline: 2px solid rgba(0, 212, 170, .35);
-            outline-offset: 1px;
-            border-color: var(--tpl-accent);
-            box-shadow: none;
-        }
+.field input::placeholder { color: #5b6572; }
 
-        /* ═══ Pestañas ═══ */
-        .tpl-tabs {
-            display: flex;
-            gap: .25rem;
-            padding: .35rem;
-            margin-bottom: .9rem;
-            background: var(--tpl-bg);
-            border: 1px solid var(--tpl-border);
-            border-radius: var(--tpl-radius);
-            overflow-x: auto;
-        }
+.field input:focus {
+    outline: none;
+    border-color: var(--tpl-accent);
+    box-shadow: 0 0 0 3px rgba(0, 212, 170, .12);
+}
 
-        .tpl-tabs .nav-link {
-            display: inline-flex;
-            align-items: center;
-            gap: .4rem;
-            padding: .45rem .9rem;
-            border: 0;
-            border-radius: 6px;
-            background: transparent;
-            color: var(--tpl-muted);
-            font: inherit;
-            font-size: .82rem;
-            font-weight: 500;
-            cursor: pointer;
-            white-space: nowrap;
-            transition: background-color var(--tpl-t), color var(--tpl-t);
-        }
+.tpl-layout {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
 
-        .tpl-tabs .nav-link i { margin: 0; font-size: .95rem; }
+/* ═══ Pestañas ═══ */
+.tpl-tabs {
+    display: flex;
+    background: var(--tpl-bg-2);
+    border-bottom: 1px solid var(--tpl-border);
+    overflow-x: auto;
+    flex: 0 0 auto;
+}
 
-        .tpl-tabs .nav-link:hover {
-            color: var(--tpl-text);
-            background: rgba(255, 255, 255, .05);
-        }
+.tpl-tabs .nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .7rem 1.1rem;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    background: transparent;
+    color: var(--tpl-muted);
+    font: inherit;
+    font-size: .84rem;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color var(--tpl-t), background-color var(--tpl-t), border-color var(--tpl-t);
+}
 
-        .tpl-tabs .nav-link.active {
-            color: var(--tpl-accent);
-            background: rgba(0, 212, 170, .12);
-            font-weight: 600;
-        }
+.tpl-tabs .nav-link:hover { color: var(--tpl-accent); background: var(--tpl-bg-3); }
 
-        /* ═══ Área de edición ═══ */
-        .tab-content {
-            background: var(--tpl-bg);
-            border: 1px solid var(--tpl-border);
-            border-radius: var(--tpl-radius);
-            overflow: hidden;
-        }
+.tpl-tabs .nav-link.active {
+    color: var(--tpl-accent);
+    border-bottom-color: var(--tpl-accent);
+    background: var(--tpl-bg-3);
+}
 
-        .tab-pane {
-            display: none;
-            padding: 0;
-        }
+/* ═══ Paneles ═══ */
+.tpl-panes {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    background: var(--tpl-bg);
+}
 
-        .tab-pane.active {
-            display: block;
-        }
+.tab-pane {
+    display: none;
+    position: absolute;
+    inset: 0;
+}
 
-        /* CodeMirror */
-        .CodeMirror {
-            height: 620px;
-            border: 0;
-            border-radius: 0;
-            font-family: var(--tpl-mono);
-            font-size: 13px;
-        }
+.tab-pane.active { display: block; }
 
-        .CodeMirror-gutters {
-            border-right: 1px solid var(--tpl-border);
-        }
+#gjs { height: 100%; width: 100%; }
 
-        /* GrapesJS: el lienzo conserva fondo claro para editar la plantilla,
-           el marco es oscuro como el resto del editor. */
-        #gjs-editor {
-            height: 620px;
-            border: 0;
-            border-radius: 0;
-            overflow: hidden;
-        }
+.gjs-cv-canvas { background: #ffffff !important; }
 
-        .gjs-cv-canvas {
-            background: #ffffff !important;
-        }
+.CodeMirror {
+    height: 100% !important;
+    font-family: var(--tpl-mono);
+    font-size: 13px;
+}
 
-        /* ═══ Pie del panel ═══ */
-        .tpl-footer {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: .9rem;
-            margin-top: 1.25rem;
-            padding-top: 1rem;
-            border-top: 1px solid var(--tpl-border);
-        }
+.CodeMirror-gutters { border-right: 1px solid var(--tpl-border); }
 
-        .tpl-options {
-            display: flex;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 1.1rem;
-        }
+/* ═══ Barra de estado ═══ */
+.tpl-statusbar {
+    height: 28px;
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: 0 1rem;
+    background: var(--tpl-bg-2);
+    border-top: 1px solid var(--tpl-border);
+    color: var(--tpl-muted);
+    font-size: .75rem;
+    flex: 0 0 auto;
+}
 
-        .tpl-options .form-check {
-            display: flex;
-            align-items: center;
-            gap: .45rem;
-            margin: 0;
-        }
+.tpl-statusbar .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--tpl-success);
+}
 
-        .tpl-options .form-check-input {
-            width: 16px;
-            height: 16px;
-            margin: 0;
-            background-color: var(--tpl-bg);
-            border-color: var(--tpl-border);
-            accent-color: var(--tpl-accent);
-        }
+.tpl-statusbar .dot.saving { background: var(--tpl-warning); animation: tplPulse 1s infinite; }
 
-        .tpl-options .form-check-input:checked {
-            background-color: var(--tpl-accent);
-            border-color: var(--tpl-accent);
-        }
+.tpl-statusbar-right { margin-left: auto; display: flex; align-items: center; gap: .75rem; }
 
-        .tpl-options .form-check-label {
-            font-size: .84rem;
-            color: var(--tpl-muted);
-            cursor: pointer;
-        }
+@keyframes tplPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .5; }
+}
 
-        .tpl-actions {
-            display: flex;
-            gap: .5rem;
-            flex-wrap: wrap;
-        }
+/* ═══ Opciones ═══ */
+.tpl-options {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1.1rem;
+    padding: .6rem 1rem;
+    background: var(--tpl-bg-2);
+    border-top: 1px solid var(--tpl-border);
+    flex: 0 0 auto;
+}
 
-        .tpl-actions .btn-tpl {
-            padding: .55rem 1rem;
-        }
+.tpl-check {
+    display: flex;
+    align-items: center;
+    gap: .45rem;
+    font-size: .84rem;
+    color: var(--tpl-muted);
+    cursor: pointer;
+    margin: 0;
+}
 
-        /* ═══ Avisos: mismo lenguaje que los toasts del builder ═══ */
-        .alert-fixed {
-            position: fixed;
-            top: calc(var(--tpl-topbar-h) + 12px);
-            right: 16px;
-            z-index: 9999;
-            min-width: 280px;
-            max-width: 460px;
-            padding: .65rem .9rem;
-            border: 1px solid var(--tpl-border);
-            border-left: 3px solid var(--tpl-accent);
-            border-radius: var(--tpl-radius);
-            background: var(--tpl-bg-2);
-            color: var(--tpl-text);
-            font-size: .84rem;
-            box-shadow: 0 10px 28px rgba(0, 0, 0, .45);
-        }
+.tpl-check input {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    accent-color: var(--tpl-accent);
+    cursor: pointer;
+}
 
-        .alert-fixed.alert-success { border-left-color: #22c55e; }
-        .alert-fixed.alert-danger { border-left-color: var(--tpl-danger); }
-        .alert-fixed.alert-warning { border-left-color: #f59e0b; }
-        .alert-fixed.alert-info { border-left-color: #3b82f6; }
+.tpl-options-actions { margin-left: auto; display: flex; gap: .5rem; }
 
-        .alert-fixed .btn-close {
-            filter: invert(1) grayscale(1) brightness(2);
-            opacity: .6;
-            padding: .6rem;
-        }
+/* ═══ Toasts: mismos que el builder ═══ */
+.toast-container {
+    position: fixed;
+    top: 70px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+    max-width: 360px;
+}
 
-        .alert-fixed .btn-close:hover { opacity: 1; }
+.toast {
+    padding: .75rem 1rem;
+    background: var(--tpl-bg-3);
+    border: 1px solid var(--tpl-border);
+    border-left: 4px solid var(--tpl-success);
+    border-radius: var(--tpl-radius);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, .4);
+    color: var(--tpl-text);
+    font-size: .85rem;
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    transition: opacity .3s ease, transform .3s ease;
+}
 
-        /* ═══ Responsive ═══ */
-        @media (max-width: 768px) {
-            .CodeMirror,
-            #gjs-editor {
-                height: 440px;
-            }
+.toast.error { border-left-color: var(--tpl-danger); }
+.toast.warning { border-left-color: var(--tpl-warning); }
+.toast.info { border-left-color: #3b82f6; }
 
-            .tpl-panel { padding: 1rem; }
+@media (max-width: 768px) {
+    .tpl-state { display: none; }
+    .btn-tpl .btn-label { display: none; }
+}
 
-            .tpl-footer {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .tpl-actions .btn-tpl { flex: 1 1 auto; justify-content: center; }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after {
-                transition-duration: .001ms !important;
-                animation-duration: .001ms !important;
-            }
-        }
-    </style>
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        transition-duration: .001ms !important;
+        animation-duration: .001ms !important;
+    }
+}
+</style>
 </head>
 <body class="tpl-body">
 
 <!-- ═══ BARRA SUPERIOR ═══ -->
 <header class="tpl-topbar">
     <div class="tpl-topbar-left">
-        <a href="<?= url('admin/templates') ?>" class="tpl-logo" title="Volver a plantillas">
+        <a href="<?= e($listUrl) ?>" class="tpl-logo" title="Volver a plantillas">
             <i class="bi bi-arrow-left"></i>
         </a>
         <div class="tpl-title">
             <i class="bi bi-layout-text-window"></i>
-            <span><?= e($pageTitle) ?></span>
-            <?php if ($template): ?>
-                <span class="tpl-badge">#<?= (int)$t['id'] ?></span>
+            <span id="displayName"><?= e($t['name'] !== '' ? $t['name'] : $pageTitle) ?></span>
+            <?php if (!$isNew): ?>
+                <span class="tpl-badge">#<?= $templateId ?></span>
+                <?php if (!empty($t['is_system_template'])): ?>
+                    <span class="tpl-badge" title="Plantilla del sistema">sistema</span>
+                <?php endif; ?>
             <?php endif; ?>
         </div>
     </div>
 
+    <div class="tpl-state" id="saveState"></div>
+
     <div class="tpl-topbar-right">
-        <?php if ($template): ?>
-            <a href="<?= url('admin/templates/' . (int)$t['id'] . '/versions') ?>" class="btn-tpl btn-ghost">
+        <?php if (!$isNew): ?>
+            <a href="<?= e($versionsUrl) ?>" class="btn-tpl btn-ghost">
                 <i class="bi bi-clock-history"></i><span class="btn-label">Versiones</span>
             </a>
         <?php endif; ?>
-        <button type="submit" form="templateForm" class="btn-tpl btn-primary" id="btnSave">
-            <i class="bi bi-check-lg"></i><span class="btn-label">Guardar</span>
+        <button type="button" class="btn-tpl btn-primary" id="btnSave">
+            <i class="bi bi-save"></i><span class="btn-label">Guardar</span>
         </button>
     </div>
 </header>
 
-<!-- ═══ CONTENIDO ═══ -->
-<main class="tpl-main">
-    <form method="post"
-          action="<?= url($template ? "admin/templates/{$t['id']}" : 'admin/templates') ?>"
-          id="templateForm"
-          class="tpl-panel">
-        <?= \App\Core\CSRF::field() ?>
+<!-- ═══ METADATOS ═══ -->
+<form id="templateForm" method="post" action="<?= e($saveUrl) ?>">
+    <?= \App\Core\CSRF::field() ?>
+    <input type="hidden" name="grapesjs_data" id="grapesjs-data" value="">
 
-        <!-- ═══ METADATOS ═══ -->
-        <section class="tpl-meta">
-            <div class="field">
-                <label for="tplName">Nombre <span class="req">*</span></label>
-                <input type="text" name="name" id="tplName" value="<?= e($t['name']) ?>" required
-                       placeholder="Nombre de la plantilla">
-            </div>
-            <div class="field">
-                <label for="tplDescription">Descripción</label>
-                <input type="text" name="description" id="tplDescription"
-                       value="<?= e($t['description']) ?>" placeholder="Para qué sirve esta plantilla">
-            </div>
-        </section>
+    <div class="tpl-meta">
+        <div class="field">
+            <label for="tplName">Nombre <span class="req">*</span></label>
+            <input type="text" name="name" id="tplName" required
+                   value="<?= e($t['name']) ?>" placeholder="Nombre de la plantilla">
+        </div>
+        <div class="field">
+            <label for="tplDescription">Descripción</label>
+            <input type="text" name="description" id="tplDescription"
+                   value="<?= e($t['description']) ?>" placeholder="Para qué sirve esta plantilla">
+        </div>
+    </div>
 
-        <!-- ═══ PESTAÑAS ═══ -->
+    <!-- ═══ EDITOR ═══ -->
+    <div class="tpl-layout">
         <nav class="tpl-tabs" id="editorTabs" role="tablist" aria-label="Modo de edición">
-            <button type="button" class="nav-link active" data-tab="visual" role="tab">
+            <button type="button" class="nav-link active" data-tab="visual" role="tab" aria-selected="true">
                 <i class="bi bi-palette"></i> Visual
             </button>
-            <button type="button" class="nav-link" data-tab="html" role="tab">
+            <button type="button" class="nav-link" data-tab="html" role="tab" aria-selected="false">
                 <i class="bi bi-code-slash"></i> HTML
             </button>
-            <button type="button" class="nav-link" data-tab="css" role="tab">
+            <button type="button" class="nav-link" data-tab="css" role="tab" aria-selected="false">
                 <i class="bi bi-palette2"></i> CSS
             </button>
-            <button type="button" class="nav-link" data-tab="js" role="tab">
+            <button type="button" class="nav-link" data-tab="js" role="tab" aria-selected="false">
                 <i class="bi bi-braces"></i> JS
             </button>
             <?php if ($canEditPhp): ?>
-            <button type="button" class="nav-link" data-tab="php" role="tab">
+            <button type="button" class="nav-link" data-tab="php" role="tab" aria-selected="false">
                 <i class="bi bi-filetype-php"></i> PHP
             </button>
             <?php endif; ?>
         </nav>
 
-        <!-- ═══ CONTENIDO DE PESTAÑAS ═══ -->
-        <div class="tab-content">
-            <!-- Visual (GrapesJS) -->
-            <div class="tab-pane active" id="pane-visual" data-tab="visual" role="tabpanel">
-                <div id="gjs-editor"></div>
+        <div class="tpl-panes">
+            <div class="tab-pane active" id="pane-visual" data-pane="visual" role="tabpanel">
+                <div id="gjs"></div>
             </div>
-
-            <!-- HTML -->
-            <div class="tab-pane" id="pane-html" data-tab="html" role="tabpanel">
-                <textarea name="content_html" id="cm-html"><?= e($initialHtml) ?></textarea>
+            <div class="tab-pane" id="pane-html" data-pane="html" role="tabpanel">
+                <textarea id="editor-html"></textarea>
             </div>
-
-            <!-- CSS -->
-            <div class="tab-pane" id="pane-css" data-tab="css" role="tabpanel">
-                <textarea name="content_css" id="cm-css"><?= e($initialCss) ?></textarea>
+            <div class="tab-pane" id="pane-css" data-pane="css" role="tabpanel">
+                <textarea id="editor-css"></textarea>
             </div>
-
-            <!-- JS -->
-            <div class="tab-pane" id="pane-js" data-tab="js" role="tabpanel">
-                <textarea name="content_js" id="cm-js"><?= e($t['content_js'] ?? '') ?></textarea>
+            <div class="tab-pane" id="pane-js" data-pane="js" role="tabpanel">
+                <textarea id="editor-js"></textarea>
             </div>
-
-            <!-- PHP -->
             <?php if ($canEditPhp): ?>
-            <div class="tab-pane" id="pane-php" data-tab="php" role="tabpanel">
-                <textarea name="content_php" id="cm-php"><?= e($t['content_php'] ?? '') ?></textarea>
+            <div class="tab-pane" id="pane-php" data-pane="php" role="tabpanel">
+                <textarea id="editor-php"></textarea>
             </div>
             <?php endif; ?>
         </div>
 
-        <!-- ═══ CAMPO OCULTO GRAPESJS ═══ -->
-        <input type="hidden" name="grapesjs_data" id="grapesjs-data"
-               value="<?= e(is_array($grapesjsData) ? json_encode($grapesjsData) : $grapesjsData) ?>">
+        <div class="tpl-statusbar">
+            <span class="dot" id="statusDot"></span>
+            <span id="statusMode">Editor visual</span>
+            <span>|</span>
+            <span id="statusInfo"></span>
+            <span class="tpl-statusbar-right">
+                <span id="statusSize">0 KB</span>
+                <span>|</span>
+                <span id="statusTemplate">
+                    <?= $isNew ? 'Plantilla nueva' : 'Plantilla #' . $templateId ?>
+                </span>
+            </span>
+        </div>
 
-        <!-- ═══ OPCIONES Y ACCIONES ═══ -->
-        <footer class="tpl-footer">
-            <div class="tpl-options">
-                <div class="form-check">
-                    <input type="checkbox" name="is_active" value="1" class="form-check-input" id="isActive"
-                           <?= !empty($t['is_active']) ? 'checked' : '' ?>>
-                    <label class="form-check-label" for="isActive">Activo</label>
-                </div>
-                <div class="form-check">
-                    <input type="checkbox" name="is_default" value="1" class="form-check-input" id="isDefault"
-                           <?= !empty($t['is_default']) ? 'checked' : '' ?>>
-                    <label class="form-check-label" for="isDefault">Por defecto</label>
-                </div>
-                <div class="form-check">
-                    <input type="checkbox" name="create_version" value="1" class="form-check-input" id="createVersion" checked>
-                    <label class="form-check-label" for="createVersion">Guardar versión</label>
-                </div>
-            </div>
+        <div class="tpl-options">
+            <label class="tpl-check">
+                <input type="checkbox" name="is_active" value="1" id="isActive" <?= !empty($t['is_active']) ? 'checked' : '' ?>>
+                <span>Activa</span>
+            </label>
+            <label class="tpl-check">
+                <input type="checkbox" name="is_default" value="1" id="isDefault" <?= !empty($t['is_default']) ? 'checked' : '' ?>>
+                <span>Por defecto</span>
+            </label>
+            <label class="tpl-check">
+                <input type="checkbox" name="create_version" value="1" id="createVersion" checked>
+                <span>Guardar versión al guardar</span>
+            </label>
 
-            <div class="tpl-actions">
-                <?php if ($template): ?>
+            <div class="tpl-options-actions">
+                <?php if (!$isNew): ?>
                 <button type="button" class="btn-tpl btn-outline" id="btnSaveVersion">
-                    <i class="bi bi-clock-history"></i> Guardar versión
+                    <i class="bi bi-clock-history"></i><span class="btn-label">Guardar versión</span>
                 </button>
                 <?php endif; ?>
-                <a href="<?= url('admin/templates') ?>" class="btn-tpl btn-ghost">Cancelar</a>
+                <a href="<?= e($listUrl) ?>" class="btn-tpl btn-ghost">Cancelar</a>
             </div>
-        </footer>
-    </form>
-</main>
+        </div>
+    </div>
+</form>
 
-<!-- ═══════════════════════════════════════════════════════════════════
-     DEPENDENCIAS CDN
-═══════════════════════════════════════════════════════════════════ -->
-<!-- jQuery -->
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+<div class="toast-container" id="toastContainer"></div>
 
-<!-- Bootstrap JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-<!-- GrapesJS -->
-<script src="https://cdn.jsdelivr.net/npm/grapesjs@0.21.10/dist/grapes.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/grapesjs-blocks-basic@1.0.2/dist/index.min.js"></script>
-
-<!-- CodeMirror -->
-<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/xml/xml.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/javascript/javascript.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/css/css.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/php/php.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/clike/clike.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/edit/closetag.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/edit/closebrackets.min.js"></script>
+<!-- Activos del editor: mismos que el builder (CodeMirror + GrapesJS + plugins) -->
+<?php require VIEWS_PATH . '/partials/editor-assets-body.php'; ?>
 
 <script>
-// ═══════════════════════════════════════════════════════════════════
-// CONFIGURACIÓN GLOBAL
-// ═══════════════════════════════════════════════════════════════════
-const CSRF_TOKEN = '<?= _tplCsrfToken() ?>';
-const URL_VERSIONS = '<?= $template ? url("admin/templates/{$t['id']}/versions") : "" ?>';
-const URL_COMPONENTS = '<?= url("admin/components/api") ?>';
+// ═══════════════════════════════════════════════════════════════
+// CONFIGURACIÓN
+// ═══════════════════════════════════════════════════════════════
+const CONFIG = {
+    saveUrl: '<?= e($saveUrl) ?>',
+    versionsUrl: '<?= e($versionsUrl) ?>',
+    assetsUrl: '<?= e($assetsUrl) ?>',
+    csrfToken: '<?= e($csrfToken) ?>',
+    templateId: <?= $templateId ?>,
+    isNew: <?= $isNew ? 'true' : 'false' ?>,
+    canEditPhp: <?= $canEditPhp ? 'true' : 'false' ?>
+};
 
-// Datos iniciales para GrapesJS
-const INITIAL_HTML = <?= json_encode($initialHtml) ?>;
-const INITIAL_CSS = <?= json_encode($initialCss) ?>;
+const templateData = {
+    html: <?= $jsonHtml ?>,
+    css: <?= $jsonCss ?>,
+    js: <?= $jsonJs ?>,
+    php: <?= $jsonPhp ?>,
+    grapes: <?= $jsonGrapes ?>
+};
 
-// ═══════════════════════════════════════════════════════════════════
-// DOCUMENT READY
-// ═══════════════════════════════════════════════════════════════════
-$(document).ready(function() {
-    
-    // ═══════════════════════════════════════════════════════════════
-    // 1. SISTEMA DE TABS MEJORADO
-    // ═══════════════════════════════════════════════════════════════
-    const tabButtons = $('#editorTabs .nav-link');
-    const tabPanes = $('.tab-pane');
-    const editors = {};
+// Ficheros de bloques, servidos por PHP desde public/assets/js/blocks.
+const BLOCK_SCRIPTS = <?= json_encode($blockUrls, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) ?>;
 
-    // Función para cambiar de tab
-    function switchTab(tabId) {
-        // Desactivar todos los tabs
-        tabButtons.removeClass('active');
-        tabPanes.removeClass('active');
-        
-        // Activar el tab seleccionado
-        $(`#editorTabs .nav-link[data-tab="${tabId}"]`).addClass('active');
-        $(`#pane-${tabId}`).addClass('active');
-        
-        // Refrescar CodeMirror después de mostrar
-        setTimeout(function() {
-            if (editors[tabId]) {
-                editors[tabId].refresh();
-            }
-            // Refrescar GrapesJS si es visual
-            if (tabId === 'visual' && window.gjsEditor) {
-                window.gjsEditor.refresh();
-                // También redimensionar el canvas
-                setTimeout(function() {
-                    window.gjsEditor.refresh();
-                }, 100);
-            }
-        }, 50);
-    }
+const existingAssets = [];
 
-    // Evento click en tabs
-    tabButtons.on('click', function(e) {
-        e.preventDefault();
-        const tab = $(this).data('tab');
-        
-        // Si es visual y GrapesJS no está inicializado, inicializarlo
-        if (tab === 'visual' && !window.gjsEditor) {
-            initGrapesJS();
-        }
-        
-        switchTab(tab);
-    });
+// ═══════════════════════════════════════════════════════════════
+// ESTADO
+// ═══════════════════════════════════════════════════════════════
+let cmHtml = null, cmCss = null, cmJs = null, cmPhp = null;
+let gjsEditor = null;
+let currentTab = 'visual';
+let isSyncing = false;
+let isSaving = false;
+let isDirty = false;
+let syncTimer = null;
 
-    // ═══════════════════════════════════════════════════════════════
-    // 2. INICIALIZAR CODEMIRROR
-    // ═══════════════════════════════════════════════════════════════
-    function initCodeMirror(textareaId, mode) {
-        const textarea = document.getElementById(textareaId);
-        if (!textarea) return null;
-        
-        const editor = CodeMirror.fromTextArea(textarea, {
-            mode: mode,
-            theme: 'dracula',
-            lineNumbers: true,
-            lineWrapping: true,
-            autoCloseTags: true,
-            autoCloseBrackets: true,
-            matchBrackets: true,
-            indentUnit: 2,
-            tabSize: 2,
-            extraKeys: {
-                "Ctrl-S": function() {
-                    $('#btnSave').click();
-                }
-            }
-        });
-        
-        // Forzar refresh
-        setTimeout(function() {
-            editor.refresh();
-        }, 100);
-        
-        return editor;
-    }
+const tabLabels = { visual: 'Editor visual', html: 'HTML', css: 'CSS', js: 'JavaScript', php: 'PHP' };
 
-    editors.html = initCodeMirror('cm-html', 'htmlmixed');
-    editors.css = initCodeMirror('cm-css', 'css');
-    editors.js = initCodeMirror('cm-js', 'javascript');
-    <?php if ($canEditPhp): ?>
-    editors.php = initCodeMirror('cm-php', 'application/x-httpd-php');
-    <?php endif; ?>
-
-    console.log('✅ CodeMirror inicializado:', Object.keys(editors));
-
-    // ═══════════════════════════════════════════════════════════════
-    // 3. INICIALIZAR GRAPESJS (solo si es necesario)
-    // ═══════════════════════════════════════════════════════════════
-    function initGrapesJS() {
-        if (window.gjsEditor) {
-            console.log('⚠️ GrapesJS ya está inicializado');
-            return window.gjsEditor;
-        }
-
-        const editorContainer = document.getElementById('gjs-editor');
-        if (!editorContainer) {
-            console.error('❌ No se encontró el contenedor de GrapesJS');
-            return null;
-        }
-
-        console.log('🔄 Inicializando GrapesJS...');
-        
+// ═══════════════════════════════════════════════════════════════
+// ARRANQUE
+// ═══════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', function() {
+    var failed = [];
+    var safeInit = function(label, fn) {
         try {
-            const gjsEditor = grapesjs.init({
-                container: '#gjs-editor',
-                height: '600px',
-                width: 'auto',
-                fromElement: false,
-                storageManager: { 
-                    type: 'none',
-                    autoload: false,
-                    autosave: false
-                },
-                components: INITIAL_HTML || '<div style="padding: 50px; text-align: center; color: #6c757d;">Contenido vacío - Comienza a diseñar</div>',
-                style: INITIAL_CSS || '',
-                plugins: ['gjs-blocks-basic'],
-                pluginsOpts: {
-                    'gjs-blocks-basic': { 
-                        flexGrid: true 
-                    }
-                },
-                deviceManager: {
-                    devices: [
-                        { name: 'Desktop', width: '' },
-                        { name: 'Tablet', width: '768px', widthMedia: '992px' },
-                        { name: 'Mobile', width: '320px', widthMedia: '480px' }
-                    ]
-                },
-                canvas: {
-                    scripts: [],
-                    styles: []
-                },
-                // Evitar problemas de autoguardado
-                storage: {
-                    type: 'none'
-                },
-                // Configuración adicional para estabilidad
-                undoManager: {
-                    trackSelection: true
-                }
-            });
-            
-            window.gjsEditor = gjsEditor;
-            
-            // Forzar refresh después de la inicialización
-            setTimeout(function() {
-                gjsEditor.refresh();
-                gjsEditor.setComponents(INITIAL_HTML || '<div>Contenido vacío</div>');
-                gjsEditor.setStyle(INITIAL_CSS || '');
-            }, 100);
-            
-            console.log('✅ GrapesJS inicializado correctamente');
-            
-            // Cargar componentes personalizados
-            loadCustomComponents(gjsEditor);
-            
-            return gjsEditor;
-            
-        } catch (e) {
-            console.error('❌ Error al inicializar GrapesJS:', e);
-            showNotification('Error al cargar el editor visual', 'danger');
-            return null;
+            fn();
+        } catch (err) {
+            console.error('❌ Editor de plantillas · falló ' + label + ':', err);
+            failed.push(label);
         }
-    }
-
-    // ═══════════════════════════════════════════════════════════════
-    // 4. CARGAR COMPONENTES PERSONALIZADOS
-    // ═══════════════════════════════════════════════════════════════
-    function loadCustomComponents(editor) {
-        if (!editor || !URL_COMPONENTS) return;
-        
-        // Verificar si la URL es válida
-        if (URL_COMPONENTS === '') {
-            console.log('ℹ️ No hay componentes personalizados configurados');
-            return;
-        }
-        
-        $.ajax({
-            url: URL_COMPONENTS,
-            method: 'GET',
-            dataType: 'json',
-            success: function(data) {
-                if (!data || !data.success || !Array.isArray(data.data)) {
-                    console.log('ℹ️ No hay componentes disponibles');
-                    return;
-                }
-
-                const bm = editor.BlockManager;
-                const grouped = {};
-
-                data.data.forEach(function(c) {
-                    const cat = c.category || 'General';
-                    if (!grouped[cat]) grouped[cat] = [];
-                    grouped[cat].push(c);
-                });
-
-                Object.entries(grouped).forEach(function([cat, items]) {
-                    items.forEach(function(c) {
-                        try {
-                            bm.add('custom-' + c.id, {
-                                label: c.name,
-                                category: '📦 ' + cat,
-                                content: c.html || '<div>Componente vacío</div>',
-                                style: c.css || ''
-                            });
-                        } catch (e) {
-                            console.warn('Error al agregar componente:', c.name, e);
-                        }
-                    });
-                });
-                console.log('✅ Componentes cargados:', data.data.length);
-            },
-            error: function(err) {
-                console.warn('⚠️ Error al cargar componentes:', err);
-            }
-        });
-    }
-
-    // ═══════════════════════════════════════════════════════════════
-    // 5. SINCRONIZACIÓN BIDIRECCIONAL
-    // ═══════════════════════════════════════════════════════════════
-    function syncFromGrapesJS() {
-        if (!window.gjsEditor) return;
-        try {
-            const html = window.gjsEditor.getHtml();
-            const css = window.gjsEditor.getCss();
-            const projectData = window.gjsEditor.getProjectData();
-
-            if (editors.html) editors.html.setValue(html);
-            if (editors.css) editors.css.setValue(css);
-            
-            const grapesjsDataEl = document.getElementById('grapesjs-data');
-            if (grapesjsDataEl) {
-                grapesjsDataEl.value = JSON.stringify(projectData);
-            }
-        } catch (e) {
-            console.warn('Error en syncFromGrapesJS:', e);
-        }
-    }
-
-    function syncToGrapesJS() {
-        if (!window.gjsEditor) return;
-        try {
-            if (editors.html) {
-                window.gjsEditor.setComponents(editors.html.getValue());
-            }
-            if (editors.css) {
-                window.gjsEditor.setStyle(editors.css.getValue());
-            }
-            // Refrescar después de sincronizar
-            setTimeout(function() {
-                window.gjsEditor.refresh();
-            }, 100);
-        } catch (e) {
-            console.warn('Error en syncToGrapesJS:', e);
-        }
-    }
-
-    // Exponer funciones globalmente
-    window.syncFromGrapesJS = syncFromGrapesJS;
-    window.syncToGrapesJS = syncToGrapesJS;
-
-    // ═══════════════════════════════════════════════════════════════
-    // 6. INICIALIZAR GRAPESJS SI EL TAB VISUAL ESTÁ ACTIVO
-    // ═══════════════════════════════════════════════════════════════
-    // Verificar si el tab visual está activo al cargar
-    if ($('#pane-visual').hasClass('active')) {
-        initGrapesJS();
-    }
-
-    // ═══════════════════════════════════════════════════════════════
-    // 7. EVENTOS DE FORMULARIO
-    // ═══════════════════════════════════════════════════════════════
-    $('#templateForm').on('submit', function(e) {
-        // Si GrapesJS está inicializado, sincronizar
-        if (window.gjsEditor) {
-            syncFromGrapesJS();
-        }
-        
-        // Guardar los textareas de CodeMirror
-        Object.values(editors).forEach(function(editor) {
-            if (editor && typeof editor.save === 'function') {
-                editor.save();
-            }
-        });
-    });
-
-    // ═══════════════════════════════════════════════════════════════
-    // 8. BOTÓN "GUARDAR VERSIÓN"
-    // ═══════════════════════════════════════════════════════════════
-    <?php if ($template): ?>
-    $('#btnSaveVersion').on('click', function() {
-        if (!confirm('¿Guardar una versión del estado actual?')) return;
-
-        // Sincronizar desde GrapesJS si está activo
-        if (window.gjsEditor) {
-            syncFromGrapesJS();
-        }
-
-        // Obtener valores actualizados
-        const payload = {
-            content_html: editors.html ? editors.html.getValue() : '',
-            content_css: editors.css ? editors.css.getValue() : '',
-            content_js: editors.js ? editors.js.getValue() : '',
-            <?php if ($canEditPhp): ?>
-            content_php: editors.php ? editors.php.getValue() : '',
-            <?php endif; ?>
-            action: 'create'
-        };
-
-        $.ajax({
-            url: URL_VERSIONS,
-            method: 'POST',
-            contentType: 'application/json',
-            headers: {
-                'X-CSRF-TOKEN': CSRF_TOKEN,
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            data: JSON.stringify(payload),
-            success: function(data) {
-                showNotification(
-                    data.success ? '✅ Versión guardada correctamente' : '❌ Error: ' + (data.error || 'desconocido'),
-                    data.success ? 'success' : 'danger'
-                );
-            },
-            error: function() {
-                showNotification('❌ Error de red', 'danger');
-            }
-        });
-    });
-    <?php endif; ?>
-
-    // ═══════════════════════════════════════════════════════════════
-    // 9. NOTIFICACIONES
-    // ═══════════════════════════════════════════════════════════════
-    window.showNotification = function(message, type = 'info') {
-        const icons = {
-            success: 'check-circle-fill',
-            danger: 'exclamation-triangle-fill',
-            info: 'info-circle-fill',
-            warning: 'exclamation-triangle-fill'
-        };
-
-        const alertDiv = $(`
-            <div class="alert alert-${type} alert-dismissible fade show shadow alert-fixed" role="alert">
-                <i class="bi bi-${icons[type] || 'info-circle-fill'} me-2"></i>
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        `);
-        
-        $('body').append(alertDiv);
-        
-        setTimeout(function() {
-            alertDiv.alert('close');
-        }, 5000);
     };
 
-    // ═══════════════════════════════════════════════════════════════
-    // 10. MANEJO DE ERRORES Y DEBUG
-    // ═══════════════════════════════════════════════════════════════
-    // Mostrar estado del editor en consola
-    console.log('✅ Editor de templates cargado correctamente');
-    console.log('📊 Estado:', {
-        'Tabs': tabButtons.length,
-        'CodeMirror': Object.keys(editors).length,
-        'GrapesJS': !!window.gjsEditor,
-        'Template ID': <?= $template ? (int)$t['id'] : 'null' ?>
+    safeInit('CodeMirror', initCodeMirror);
+    safeInit('lienzo visual', initGrapesJS);
+    safeInit('eventos', bindEvents);
+
+    if (failed.length) {
+        showToast('✗ No se pudo iniciar: ' + failed.join(', '), 'error');
+    }
+    updateStatus();
+    updateSizeInfo();
+});
+
+// ═══════════════════════════════════════════════════════════════
+// CODEMIRROR (mismas opciones que el builder)
+// ═══════════════════════════════════════════════════════════════
+function initCodeMirror() {
+    const cmOptions = {
+        theme: 'dracula',
+        lineNumbers: true,
+        lineWrapping: true,
+        matchBrackets: true,
+        autoCloseBrackets: true,
+        autoCloseTags: true,
+        styleActiveLine: true,
+        tabSize: 2,
+        indentUnit: 2,
+        indentWithTabs: false,
+        foldGutter: true,
+        gutters: ['CodeMirror-linenumbers', 'CodeMirror-foldgutter'],
+        extraKeys: {
+            'Ctrl-Space': 'autocomplete',
+            'Ctrl-S': function() { saveTemplate(); }
+        }
+    };
+
+    cmHtml = CodeMirror.fromTextArea(document.getElementById('editor-html'), Object.assign({}, cmOptions, { mode: 'htmlmixed' }));
+    cmCss  = CodeMirror.fromTextArea(document.getElementById('editor-css'), Object.assign({}, cmOptions, { mode: 'css' }));
+    cmJs   = CodeMirror.fromTextArea(document.getElementById('editor-js'), Object.assign({}, cmOptions, { mode: 'javascript' }));
+
+    const phpEl = document.getElementById('editor-php');
+    cmPhp = phpEl ? CodeMirror.fromTextArea(phpEl, Object.assign({}, cmOptions, { mode: 'application/x-httpd-php' })) : null;
+
+    cmHtml.setValue(templateData.html || '');
+    cmCss.setValue(templateData.css || '');
+    cmJs.setValue(templateData.js || '');
+    if (cmPhp) cmPhp.setValue(templateData.php || '');
+
+    [cmHtml, cmCss, cmJs, cmPhp].forEach(function(cm) {
+        if (!cm) return;
+        cm.on('change', function() {
+            isDirty = true;
+            updateStatus();
+            updateSizeInfo();
+        });
+    });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// GRAPESJS (mismo modelo que el builder: EditorKit + bloques del proyecto)
+// ═══════════════════════════════════════════════════════════════
+function initGrapesJS() {
+    if (gjsEditor) return gjsEditor;
+
+    const pluginSelection = EditorKit.filterPlugins(EditorKit.PLUGIN_NAMES);
+    if (pluginSelection.skipped.length) {
+        console.warn('Plugins no disponibles (se omiten): ' + pluginSelection.skipped.join(', '));
+        showToast('⚠ Sin plugin: ' + pluginSelection.skipped.join(', '), 'warning');
+    }
+
+    gjsEditor = grapesjs.init({
+        container: '#gjs',
+        showOffsets: true,
+        fromElement: false,
+        noticeOnUnload: false,
+        storageManager: false,
+        height: '100%',
+        assetManager: {
+            // Biblioteca de medios ya subida (la subida se hace desde el editor
+            // de páginas: no hay endpoint de subida para plantillas).
+            assets: existingAssets,
+            autoAdd: true,
+            accept: 'image/*'
+        },
+        selectorManager: { componentFirst: true },
+        components: templateData.html || '',
+        style: templateData.css || '',
+        plugins: pluginSelection.enabled,
+        pluginsOpts: EditorKit.PLUGINS_OPTS,
+        canvas: {
+            styles: EditorKit.CANVAS_STYLES,
+            scripts: EditorKit.CANVAS_SCRIPTS
+        },
+        deviceManager: {
+            devices: [
+                { name: 'Desktop', width: '' },
+                { name: 'Tablet', width: '768px', widthMedia: '992px' },
+                { name: 'Mobile', width: '375px', widthMedia: '480px' }
+            ]
+        },
+        styleManager: {
+            sectors: [
+                { name: 'Dimensiones', open: true, properties: ['width', 'height', 'max-width', 'min-height', 'margin', 'padding'] },
+                { name: 'Tipografía', open: true, properties: ['font-family', 'font-size', 'font-weight', 'color', 'line-height', 'letter-spacing', 'text-align', 'text-decoration', 'text-transform'] },
+                { name: 'Fondo', open: false, properties: ['background-color', 'background-image', 'background-size', 'background-position', 'background-repeat'] },
+                { name: 'Bordes', open: false, properties: ['border-radius', 'border-width', 'border-style', 'border-color'] },
+                { name: 'Efectos', open: false, properties: ['box-shadow', 'opacity', 'transition', 'transform'] },
+                { name: 'Posición', open: false, properties: ['position', 'top', 'right', 'bottom', 'left', 'display', 'flex-direction', 'justify-content', 'align-items', 'gap', 'overflow'] }
+            ]
+        },
+        layerManager: { scrollLayers: true },
+        traitManager: { scrollTraits: true },
+        colorPicker: { appendTo: 'parent' }
     });
 
-    // Tecla de ayuda: Ctrl+Shift+D para debug
-    $(document).on('keydown', function(e) {
-        if (e.ctrlKey && e.shiftKey && e.key === 'D') {
-            console.log('🔍 Debug info:', {
-                'gjsEditor': window.gjsEditor,
-                'editors': editors,
-                'initialHtml': INITIAL_HTML,
-                'initialCss': INITIAL_CSS
-            });
-            showNotification('Debug info en consola', 'info');
+    // Restaurar el proyecto guardado (ids, estilos y componentes que el HTML/CSS
+    // plano no puede representar). Mismo mecanismo que el builder de páginas.
+    if (templateData.grapes) {
+        try {
+            var project = typeof templateData.grapes === 'string'
+                ? JSON.parse(templateData.grapes)
+                : templateData.grapes;
+            if (project && project.pages) {
+                gjsEditor.loadProjectData(project);
+            }
+        } catch (err) {
+            console.warn('No se pudo restaurar el proyecto del lienzo:', err);
+        }
+    }
+
+    gjsEditor.on('update', function() {
+        isDirty = true;
+        updateStatus();
+        if (isSyncing) return;
+        isSyncing = true;
+        try {
+            cmHtml.setValue(gjsEditor.getHtml());
+            cmCss.setValue(gjsEditor.getCss());
+            updateSizeInfo();
+        } catch (err) {
+            console.warn('Error sincronizando lienzo → código:', err);
+        }
+        setTimeout(function() { isSyncing = false; }, 150);
+    });
+
+    // Código → lienzo, con retardo para no reconstruir en cada tecla.
+    cmHtml.on('change', function() {
+        if (isSyncing || !gjsEditor) return;
+        clearTimeout(syncTimer);
+        syncTimer = setTimeout(function() {
+            isSyncing = true;
+            try {
+                gjsEditor.setComponents(cmHtml.getValue());
+            } catch (err) {
+                console.warn('Error sincronizando HTML:', err);
+            }
+            setTimeout(function() { isSyncing = false; }, 200);
+        }, 600);
+    });
+
+    cmCss.on('change', function() {
+        if (isSyncing || !gjsEditor) return;
+        clearTimeout(syncTimer);
+        syncTimer = setTimeout(function() {
+            isSyncing = true;
+            try {
+                gjsEditor.setStyle(cmCss.getValue());
+            } catch (err) {
+                console.warn('Error sincronizando CSS:', err);
+            }
+            setTimeout(function() { isSyncing = false; }, 200);
+        }, 600);
+    });
+
+    // Los ficheros de bloques registran con `gjsEditor.BlockManager.add(...)`:
+    // hay que inyectarlos con el editor ya creado (EditorKit comparte el loader).
+    EditorKit.loadBlockScripts(BLOCK_SCRIPTS, gjsEditor, function() {
+        updateStatus();
+    });
+
+    // Biblioteca de medios compartida con el editor de páginas.
+    loadAssets();
+
+    return gjsEditor;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PESTAÑAS Y EVENTOS
+// ═══════════════════════════════════════════════════════════════
+function switchTab(tab) {
+    if (tab === currentTab) {
+        refreshTab(tab);
+        return;
+    }
+    currentTab = tab;
+
+    document.querySelectorAll('.tpl-tabs .nav-link').forEach(function(btn) {
+        const active = btn.dataset.tab === tab;
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    document.querySelectorAll('.tab-pane').forEach(function(pane) {
+        pane.classList.toggle('active', pane.dataset.pane === tab);
+    });
+
+    document.getElementById('statusMode').textContent = tabLabels[tab] || tab;
+    refreshTab(tab);
+    updateStatus();
+}
+
+function refreshTab(tab) {
+    setTimeout(function() {
+        [cmHtml, cmCss, cmJs, cmPhp].forEach(function(cm) { if (cm) cm.refresh(); });
+        if (tab === 'visual' && gjsEditor) gjsEditor.refresh();
+    }, 20);
+}
+
+function bindEvents() {
+    document.querySelectorAll('.tpl-tabs .nav-link').forEach(function(btn) {
+        btn.addEventListener('click', function() { switchTab(btn.dataset.tab); });
+    });
+
+    document.getElementById('btnSave').addEventListener('click', saveTemplate);
+
+    const versionBtn = document.getElementById('btnSaveVersion');
+    if (versionBtn) versionBtn.addEventListener('click', saveVersion);
+
+    const nameInput = document.getElementById('tplName');
+    if (nameInput) {
+        nameInput.addEventListener('input', function() {
+            document.getElementById('displayName').textContent = nameInput.value || '<?= e($pageTitle) ?>';
+            isDirty = true;
+            updateStatus();
+        });
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            e.preventDefault();
+            saveTemplate();
         }
     });
-});
+
+    window.addEventListener('beforeunload', function(e) {
+        if (isDirty) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
+
+    // Crear una plantilla no tiene endpoint JSON: se envía el formulario y el
+    // controlador redirige a la edición.
+    document.getElementById('templateForm').addEventListener('submit', function() {
+        syncFormBeforeSend();
+    });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SINCRONIZACIÓN CON EL FORMULARIO
+// ═══════════════════════════════════════════════════════════════
+function syncFormBeforeSend() {
+    if (gjsEditor) {
+        const dataEl = document.getElementById('grapesjs-data');
+        if (dataEl) dataEl.value = JSON.stringify(gjsEditor.getProjectData());
+    }
+}
+
+function buildFormData() {
+    syncFormBeforeSend();
+    const form = document.getElementById('templateForm');
+    const fd = new FormData(form);
+
+    // Los textareas están tapados por CodeMirror: se envían sus valores reales.
+    fd.set('content_html', cmHtml ? cmHtml.getValue() : '');
+    fd.set('content_css', cmCss ? cmCss.getValue() : '');
+    fd.set('content_js', cmJs ? cmJs.getValue() : '');
+    if (CONFIG.canEditPhp) {
+        fd.set('content_php', cmPhp ? cmPhp.getValue() : '');
+    }
+    // Los checkboxes sin marcar no viajan en FormData: se envían explícitos.
+    fd.set('is_active', document.getElementById('isActive').checked ? '1' : '0');
+    fd.set('is_default', document.getElementById('isDefault').checked ? '1' : '0');
+    fd.set('create_version', document.getElementById('createVersion').checked ? '1' : '0');
+    fd.set('_csrf_token', CONFIG.csrfToken);
+
+    return fd;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// GUARDAR
+// ═══════════════════════════════════════════════════════════════
+function saveTemplate() {
+    if (isSaving) return;
+
+    // Plantilla nueva: POST normal, el controlador redirige a la edición.
+    if (CONFIG.isNew) {
+        syncFormBeforeSend();
+        [cmHtml, cmCss, cmJs, cmPhp].forEach(function(cm) { if (cm && cm.save) cm.save(); });
+        document.getElementById('templateForm').submit();
+        return;
+    }
+
+    isSaving = true;
+    const btn = document.getElementById('btnSave');
+    const dot = document.getElementById('statusDot');
+    const original = btn.innerHTML;
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i><span class="btn-label">Guardando…</span>';
+    btn.disabled = true;
+    if (dot) dot.classList.add('saving');
+
+    fetch(CONFIG.saveUrl, {
+        method: 'POST',
+        body: buildFormData(),
+        credentials: 'same-origin',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        }
+    })
+    .then(function(r) {
+        const contentType = r.headers.get('content-type') || '';
+        const isJson = contentType.indexOf('application/json') !== -1;
+
+        if (!r.ok) {
+            return (isJson ? r.json() : Promise.resolve({})).then(function(body) {
+                throw new Error(body.message || body.error || ('El servidor respondió ' + r.status));
+            });
+        }
+        return isJson ? r.json() : { success: true, message: 'Plantilla guardada' };
+    })
+    .then(function(result) {
+        if (result.success) {
+            isDirty = false;
+            showToast('✓ Plantilla guardada', 'success');
+        } else {
+            showToast('✗ ' + (result.message || result.error || 'Error al guardar'), 'error');
+        }
+        updateStatus();
+    })
+    .catch(function(err) {
+        showToast('✗ ' + err.message, 'error');
+    })
+    .finally(function() {
+        isSaving = false;
+        btn.innerHTML = original;
+        btn.disabled = false;
+        if (dot) dot.classList.remove('saving');
+    });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// GUARDAR VERSIÓN
+// ═══════════════════════════════════════════════════════════════
+function saveVersion() {
+    if (!CONFIG.versionsUrl) return;
+    if (!window.confirm('¿Guardar una versión del estado actual?')) return;
+
+    // FormData con _csrf_token: CSRF::guard() lee $_POST, no cabeceras.
+    const fd = new FormData();
+    fd.set('_csrf_token', CONFIG.csrfToken);
+    fd.set('content_html', cmHtml ? cmHtml.getValue() : '');
+    fd.set('content_css', cmCss ? cmCss.getValue() : '');
+    fd.set('content_js', cmJs ? cmJs.getValue() : '');
+    fd.set('content_php', CONFIG.canEditPhp && cmPhp ? cmPhp.getValue() : '');
+
+    fetch(CONFIG.versionsUrl, {
+        method: 'POST',
+        body: fd,
+        credentials: 'same-origin',
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+    })
+    .then(function(r) {
+        if (!r.ok) throw new Error('El servidor respondió ' + r.status);
+        return r.json();
+    })
+    .then(function(result) {
+        if (result.success) {
+            showToast('✓ ' + (result.message || 'Versión guardada'), 'success');
+        } else {
+            showToast('✗ ' + (result.error || result.message || 'No se pudo guardar la versión'), 'error');
+        }
+    })
+    .catch(function(err) {
+        showToast('✗ ' + err.message, 'error');
+    });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BIBLIOTECA DE MEDIOS
+// ═══════════════════════════════════════════════════════════════
+function loadAssets() {
+    if (!CONFIG.assetsUrl || !gjsEditor) return;
+    fetch(CONFIG.assetsUrl, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        credentials: 'same-origin'
+    })
+    .then(function(r) { return r.ok ? r.json() : Promise.resolve(null); })
+    .then(function(result) {
+        const assets = result && (result.data || result);
+        if (Array.isArray(assets) && assets.length && gjsEditor) {
+            gjsEditor.AssetManager.add(assets);
+        }
+    })
+    .catch(function(err) {
+        console.warn('No se pudo cargar la biblioteca de medios:', err);
+    });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// UI: estado, tamaño y avisos
+// ═══════════════════════════════════════════════════════════════
+function updateStatus() {
+    const state = document.getElementById('saveState');
+    if (state) {
+        state.innerHTML = isSaving
+            ? '<i class="bi bi-cloud-arrow-up"></i> Guardando…'
+            : (isDirty
+                ? '<i class="bi bi-pencil-square"></i> Cambios sin guardar'
+                : '<i class="bi bi-check-circle"></i> Sin cambios pendientes');
+    }
+    const info = document.getElementById('statusInfo');
+    const cm = { visual: null, html: cmHtml, css: cmCss, js: cmJs, php: cmPhp }[currentTab];
+    if (info) {
+        if (cm) {
+            const pos = cm.getCursor();
+            info.textContent = 'Línea ' + (pos.line + 1) + ', Col ' + (pos.ch + 1);
+        } else {
+            info.textContent = 'Arrastra bloques desde el panel derecho del lienzo';
+        }
+    }
+}
+
+function updateSizeInfo() {
+    try {
+        const html = cmHtml ? cmHtml.getValue() : '';
+        const css = cmCss ? cmCss.getValue() : '';
+        const size = new Blob([html, css]).size;
+        const el = document.getElementById('statusSize');
+        if (el) el.textContent = (size / 1024).toFixed(1) + ' KB';
+    } catch (err) { /* Blob no disponible: sin tamaño */ }
+}
+
+function showToast(msg, type) {
+    type = type || 'success';
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+
+    const icons = {
+        success: 'check-circle-fill',
+        error: 'x-circle-fill',
+        warning: 'exclamation-triangle-fill',
+        info: 'info-circle-fill'
+    };
+    const toast = document.createElement('div');
+    toast.className = 'toast ' + type;
+    toast.innerHTML = '<i class="bi bi-' + (icons[type] || 'info-circle-fill') + '"></i> ' + msg;
+    container.appendChild(toast);
+
+    setTimeout(function() {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%)';
+        setTimeout(function() { toast.remove(); }, 300);
+    }, 3500);
+}
 </script>
 </body>
 </html>

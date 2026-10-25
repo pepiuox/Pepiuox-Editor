@@ -164,9 +164,11 @@ class TemplatesService
     {
         try {
             return $this->db->fetchAll(
-                "SELECT tv.*, u.username
+                // `template_versions` no tiene columna created_by: el JOIN con
+                // users lanzaba «Unknown column» y este método devolvía [] en
+                // silencio, así que la lista de versiones siempre salía vacía.
+                "SELECT tv.*
                  FROM {$this->versionsTable} tv
-                 LEFT JOIN users u ON u.id = tv.created_by
                  WHERE tv.template_id = ?
                  ORDER BY tv.created_at DESC",
                 [$templateId]
@@ -202,11 +204,14 @@ class TemplatesService
             ];
 
             $versionId = $this->db->insert(
+                // Sin created_by: la tabla template_versions no tiene esa
+                // columna, el INSERT fallaba con «Unknown column» y por eso
+                // «Guardar versión» no guardaba nunca nada.
                 "INSERT INTO {$this->versionsTable}
-                 (template_id, content_html, content_css, content_js, content_php, created_by, created_at)
-                 VALUES (?, ?, ?, ?, ?, ?, NOW())",
+                 (template_id, content_html, content_css, content_js, content_php, created_at)
+                 VALUES (?, ?, ?, ?, ?, NOW())",
                 [$templateId, $versionData['content_html'], $versionData['content_css'],
-                 $versionData['content_js'], $versionData['content_php'], Auth::id()]
+                 $versionData['content_js'], $versionData['content_php']]
             );
 
             return ['success' => true, 'version_id' => $versionId, 'message' => 'Versión creada'];

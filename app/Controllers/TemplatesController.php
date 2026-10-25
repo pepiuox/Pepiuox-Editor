@@ -147,6 +147,18 @@ class TemplatesController
 
             $result = $this->templateService->update($id, $data);
 
+            // El editor (views/templates/edit.php) guarda por fetch, igual que el
+            // builder de páginas: en peticiones AJAX la respuesta es JSON y no
+            // hay recarga de página.
+            if ($request->isAjax()) {
+                Response::json(
+                    $result['success']
+                        ? ['success' => true, 'message' => 'Plantilla guardada']
+                        : ['success' => false, 'message' => $result['error'] ?? 'Error al guardar'],
+                    $result['success'] ? 200 : 422
+                );
+            }
+
             if ($result['success']) {
                 Session::flash('flash.success', 'Template actualizado correctamente');
                 Response::redirect(url('admin/templates'));
@@ -156,6 +168,9 @@ class TemplatesController
             }
         } catch (Throwable $e) {
             error_log('[TemplatesController] Error en update: ' . $e->getMessage());
+            if ($request->isAjax()) {
+                Response::json(['success' => false, 'message' => 'Error al actualizar la plantilla'], 500);
+            }
             Session::flash('flash.error', 'Error al actualizar el template');
             Response::redirect(url("admin/templates/{$id}/edit"));
         }

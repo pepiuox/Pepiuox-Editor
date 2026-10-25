@@ -81,24 +81,9 @@ $blockUrls = array_map(
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title><?= e($pageTitle) ?> · PePiuoX Editor</title>
 
-<!-- Google Fonts -->
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-
-<!-- Bootstrap Icons -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-
-<!-- Font Awesome: los ficheros de bloques de assets/js/blocks usan iconos
-     `fas fa-*` en las etiquetas y miniaturas del panel y dentro de algunos
-     contenidos. Sin esta hoja los iconos salen en blanco. -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css">
-
-<!-- GrapesJS -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/grapesjs@0.21.10/dist/css/grapes.min.css">
-
-<!-- CodeMirror -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/theme/dracula.min.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/fold/foldgutter.min.css">
+<!-- Activos del editor (GrapesJS + CodeMirror): los mismos que usa el editor
+     de plantillas. Fuente única: views/partials/editor-assets-head.php -->
+<?php $editorIncludeBootstrap = false; require VIEWS_PATH . '/partials/editor-assets-head.php'; ?>
 
 <!-- ═══════════════════════════════════════════════════════════════
 CSS DEL BUILDER (inline)
@@ -1678,46 +1663,10 @@ FORMULARIO OCULTO PARA GUARDAR
     <input type="hidden" name="version_note" id="formVersionNote">
 </form>
 
-<!-- ═══════════════════════════════════════════════════════════════
-SCRIPTS — CodeMirror
-═══════════════════════════════════════════════════════════════ -->
-<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/xml/xml.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/css/css.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/javascript/javascript.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/php/php.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/edit/matchbrackets.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/edit/closetag.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/edit/closebrackets.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/selection/active-line.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/fold/foldcode.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/fold/foldgutter.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/fold/brace-fold.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/fold/xml-fold.min.js"></script>
-
-<!-- ═══════════════════════════════════════════════════════════════
-SCRIPTS — GrapesJS
-Las versiones van fijadas a propósito: con URLs sin versión, un release
-nuevo puede cambiar la API y romper el builder sin que nadie toque el repo.
-El CSS de GrapesJS (arriba) y el JS deben compartir versión.
-═══════════════════════════════════════════════════════════════ -->
-<script src="https://cdn.jsdelivr.net/npm/grapesjs@0.21.10/dist/grapes.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/grapesjs-blocks-basic@1.0.2/dist/index.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/grapesjs-plugin-forms@2.0.6/dist/index.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/grapesjs-tabs@1.0.6/dist/index.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/grapesjs-custom-code@1.0.2/dist/index.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/grapesjs-touch@0.1.1/dist/index.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/grapesjs-plugin-export@1.0.12/dist/index.min.js"></script>
-<!-- Bootstrap 5 blocks. El nombre del plugin lo publica su README como
-     `grapesjs-blocks-bootstrap5`. El paquete está marcado como deprecado en npm
-     (0.2.31 es la última): por eso la versión queda fijada aquí.
-     El lienzo ya carga Bootstrap 5.3.3 (CSS + bundle JS), que es lo que este
-     plugin necesita para que sus bloques se vean y funcionen. -->
-<script src="https://cdn.jsdelivr.net/npm/grapesjs-blocks-bootstrap5@0.2.31/dist/index.min.js"></script>
-<!-- grapesjs-parser-postcss@1.0.0 NO existe en el CDN (solo 1.0.3 / 1.0.1 / 0.1.1).
-     El 404 hacía fallar grapesjs.init() con "Plugin not found". GrapesJS ya
-     parsea CSS de forma nativa, así que el plugin no hace falta. -->
+<!-- Activos JS del editor (CodeMirror + GrapesJS + plugins + utilidades).
+     Fuente única: views/partials/editor-assets-body.php, compartido con el
+     editor de plantillas (views/templates/edit.php). -->
+<?php require VIEWS_PATH . '/partials/editor-assets-body.php'; ?>
 
 <!-- Sistema de comentarios: define la clase CommentsManager que usa el builder -->
 <script src="<?= e(ASSETS_URL) ?>/js/comments.js"></script>
@@ -1750,21 +1699,9 @@ const pageData = {
     grapes: <?= $jsonGrapes ?>,
 };
 
-// Plugins que se piden a GrapesJS. Se filtran contra el registro real antes de
-// inicializar (ver filterPlugins): un nombre que no exista —porque el CDN
-// devuelve 404 o porque el paquete cambió— hacía que grapesjs.init() lanzara
-// "Plugin not found" y el builder entero se quedaba en blanco.
-const PLUGIN_NAMES = [
-    'gjs-blocks-basic',
-    'grapesjs-plugin-forms',
-    'grapesjs-tabs',
-    'grapesjs-custom-code',
-    'grapesjs-touch',
-    'grapesjs-plugin-export',
-    'grapesjs-blocks-bootstrap5',
-];
-
-// Ficheros de bloques de public/assets/js/blocks, generados por la vista.
+// Los plugins, sus opciones, los estilos del lienzo y la carga de bloques viven
+// en public/assets/js/grapesjs-shared.js (window.EditorKit): el mismo código que
+// usa el editor de plantillas. Aquí solo queda lo propio de páginas.
 const BLOCK_SCRIPTS = <?= json_encode($blockUrls, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) ?>;
 
 // ═══════════════════════════════════════════════════════════════
@@ -1962,7 +1899,7 @@ function initCodeMirror() {
 // ═══════════════════════════════════════════════════════════════
 function initGrapesJS() {
     // Solo se piden los plugins que el navegador tiene realmente registrados.
-    var pluginSelection = filterPlugins(PLUGIN_NAMES);
+    var pluginSelection = EditorKit.filterPlugins(EditorKit.PLUGIN_NAMES);
     if (pluginSelection.skipped.length) {
         console.warn('Plugins de GrapesJS no disponibles (se omiten): ' + pluginSelection.skipped.join(', '));
         showToast('⚠ Sin plugin: ' + pluginSelection.skipped.join(', '), 'warning');
@@ -1990,57 +1927,10 @@ function initGrapesJS() {
         components: pageData.html || '<div></div>',
         style: pageData.css || '',
         plugins: pluginSelection.enabled,
-        pluginsOpts: {
-            'gjs-blocks-basic': {
-                flexGrid: true,
-                blocks: ['column1', 'column2', 'column3', 'column3-7', 'text', 'link', 'image', 'video', 'map']
-            },
-            'grapesjs-plugin-forms': {
-                blocks: ['form', 'input', 'textarea', 'select', 'button', 'label', 'checkbox', 'radio']
-            },
-            'grapesjs-tabs': {
-                tabsBlock: {
-                    category: 'Extra'
-                }
-            },
-            'grapesjs-custom-code': {
-                blockLabel: 'Código Personalizado',
-                blockCategory: 'Avanzado',
-                label: 'Código',
-                placeholder: 'Pega tu código HTML/CSS/JS aquí'
-            },
-            // La clave debe ser el nombre real del plugin; con 'gjs-plugin-export'
-            // estas opciones se ignoraban en silencio.
-            'grapesjs-plugin-export': {
-                command: 'export-template',
-                root: '#gjs',
-                label: 'Exportar',
-                modalTitle: 'Exportar HTML'
-            },
-            // Bootstrap 5: categorías propias para no mezclarse con los bloques
-            // de los ficheros de public/assets/js/blocks.
-            'grapesjs-blocks-bootstrap5': {
-                gridDevices: true,
-                blockCategories: {
-                    layout: 'Bootstrap 5 · Layout',
-                    components: 'Bootstrap 5 · Componentes',
-                    typography: 'Bootstrap 5 · Tipografía',
-                    basic: 'Bootstrap 5 · Básicos',
-                    forms: 'Bootstrap 5 · Formularios'
-                }
-            }
-        },
+        pluginsOpts: EditorKit.PLUGINS_OPTS,
         canvas: {
-            styles: [
-                'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
-                'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
-                'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css',
-                // Los bloques insertan iconos Font Awesome en su contenido.
-                'https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css'
-            ],
-            scripts: [
-                'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js'
-            ]
+            styles: EditorKit.CANVAS_STYLES,
+            scripts: EditorKit.CANVAS_SCRIPTS
         },
         deviceManager: {
             devices: [
@@ -2137,81 +2027,8 @@ function initGrapesJS() {
     });
 
     // Los ficheros de bloques registran con `gjsEditor.BlockManager.add(...)`:
-    // hay que inyectarlos con el editor ya creado.
-    loadBlockScripts();
-}
-
-// ═══════════════════════════════════════════════════════════════
-// PLUGINS: FILTRADO CONTRA EL REGISTRO REAL DE GRAPESJS
-// ═══════════════════════════════════════════════════════════════
-/**
- * Deja pasar solo los plugins que existen en el registro de GrapesJS.
- *
- * grapesjs.init() lanza «Plugin not found» y aborta si un nombre de la lista no
- * está registrado (eso pasó con un <script> que devolvía 404). Con este filtro,
- * un CDN caído o un paquete renombrado degradan una función, no todo el builder.
- *
- * @param {string[]} names Nombres de plugin solicitados
- * @returns {{enabled: string[], skipped: string[]}}
- */
-function filterPlugins(names) {
-    var registry = null;
-    try {
-        if (window.grapesjs && grapesjs.plugins && typeof grapesjs.plugins.getAll === 'function') {
-            registry = grapesjs.plugins.getAll();
-        }
-    } catch (err) {
-        console.warn('No se pudo leer el registro de plugins:', err);
-    }
-
-    // Sin registro accesible se confía en la lista tal cual (comportamiento previo).
-    if (!registry) {
-        return { enabled: names.slice(), skipped: [] };
-    }
-
-    var enabled = [];
-    var skipped = [];
-    names.forEach(function(name) {
-        if (Object.prototype.hasOwnProperty.call(registry, name)) {
-            enabled.push(name);
-        } else {
-            skipped.push(name);
-        }
-    });
-    return { enabled: enabled, skipped: skipped };
-}
-
-// ═══════════════════════════════════════════════════════════════
-// CARGA DE BLOQUES (public/assets/js/blocks/*.js)
-// ═══════════════════════════════════════════════════════════════
-/**
- * Inyecta los ficheros de bloques en orden, uno detrás de otro.
- *
- * En serie y no en paralelo: el orden de carga decide quién gana cuando dos
- * ficheros registran el mismo id de bloque, y se quiere un resultado
- * reproducible. Un fichero que falle no detiene a los siguientes.
- *
- * @returns {void}
- */
-function loadBlockScripts() {
-    if (!gjsEditor || !BLOCK_SCRIPTS.length) return;
-
-    var loadNext = function(index) {
-        if (index >= BLOCK_SCRIPTS.length) {
-            console.log('✅ Bloques cargados: ' + BLOCK_SCRIPTS.length + ' fichero(s)');
-            return;
-        }
-        var script = document.createElement('script');
-        script.src = BLOCK_SCRIPTS[index];
-        script.onload = function() { loadNext(index + 1); };
-        script.onerror = function() {
-            console.error('✗ No se pudo cargar el fichero de bloques: ' + BLOCK_SCRIPTS[index]);
-            loadNext(index + 1);
-        };
-        document.body.appendChild(script);
-    };
-
-    loadNext(0);
+    // hay que inyectarlos con el editor ya creado. La carga vive en EditorKit.
+    EditorKit.loadBlockScripts(BLOCK_SCRIPTS, gjsEditor);
 }
 
 // ═══════════════════════════════════════════════════════════════
