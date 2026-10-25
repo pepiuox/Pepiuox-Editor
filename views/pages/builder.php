@@ -45,6 +45,34 @@ $saveUrl    = url('admin/pages/' . $page['id']);
 $previewUrl = url($page['slug'] ?? '');
 $currentUser = Auth::user();
 $csrfToken = function_exists('csrf_token') ? csrf_token() : \App\Core\CSRF::token();
+
+// ═══════════════════════════════════════════════════════════════════
+// BLOQUES DE GRAPESJS (public/assets/js/blocks/*.js)
+// Se listan desde el disco para que añadir un fichero no obligue a tocar esta
+// vista. Se cargan DESPUÉS de crear el editor, porque cada fichero registra sus
+// bloques con `gjsEditor.BlockManager.add(...)` y necesita la variable ya
+// asignada (si se cargan como <script> suelto, gjsEditor sigue siendo null y
+// todos fallan con "Cannot read properties of null").
+// Exclusiones, con motivo:
+//   - bs-blocks.js: duplica 5 ids de blocks-bs.js (bs-navbar, bs-hero,
+//     bs-footer, bs-accordion, bs-alert) con contenido distinto.
+//   - template.js: su único bloque es un layout con <script> dentro del
+//     `content`, y ese contenido se ejecuta en el lienzo del editor.
+// ═══════════════════════════════════════════════════════════════════
+$blockExcluded = ['bs-blocks.js', 'template.js'];
+$blockFiles = [];
+foreach (glob(ASSETS_PATH . '/js/blocks/*.js') ?: [] as $blockFile) {
+    $blockName = basename($blockFile);
+    if (in_array($blockName, $blockExcluded, true)) {
+        continue;
+    }
+    $blockFiles[] = $blockName;
+}
+sort($blockFiles);
+$blockUrls = array_map(
+    static fn (string $name): string => asset('js/blocks/' . $name),
+    $blockFiles
+);
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -58,6 +86,11 @@ $csrfToken = function_exists('csrf_token') ? csrf_token() : \App\Core\CSRF::toke
 
 <!-- Bootstrap Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+
+<!-- Font Awesome: los ficheros de bloques de assets/js/blocks usan iconos
+     `fas fa-*` en las etiquetas y miniaturas del panel y dentro de algunos
+     contenidos. Sin esta hoja los iconos salen en blanco. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css">
 
 <!-- GrapesJS -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/grapesjs@0.21.10/dist/css/grapes.min.css">
@@ -1665,6 +1698,9 @@ SCRIPTS — CodeMirror
 
 <!-- ═══════════════════════════════════════════════════════════════
 SCRIPTS — GrapesJS
+Las versiones van fijadas a propósito: con URLs sin versión, un release
+nuevo puede cambiar la API y romper el builder sin que nadie toque el repo.
+El CSS de GrapesJS (arriba) y el JS deben compartir versión.
 ═══════════════════════════════════════════════════════════════ -->
 <script src="https://cdn.jsdelivr.net/npm/grapesjs@0.21.10/dist/grapes.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/grapesjs-blocks-basic@1.0.2/dist/index.min.js"></script>
@@ -1672,10 +1708,16 @@ SCRIPTS — GrapesJS
 <script src="https://cdn.jsdelivr.net/npm/grapesjs-tabs@1.0.6/dist/index.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/grapesjs-custom-code@1.0.2/dist/index.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/grapesjs-touch@0.1.1/dist/index.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/grapesjs-plugin-export@1.0.12/dist/index.min.js"></script>
+<!-- Bootstrap 5 blocks. El nombre del plugin lo publica su README como
+     `grapesjs-blocks-bootstrap5`. El paquete está marcado como deprecado en npm
+     (0.2.31 es la última): por eso la versión queda fijada aquí.
+     El lienzo ya carga Bootstrap 5.3.3 (CSS + bundle JS), que es lo que este
+     plugin necesita para que sus bloques se vean y funcionen. -->
+<script src="https://cdn.jsdelivr.net/npm/grapesjs-blocks-bootstrap5@0.2.31/dist/index.min.js"></script>
 <!-- grapesjs-parser-postcss@1.0.0 NO existe en el CDN (solo 1.0.3 / 1.0.1 / 0.1.1).
      El 404 hacía fallar grapesjs.init() con "Plugin not found". GrapesJS ya
      parsea CSS de forma nativa, así que el plugin no hace falta. -->
-<script src="https://cdn.jsdelivr.net/npm/grapesjs-plugin-export@1.0.12/dist/index.min.js"></script>
 
 <!-- Sistema de comentarios: define la clase CommentsManager que usa el builder -->
 <script src="<?= e(ASSETS_URL) ?>/js/comments.js"></script>
@@ -1707,6 +1749,23 @@ const pageData = {
     js: <?= $jsonJs ?>,
     grapes: <?= $jsonGrapes ?>,
 };
+
+// Plugins que se piden a GrapesJS. Se filtran contra el registro real antes de
+// inicializar (ver filterPlugins): un nombre que no exista —porque el CDN
+// devuelve 404 o porque el paquete cambió— hacía que grapesjs.init() lanzara
+// "Plugin not found" y el builder entero se quedaba en blanco.
+const PLUGIN_NAMES = [
+    'gjs-blocks-basic',
+    'grapesjs-plugin-forms',
+    'grapesjs-tabs',
+    'grapesjs-custom-code',
+    'grapesjs-touch',
+    'grapesjs-plugin-export',
+    'grapesjs-blocks-bootstrap5',
+];
+
+// Ficheros de bloques de public/assets/js/blocks, generados por la vista.
+const BLOCK_SCRIPTS = <?= json_encode($blockUrls, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) ?>;
 
 // ═══════════════════════════════════════════════════════════════
 // ESTADO GLOBAL
@@ -1902,6 +1961,13 @@ function initCodeMirror() {
 // GRAPESJS
 // ═══════════════════════════════════════════════════════════════
 function initGrapesJS() {
+    // Solo se piden los plugins que el navegador tiene realmente registrados.
+    var pluginSelection = filterPlugins(PLUGIN_NAMES);
+    if (pluginSelection.skipped.length) {
+        console.warn('Plugins de GrapesJS no disponibles (se omiten): ' + pluginSelection.skipped.join(', '));
+        showToast('⚠ Sin plugin: ' + pluginSelection.skipped.join(', '), 'warning');
+    }
+
     gjsEditor = grapesjs.init({
         container: '#gjs',
         showOffsets: true,
@@ -1923,25 +1989,54 @@ function initGrapesJS() {
         selectorManager: { componentFirst: true },
         components: pageData.html || '<div></div>',
         style: pageData.css || '',
-        plugins: [
-            'gjs-blocks-basic',
-            'grapesjs-plugin-forms',
-            'grapesjs-tabs',
-            'grapesjs-custom-code',
-            'grapesjs-touch',
-            'grapesjs-plugin-export'
-        ],
+        plugins: pluginSelection.enabled,
         pluginsOpts: {
-            'gjs-blocks-basic': { flexGrid: true },
-            'grapesjs-plugin-forms': {},
-            'grapesjs-tabs': { tabsBlock: { category: 'Extra' } },
-            'grapesjs-custom-code': {},
+            'gjs-blocks-basic': {
+                flexGrid: true,
+                blocks: ['column1', 'column2', 'column3', 'column3-7', 'text', 'link', 'image', 'video', 'map']
+            },
+            'grapesjs-plugin-forms': {
+                blocks: ['form', 'input', 'textarea', 'select', 'button', 'label', 'checkbox', 'radio']
+            },
+            'grapesjs-tabs': {
+                tabsBlock: {
+                    category: 'Extra'
+                }
+            },
+            'grapesjs-custom-code': {
+                blockLabel: 'Código Personalizado',
+                blockCategory: 'Avanzado',
+                label: 'Código',
+                placeholder: 'Pega tu código HTML/CSS/JS aquí'
+            },
+            // La clave debe ser el nombre real del plugin; con 'gjs-plugin-export'
+            // estas opciones se ignoraban en silencio.
+            'grapesjs-plugin-export': {
+                command: 'export-template',
+                root: '#gjs',
+                label: 'Exportar',
+                modalTitle: 'Exportar HTML'
+            },
+            // Bootstrap 5: categorías propias para no mezclarse con los bloques
+            // de los ficheros de public/assets/js/blocks.
+            'grapesjs-blocks-bootstrap5': {
+                gridDevices: true,
+                blockCategories: {
+                    layout: 'Bootstrap 5 · Layout',
+                    components: 'Bootstrap 5 · Componentes',
+                    typography: 'Bootstrap 5 · Tipografía',
+                    basic: 'Bootstrap 5 · Básicos',
+                    forms: 'Bootstrap 5 · Formularios'
+                }
+            }
         },
         canvas: {
             styles: [
                 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
                 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
-                'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css'
+                'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css',
+                // Los bloques insertan iconos Font Awesome en su contenido.
+                'https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css'
             ],
             scripts: [
                 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js'
@@ -2040,6 +2135,83 @@ function initGrapesJS() {
     gjsEditor.on('component:selected', function(component) {
         updateLayersList();
     });
+
+    // Los ficheros de bloques registran con `gjsEditor.BlockManager.add(...)`:
+    // hay que inyectarlos con el editor ya creado.
+    loadBlockScripts();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PLUGINS: FILTRADO CONTRA EL REGISTRO REAL DE GRAPESJS
+// ═══════════════════════════════════════════════════════════════
+/**
+ * Deja pasar solo los plugins que existen en el registro de GrapesJS.
+ *
+ * grapesjs.init() lanza «Plugin not found» y aborta si un nombre de la lista no
+ * está registrado (eso pasó con un <script> que devolvía 404). Con este filtro,
+ * un CDN caído o un paquete renombrado degradan una función, no todo el builder.
+ *
+ * @param {string[]} names Nombres de plugin solicitados
+ * @returns {{enabled: string[], skipped: string[]}}
+ */
+function filterPlugins(names) {
+    var registry = null;
+    try {
+        if (window.grapesjs && grapesjs.plugins && typeof grapesjs.plugins.getAll === 'function') {
+            registry = grapesjs.plugins.getAll();
+        }
+    } catch (err) {
+        console.warn('No se pudo leer el registro de plugins:', err);
+    }
+
+    // Sin registro accesible se confía en la lista tal cual (comportamiento previo).
+    if (!registry) {
+        return { enabled: names.slice(), skipped: [] };
+    }
+
+    var enabled = [];
+    var skipped = [];
+    names.forEach(function(name) {
+        if (Object.prototype.hasOwnProperty.call(registry, name)) {
+            enabled.push(name);
+        } else {
+            skipped.push(name);
+        }
+    });
+    return { enabled: enabled, skipped: skipped };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CARGA DE BLOQUES (public/assets/js/blocks/*.js)
+// ═══════════════════════════════════════════════════════════════
+/**
+ * Inyecta los ficheros de bloques en orden, uno detrás de otro.
+ *
+ * En serie y no en paralelo: el orden de carga decide quién gana cuando dos
+ * ficheros registran el mismo id de bloque, y se quiere un resultado
+ * reproducible. Un fichero que falle no detiene a los siguientes.
+ *
+ * @returns {void}
+ */
+function loadBlockScripts() {
+    if (!gjsEditor || !BLOCK_SCRIPTS.length) return;
+
+    var loadNext = function(index) {
+        if (index >= BLOCK_SCRIPTS.length) {
+            console.log('✅ Bloques cargados: ' + BLOCK_SCRIPTS.length + ' fichero(s)');
+            return;
+        }
+        var script = document.createElement('script');
+        script.src = BLOCK_SCRIPTS[index];
+        script.onload = function() { loadNext(index + 1); };
+        script.onerror = function() {
+            console.error('✗ No se pudo cargar el fichero de bloques: ' + BLOCK_SCRIPTS[index]);
+            loadNext(index + 1);
+        };
+        document.body.appendChild(script);
+    };
+
+    loadNext(0);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -2735,6 +2907,5 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 100);
 });
 </script>
-
 </body>
 </html>
