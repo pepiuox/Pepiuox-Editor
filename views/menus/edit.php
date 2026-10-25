@@ -109,6 +109,12 @@ $flatten($items ?? [], 0);
                         <i class="bi bi-arrow-repeat"></i> Sincronizar desde páginas publicadas
                     </button>
                 </form>
+            <?php else: ?>
+                <small class="text-muted d-none d-md-inline">
+                    <i class="bi bi-grip-vertical"></i> Arrastra un elemento para reordenarlo;
+                    suéltalo en el <strong>centro</strong> de otro para anidarlo, o en el
+                    <strong>borde</strong> para colocarlo antes o después.
+                </small>
             <?php endif; ?>
         </div>
 
@@ -138,13 +144,21 @@ $flatten($items ?? [], 0);
                     <?php
                         $itemId = (int) $item['id'];
                         $depth = (int) ($item['depth'] ?? 0);
+                        $parentId = isset($item['parent_id']) && $item['parent_id'] !== null ? (int) $item['parent_id'] : 0;
                         $pagePublished = $item['page_status'] ?? null;
                         $visible = (int) ($item['is_published'] ?? 0) === 1
                             && ($item['status'] ?? '') === 'published'
                             && ($pagePublished === null || $pagePublished === 'published');
                     ?>
-                    <tr>
-                        <td style="padding-left:<?= 12 + $depth * 22 ?>px">
+                    <tr class="menu-item-row<?= $isDefault ? '' : ' menu-item-draggable' ?>"
+                        data-item-id="<?= $itemId ?>"
+                        data-parent-id="<?= $parentId ?>"
+                        data-depth="<?= $depth ?>"
+                        <?= $isDefault ? '' : 'draggable="true"' ?>>
+                        <td class="menu-item-label" style="padding-left:<?= 12 + $depth * 22 ?>px">
+                            <?php if (!$isDefault): ?>
+                                <i class="bi bi-grip-vertical menu-item-grip" title="Arrastra para reordenar o anidar"></i>
+                            <?php endif; ?>
                             <?= $depth > 0 ? '<i class="bi bi-arrow-return-right"></i> ' : '' ?><?= e((string) $item['title']) ?>
                         </td>
                         <td>
@@ -160,18 +174,22 @@ $flatten($items ?? [], 0);
                                 <?= $visible ? 'visible' : 'oculto' ?>
                             </span>
                         </td>
-                        <td><?= (int) ($item['level'] ?? $depth) ?></td>
+                        <td class="menu-item-level"><?= (int) ($item['level'] ?? $depth) ?></td>
                         <td class="text-end">
                             <?php if (!$isDefault): ?>
                                 <form method="post" action="<?= url("admin/menus/{$menuId}/items/{$itemId}/move") ?>" style="display:inline">
                                     <?= \App\Core\CSRF::field() ?>
                                     <input type="hidden" name="direction" value="up">
-                                    <button class="btn btn-ghost btn-sm" title="Subir"><i class="bi bi-arrow-up"></i></button>
+                                    <button class="btn btn-ghost btn-sm" title="Subir (alternativa al arrastre)">
+                                        <i class="bi bi-arrow-up"></i>
+                                    </button>
                                 </form>
                                 <form method="post" action="<?= url("admin/menus/{$menuId}/items/{$itemId}/move") ?>" style="display:inline">
                                     <?= \App\Core\CSRF::field() ?>
                                     <input type="hidden" name="direction" value="down">
-                                    <button class="btn btn-ghost btn-sm" title="Bajar"><i class="bi bi-arrow-down"></i></button>
+                                    <button class="btn btn-ghost btn-sm" title="Bajar (alternativa al arrastre)">
+                                        <i class="bi bi-arrow-down"></i>
+                                    </button>
                                 </form>
                                 <form method="post" action="<?= url("admin/menus/{$menuId}/items/{$itemId}/delete") ?>" style="display:inline"
                                       onsubmit="return confirm('¿Quitar «<?= e((string) $item['title']) ?>» del menú? La página no se borra.')">
@@ -265,4 +283,204 @@ $flatten($items ?? [], 0);
             </div>
         </div>
     <?php endif; ?>
+<?php endif; ?>
+
+<?php if (!$isNew && !$isDefault): ?>
+<style>
+    /* Arrastrar y soltar en la tabla de elementos */
+    .menu-item-draggable { cursor: grab; }
+    .menu-item-draggable:active { cursor: grabbing; }
+    .menu-item-grip { color: var(--text-muted, #8b949e); margin-right: .35rem; opacity: .7; }
+    .menu-item-row.is-dragging { opacity: .45; }
+    .menu-item-row.drop-before > td { box-shadow: inset 0 3px 0 var(--accent, #00d4aa); }
+    .menu-item-row.drop-after > td { box-shadow: inset 0 -3px 0 var(--accent, #00d4aa); }
+    .menu-item-row.drop-inside > td { background: rgba(0, 212, 170, .12); }
+    .menu-reorder-status { font-size: .8rem; color: var(--text-muted, #8b949e); margin-left: .5rem; }
+</style>
+
+<script>
+(function () {
+    'use strict';
+
+    const tbody = document.querySelector('.menu-item-row')?.closest('tbody');
+    if (!tbody) return;
+
+    const reorderUrl = <?= json_encode(url("admin/menus/{$menuId}/items/reorder"), JSON_UNESCAPED_SLASHES) ?>;
+    const csrfToken = <?= json_encode(\App\Core\CSRF::token(), JSON_UNESCAPED_SLASHES) ?>;
+    const status = document.createElement('span');
+    status.className = 'menu-reorder-status';
+
+    let dragRow = null;
+
+    const rows = () => Array.from(tbody.querySelectorAll('tr.menu-item-row'));
+    const depthOf = (row) => parseInt(row.dataset.depth || '0', 10);
+    const idOf = (row) => row.dataset.itemId;
+
+    /** Filas del elemento arrastrado más sus descendientes (bloque contiguo). */
+    function subtree(row) {
+        const all = rows();
+        const start = all.indexOf(row);
+        if (start === -1) return [row];
+        const block = [row];
+        for (let i = start + 1; i < all.length; i++) {
+            if (depthOf(all[i]) > depthOf(row)) block.push(all[i]);
+            else break;
+        }
+        return block;
+    }
+
+    /** Ajusta la profundidad visual de un bloque movido y la guarda en data-depth. */
+    function applyDepth(block, baseDepth) {
+        const offset = baseDepth - depthOf(block[0]);
+        block.forEach((row) => {
+            const depth = Math.max(0, depthOf(row) + offset);
+            row.dataset.depth = String(depth);
+            const label = row.querySelector('.menu-item-label');
+            if (label) {
+                label.style.paddingLeft = (12 + depth * 22) + 'px';
+            }
+            const level = row.querySelector('.menu-item-level');
+            if (level) {
+                level.textContent = String(depth);
+            }
+            const arrow = label ? label.querySelector('.bi-arrow-return-right') : null;
+            if (depth > 0 && !arrow && label) {
+                label.insertAdjacentHTML('afterbegin', '<i class="bi bi-arrow-return-right"></i> ');
+            }
+        });
+    }
+
+    /** Zona del destino según la posición vertical del puntero. */
+    function dropZone(row, event) {
+        const rect = row.getBoundingClientRect();
+        const offset = event.clientY - rect.top;
+        if (offset < rect.height * 0.3) return 'before';
+        if (offset > rect.height * 0.7) return 'after';
+        return 'inside';
+    }
+
+    function clearMarks() {
+        rows().forEach((row) => row.classList.remove('drop-before', 'drop-after', 'drop-inside'));
+    }
+
+    function serialize() {
+        return rows().map((row, index) => ({
+            id: parseInt(idOf(row), 10),
+            order: index,
+            parent_id: parseInt(row.dataset.parentId || '0', 10) || null
+        }));
+    }
+
+    function persist() {
+        const body = new FormData();
+        body.set('_csrf_token', csrfToken);
+        body.set('items', JSON.stringify(serialize()));
+        status.textContent = 'Guardando…';
+        status.style.color = '';
+
+        fetch(reorderUrl, {
+            method: 'POST',
+            body: body,
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+        })
+        .then((response) => {
+            if (!response.ok) throw new Error('El servidor respondió ' + response.status);
+            return response.json();
+        })
+        .then((result) => {
+            if (!result.success) throw new Error(result.error || 'No se pudo guardar el orden');
+            status.textContent = '✓ Orden guardado';
+            // Recarga para ver el estado persistido (padres y niveles reales).
+            window.location.reload();
+        })
+        .catch((error) => {
+            status.textContent = '✗ ' + error.message;
+            status.style.color = '#ef4444';
+        });
+    }
+
+    tbody.addEventListener('dragstart', (event) => {
+        const row = event.target.closest('tr.menu-item-row');
+        if (!row || !row.draggable) return;
+        dragRow = row;
+        row.classList.add('is-dragging');
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', idOf(row));
+    });
+
+    tbody.addEventListener('dragend', () => {
+        if (dragRow) dragRow.classList.remove('is-dragging');
+        dragRow = null;
+        clearMarks();
+    });
+
+    tbody.addEventListener('dragover', (event) => {
+        if (!dragRow) return;
+        const row = event.target.closest('tr.menu-item-row');
+        if (!row || row === dragRow) return;
+
+        // No se puede soltar dentro de un descendiente del propio elemento.
+        if (subtree(dragRow).includes(row)) return;
+
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+        clearMarks();
+        row.classList.add('drop-' + dropZone(row, event));
+    });
+
+    tbody.addEventListener('dragleave', (event) => {
+        const row = event.target.closest('tr.menu-item-row');
+        if (row) row.classList.remove('drop-before', 'drop-after', 'drop-inside');
+    });
+
+    tbody.addEventListener('drop', (event) => {
+        if (!dragRow) return;
+        const target = event.target.closest('tr.menu-item-row');
+        if (!target || target === dragRow) return;
+
+        const block = subtree(dragRow);
+        if (block.includes(target)) return;
+
+        event.preventDefault();
+        const zone = dropZone(target, event);
+
+        // Se recoloca el bloque completo (el elemento y sus hijos) en el DOM.
+        const parentIdOfTarget = parseInt(target.dataset.parentId || '0', 10);
+        const targetBlock = subtree(target);
+        let anchor;
+        let newParentId;
+        let baseDepth;
+
+        if (zone === 'inside') {
+            anchor = targetBlock[targetBlock.length - 1].nextElementSibling;
+            newParentId = parseInt(idOf(target), 10);
+            baseDepth = depthOf(target) + 1;
+        } else if (zone === 'before') {
+            anchor = target;
+            newParentId = parentIdOfTarget;
+            baseDepth = depthOf(target);
+        } else {
+            anchor = targetBlock[targetBlock.length - 1].nextElementSibling;
+            newParentId = parentIdOfTarget;
+            baseDepth = depthOf(target);
+        }
+
+        block.forEach((row) => tbody.insertBefore(row, anchor));
+        // Solo el elemento arrastrado cambia de padre; sus hijos lo mantienen.
+        block[0].dataset.parentId = String(newParentId);
+        applyDepth(block, baseDepth);
+
+        clearMarks();
+        dragRow.classList.remove('is-dragging');
+        dragRow = null;
+
+        persist();
+    });
+
+    // Indicador de estado junto al título de la tarjeta.
+    const header = tbody.closest('.card')?.querySelector('.card-header h3');
+    if (header) header.appendChild(status);
+})();
+</script>
 <?php endif; ?>

@@ -66,4 +66,19 @@ class Database
     public static function begin(): void   { self::connection()->beginTransaction(); }
     public static function commit(): void  { self::connection()->commit(); }
     public static function rollback(): void{ self::connection()->rollBack(); }
+
+    /**
+     * Revierte solo si hay una transacción abierta.
+     *
+     * Sirve para los `catch` de bloques que validan antes de abrir la
+     * transacción: llamar a rollback() sin transacción lanza
+     * «There is no active transaction» y oculta el error real.
+     */
+    public static function rollbackIfActive(): void
+    {
+        $pdo = self::connection();
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+    }
 }

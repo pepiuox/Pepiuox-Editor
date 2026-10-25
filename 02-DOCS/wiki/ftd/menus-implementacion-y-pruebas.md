@@ -140,10 +140,50 @@ El menú automático **ahora refleja la jerarquía real de las páginas**, y hoy
 
 El estado anterior está en `storage/backups/menus_20261025_172704.json`.
 
-## 7. Límites conocidos
+## 7. Arrastrar y soltar (organización del menú)
+
+En `views/menus/edit.php`, la tabla de elementos de un **menú personalizado** es arrastrable:
+
+- Se arrastra por el asa `⠿` de cada fila (`draggable="true"`).
+- **Tres zonas de destino** según la posición del puntero sobre la fila destino:
+  - borde superior (30 % superior) → se coloca **antes**;
+  - borde inferior (30 % inferior) → se coloca **después**;
+  - centro → se **anida** dentro de ese elemento (pasa a ser hijo).
+- Al soltar, el bloque movido arrastra a sus descendientes (se recoloca el subárbol completo) y se
+  recalculan las profundidades en la vista.
+- Se envía `POST /admin/menus/{id}/items/reorder` con `_csrf_token` e `items` =
+  `[{"id":…,"order":…,"parent_id":…}, …]` (el orden es el índice visual, de 0 a n-1). El servidor
+  valida padre, ciclos y pertenencia al menú, y guarda **`order` y `sort`** (se mantienen iguales; `order`
+  es el canónico para pintar) además de `level`.
+- Tras guardar, la página se recarga para mostrar el estado persistido.
+- **Alternativa accesible sin JavaScript**: las flechas ↑ ↓ de cada fila siguen siendo formularios POST a
+  `/admin/menus/{id}/items/{item}/move`.
+- El **menú automático** no es arrastrable ni acepta reorden manual: su orden se deriva de las páginas
+  (`pages.id`, jerarquía por `pages.parent_id`) y lo pisa la siguiente sincronización. La vista oculta el
+  arrastre, y el servicio además lo rechaza con un mensaje claro.
+
+Verificado por HTTP (con sesión y CSRF reales):
+
+```
+POST /admin/menus/8/items/reorder  items=[27,25,26]        → {"success":true}  → nav: Viajes, Inicio, proyectos
+POST /admin/menus/8/items/reorder  items=[27,25(parent 27)] → {"success":true}  → DB: Inicio parent_id=27 level=1
+                                                              nav: 1 nivel + 1 submenú (dropdown)
+POST /admin/menus/8/items/reorder  ciclo 27↔25              → {"success":false,"error":"…crearía un ciclo"}
+POST /admin/menus/1/items/reorder  (automático)             → {"success":false,"error":"El menú automático se ordena…"}
+```
+
+JS del arrastre extraído del HTML emitido: `node --check` sin errores; el bloque no se emite en el menú
+automático (0 scripts de DnD en esa vista).
+
+**Fallo encontrado al probarlo**: `reorderItems()` validaba antes de abrir la transacción y el `catch`
+llamaba a `Database::rollback()` sin transacción activa → «There is no active transaction» (excepción que
+tapaba el mensaje real). Se añadió `Database::rollbackIfActive()` y se usa en los cuatro `catch` del
+servicio.
+
+## 8. Límites conocidos
 
 - El layout público pinta **solo** el menú de la ubicación `header`. El menú `footer` existe en el modelo y en la
   administración, pero el pie de página sigue teniendo enlaces estáticos: falta renderizarlo.
-- No hay arrastrar y soltar: el orden se cambia con flechas subir/bajar y el campo «Orden». La ruta
-  `POST /admin/menus/{id}/items/reorder` acepta JSON con `[{id, order, parent_id}]` para cuando se añada.
+- El arrastre se ha validado con el endpoint real y la sintaxis del script, **no** con un navegador: la
+  pulsación del ratón queda pendiente de tu comprobación.
 - `order` y `sort` siguen duplicados en `page_menu` (se escriben igual); se conservan por compatibilidad.

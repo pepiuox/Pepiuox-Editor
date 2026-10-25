@@ -314,7 +314,7 @@ class MenuService
 
             return ['success' => true, 'message' => 'Menú automático actualizado. Pulsa «Sincronizar» para regenerarlo.'];
         } catch (Throwable $e) {
-            Database::rollback();
+            Database::rollbackIfActive();
             return ['success' => false, 'error' => $e->getMessage()];
         }
     }
@@ -726,7 +726,7 @@ class MenuService
 
             return ['success' => true, 'message' => 'Orden actualizado.'];
         } catch (Throwable $e) {
-            Database::rollback();
+            Database::rollbackIfActive();
             return ['success' => false, 'error' => $e->getMessage()];
         }
     }
@@ -742,6 +742,15 @@ class MenuService
         try {
             if ($rows === []) {
                 throw new \InvalidArgumentException('No hay elementos que reordenar.');
+            }
+
+            // El menú automático se ordena por la estructura de páginas: si se
+            // reordenara a mano, la siguiente sincronización lo pisaría.
+            $menu = $this->findMenu($menuId);
+            if ($menu && (int) $menu['is_default'] === 1) {
+                throw new \InvalidArgumentException(
+                    'El menú automático se ordena según las páginas. Reordena en un menú personalizado o cambia el orden de las páginas.'
+                );
             }
 
             Database::begin();
@@ -774,7 +783,7 @@ class MenuService
 
             return ['success' => true, 'message' => 'Orden actualizado.'];
         } catch (Throwable $e) {
-            Database::rollback();
+            Database::rollbackIfActive();
             return ['success' => false, 'error' => $e->getMessage()];
         }
     }
@@ -927,7 +936,7 @@ class MenuService
                 'removed' => $removed,
             ];
         } catch (Throwable $e) {
-            Database::rollback();
+            Database::rollbackIfActive();
             error_log('[MenuService] Error en syncDefaultMenu: ' . $e->getMessage());
             return ['success' => false, 'error' => $e->getMessage()];
         }

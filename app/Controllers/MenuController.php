@@ -357,7 +357,7 @@ class MenuController
             $this->touch();
         }
 
-        Response::json($result);
+        Response::json($result, $result['success'] ? 200 : 422);
     }
 
     // ═══════════════════════════════════════════════════════════════
