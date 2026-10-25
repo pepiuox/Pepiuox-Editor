@@ -18,6 +18,11 @@
     RewriteCond %{QUERY_STRING} _REQUEST(=|\[|\%[0-9A-Z]{0,2})
     RewriteRule ^ - [F,L]
     
+    # ═══ FICHEROS SUBIDOS (uploads/ vive fuera del document root) ═══
+    # Regla relativa a este directorio: cubre tanto /uploads/... como
+    # /public/uploads/... (las URLs que genera url('uploads/...')).
+    RewriteRule ^uploads/(.+)$ uploads.php [L,QSA]
+
     # ═══ ARCHIVOS ESTÁTICOS (servir directamente) ═══
     RewriteCond %{REQUEST_FILENAME} -f [OR]
     RewriteCond %{REQUEST_FILENAME} -d

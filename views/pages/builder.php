@@ -2533,7 +2533,14 @@ function performAutoSave() {
         credentials: 'same-origin',
         headers: { 'X-Requested-With': 'XMLHttpRequest' }
     })
-    .then(function(r) { return r.json(); })
+    .then(function(r) {
+        // Sin esta comprobación un 500 se leía como respuesta vacía y el
+        // autoguardado fallaba en silencio.
+        if (!r.ok) {
+            throw new Error('El servidor respondió ' + r.status);
+        }
+        return r.json();
+    })
     .then(function(result) {
         if (result.success) {
             lastAutoSaveTime = Date.now();
@@ -2634,11 +2641,18 @@ function savePage() {
         }
     })
     .then(function(r) {
-        var contentType = r.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-            return r.json();
+        var contentType = r.headers.get('content-type') || '';
+        var isJson = contentType.indexOf('application/json') !== -1;
+
+        // Un 4xx/5xx con cuerpo HTML (o vacío) se daba por guardado: el builder
+        // decía "Página guardada" aunque el servidor hubiera fallado.
+        if (!r.ok) {
+            return (isJson ? r.json() : Promise.resolve({})).then(function(body) {
+                throw new Error(body.message || body.error || ('El servidor respondió ' + r.status));
+            });
         }
-        return { success: true, message: 'Guardado correctamente' };
+
+        return isJson ? r.json() : { success: true, message: 'Guardado correctamente' };
     })
     .then(function(result) {
         if (result.success) {

@@ -42,6 +42,16 @@
     RewriteRule ^ - [F,L]
 
     # ═══════════════════════════════════════════════════════════════
+    # 4.b FICHEROS SUBIDOS (viven fuera del document root)
+    #     uploads/ está en la raíz del proyecto y no se sirve como estático:
+    #     estas reglas lo resuelven a través de public/uploads.php, que valida
+    #     extensión y ruta antes de enviar la imagen. Así funcionan tanto las
+    #     URLs que genera url('uploads/...') (llevan /public) como las que ya
+    #     están guardadas en el contenido de páginas antiguas.
+    # ═══════════════════════════════════════════════════════════════
+    RewriteRule ^uploads/(.+)$ public/uploads.php [L,QSA]
+
+    # ═══════════════════════════════════════════════════════════════
     # 5. REDIRECCIÓN PARA ELIMINAR /public/ DE LA URL
     #    Si alguien accede a https://dominio.com/public/foo → redirige a /foo
     # ═══════════════════════════════════════════════════════════════

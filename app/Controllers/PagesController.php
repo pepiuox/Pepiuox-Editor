@@ -67,7 +67,9 @@ class PagesController
         }
 
         $this->saveSeo($id, $req);
-        AuditService::log('page_created', "Página creada: {$data['title']}", 'pages', $id);
+        // AuditService::log() recibe primero el usuario: con los argumentos
+        // desordenados PHP lanzaba un TypeError y la petición acababa en 500.
+        AuditService::log(Auth::id(), 'page_created', "Página creada: {$data['title']} (ID $id)", 'pages');
 
         Session::flash('flash.success', 'Página creada correctamente.');
         Response::redirect(url("admin/pages/$id/builder"));
@@ -153,7 +155,11 @@ class PagesController
         }
 
         $this->saveSeo($id, $req);
-        AuditService::log('page_updated', "Página actualizada: {$data['title']}", 'pages', $id);
+        // Firma real: log(?int $userId, string $action, ?string $details, ?string $context).
+        // Antes se pasaba la acción como primer argumento y el TypeError que
+        // lanzaba se comía la respuesta: el guardado sí estaba en la base de
+        // datos, pero el builder recibía un 500 y lo mostraba como error.
+        AuditService::log(Auth::id(), 'page_updated', "Página actualizada: {$data['title']} (ID $id)", 'pages');
 
         if ($req->isAjax()) {
             Response::json(['success' => true, 'message' => 'Guardado correctamente']);
@@ -170,7 +176,7 @@ class PagesController
         Page::delete($id);
         \App\Services\CacheService::invalidatePage($id);
         \App\Services\SitemapService::generate();
-        AuditService::log('page_deleted', "Página eliminada ID $id", 'pages', $id);
+        AuditService::log(Auth::id(), 'page_deleted', "Página eliminada ID $id", 'pages');
         Session::flash('flash.success', 'Página eliminada.');
         Response::redirect(url('admin/pages'));
     }
@@ -183,17 +189,19 @@ class PagesController
             "DELETE FROM page_autosave WHERE page_id = ? AND user_id = ?",
             [$id, Auth::id()]
         );
+        // La tabla page_autosave solo tiene content_html/css/js/php. El INSERT
+        // mencionaba además grapesjs_data, una columna que no existe: la consulta
+        // fallaba siempre con "Unknown column" y el autoguardado nunca guardó nada.
         Database::insert(
             "INSERT INTO page_autosave 
-                (page_id, user_id, content_html, content_css, content_js, content_php, grapesjs_data)
-             VALUES (?,?,?,?,?,?,?)",
+                (page_id, user_id, content_html, content_css, content_js, content_php)
+             VALUES (?,?,?,?,?,?)",
             [
                 $id, Auth::id(),
                 $req->post('content_html'),
                 $req->post('content_css'),
                 $req->post('content_js'),
                 $req->post('content_php'),
-                $req->post('grapesjs_data'),
             ]
         );
         Response::json(['success' => true, 'message' => 'Autoguardado']);
@@ -222,7 +230,7 @@ class PagesController
                 'content_css' => $autosave['content_css'],
                 'content_js' => $autosave['content_js'],
                 'content_php' => $autosave['content_php'],
-                'grapesjs_data' => $autosave['grapesjs_data'],
+                'grapesjs_data' => $autosave['grapesjs_data'] ?? null,
                 'created_at' => $autosave['created_at'],
                 'age_seconds' => time() - strtotime($autosave['created_at']),
             ]
@@ -430,7 +438,12 @@ class PagesController
             $ext = strtolower($file->getExtension());
             if (!in_array($ext, $allowedExt, true)) continue;
 
-            $relativePath = str_replace($uploadDir . '/', '', $file->getPathname());
+            // getPathname() devuelve separadores nativos (barra invertida en
+            // Windows). Al quitar el prefijo con str_replace() y '/' la ruta no
+            // se recortaba y la URL acababa siendo "uploads/C:\...": el visor de
+            // assets mostraba imágenes rotas para todo lo que estaba en subcarpetas.
+            $absolute = str_replace('\\', '/', $file->getPathname());
+            $relativePath = ltrim(substr($absolute, strlen(str_replace('\\', '/', rtrim($uploadDir, '/\\')))), '/');
             $publicUrl = url('uploads/' . $relativePath);
 
             [$width, $height] = $this->assetDimensions($file->getPathname(), $ext);
