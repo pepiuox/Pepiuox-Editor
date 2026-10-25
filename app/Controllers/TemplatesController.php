@@ -2,7 +2,7 @@
 namespace App\Controllers;
 
 use App\Core\{Request, Response, View, Session, CSRF, Auth};
-use App\Services\TemplatesService;
+use App\Services\{TemplatesService, AssetUploadService};
 use Throwable;
 
 /**
@@ -228,6 +228,41 @@ class TemplatesController
      * Lista versiones de un template
      * Ruta: GET /admin/templates/{id}/versions
      */
+    /**
+     * Sube imágenes para el gestor de assets del editor de plantillas.
+     * Ruta: POST /admin/templates/{id}/builder/upload
+     *
+     * Solo comprueba permisos y responde; la validación y el guardado están en
+     * AssetUploadService, el mismo que usa el editor de páginas.
+     */
+    public function uploadAsset(Request $request, array $params): void
+    {
+        $id = (int)($params['id'] ?? 0);
+
+        if (!$this->templateService->find($id)) {
+            Response::json(['success' => false, 'errors' => ['Plantilla no encontrada']], 404);
+            return;
+        }
+
+        if (!Auth::can('templates.edit')) {
+            Response::json(['success' => false, 'errors' => ['Sin permisos']], 403);
+            return;
+        }
+
+        $result = (new AssetUploadService())->store($_FILES['files'] ?? null);
+
+        if (!$result['received']) {
+            Response::json(['success' => false, 'errors' => $result['errors']]);
+            return;
+        }
+
+        Response::json([
+            'success' => true,
+            'data' => $result['uploaded'],
+            'errors' => $result['errors'],
+        ]);
+    }
+
     public function versions(Request $request, array $params): void
     {
         if (!Auth::can('templates.view')) {

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Vista: editor de plantillas (templates).
  *
@@ -47,6 +47,7 @@ $jsonGrapes = json_encode($t['grapesjs_data'] ?? null, $jsonFlags);
 $saveUrl     = $isNew ? url('admin/templates') : url('admin/templates/' . $templateId);
 $versionsUrl = $isNew ? '' : url('admin/templates/' . $templateId . '/versions');
 $assetsUrl   = url('admin/pages/assets');
+$uploadUrl   = $isNew ? '' : url('admin/templates/' . $templateId . '/builder/upload');
 $listUrl     = url('admin/templates');
 
 // Los mismos bloques que el builder de páginas (lista descubierta en disco).
@@ -939,8 +940,12 @@ body.builder-body {
             <div class="config-section">
                 <label class="config-label"><i class="bi bi-images"></i> Medios</label>
                 <small class="config-help">
-                    El gestor de bloques e imágenes usa la biblioteca de medios existente.
-                    Para subir imágenes nuevas, usa el editor de páginas.
+                    <?php if ($isNew): ?>
+                        Guarda la plantilla para poder subir imágenes desde aquí.
+                    <?php else: ?>
+                        Puedes subir imágenes desde el gestor de assets del lienzo. Se guardan en
+                        <code>uploads/</code> y quedan disponibles también para las páginas.
+                    <?php endif; ?>
                 </small>
             </div>
         </div>
@@ -976,6 +981,7 @@ const CONFIG = {
     saveUrl: '<?= e($saveUrl) ?>',
     versionsUrl: '<?= e($versionsUrl) ?>',
     assetsUrl: '<?= e($assetsUrl) ?>',
+    uploadUrl: '<?= e($uploadUrl) ?>',
     csrfToken: '<?= e($csrfToken) ?>',
     templateId: <?= $templateId ?>,
     isNew: <?= $isNew ? 'true' : 'false' ?>,
@@ -1105,12 +1111,7 @@ function initGrapesJS() {
         noticeOnUnload: false,
         storageManager: false,
         height: '100%',
-        assetManager: {
-            // Biblioteca de medios compartida con el editor de páginas.
-            assets: [],
-            autoAdd: true,
-            accept: 'image/*'
-        },
+        assetManager: buildAssetManagerConfig(),
         selectorManager: { componentFirst: true },
         components: templateData.html || '',
         style: templateData.css || '',
@@ -1516,7 +1517,105 @@ function saveVersion() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// BIBLIOTECA DE MEDIOS (solo lectura)
+// GESTOR DE ASSETS: biblioteca + subida
+// ═══════════════════════════════════════════════════════════════
+/**
+ * Configuración del gestor de assets.
+ *
+ * La biblioteca de medios es la misma que la del editor de páginas. La subida
+ * solo se activa cuando la plantilla ya existe (hace falta su id en la ruta);
+ * en una plantilla nueva el botón de subir no tiene destino todavía.
+ *
+ * @returns {object}
+ */
+function buildAssetManagerConfig() {
+    var config = {
+        assets: [],
+        autoAdd: true,
+        accept: 'image/*'
+    };
+
+    if (CONFIG.uploadUrl) {
+        config.upload = CONFIG.uploadUrl;
+        config.uploadName = 'files[]';
+        config.multiUpload = true;
+        config.uploadFile = function(e) { handleAssetUpload(e); };
+    }
+
+    return config;
+}
+
+/**
+ * Sube las imágenes elegidas y las añade al gestor.
+ *
+ * @param {Event} e Evento de cambio del input o de drop sobre el gestor
+ * @returns {void}
+ */
+function handleAssetUpload(e) {
+    if (!CONFIG.uploadUrl) {
+        showToast('Guarda la plantilla antes de subir imágenes', 'warning');
+        return;
+    }
+
+    var files = e && e.dataTransfer ? e.dataTransfer.files : (e && e.target ? e.target.files : null);
+    if (!files || files.length === 0) return;
+
+    var formData = new FormData();
+    var valid = 0;
+
+    for (var i = 0; i < files.length; i++) {
+        if (files[i].size > 5 * 1024 * 1024) {
+            showToast('⚠ Archivo demasiado grande: ' + files[i].name, 'warning');
+            continue;
+        }
+        if (!files[i].type.startsWith('image/')) {
+            showToast('⚠ Solo imágenes: ' + files[i].name, 'warning');
+            continue;
+        }
+        formData.append('files[]', files[i]);
+        valid++;
+    }
+
+    if (valid === 0) return;
+
+    formData.append('_csrf_token', CONFIG.csrfToken);
+    showToast('📤 Subiendo ' + valid + ' imagen(es)…', 'info');
+
+    fetch(CONFIG.uploadUrl, {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin',
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+    })
+    .then(function(r) {
+        if (!r.ok) throw new Error('El servidor respondió ' + r.status);
+        return r.json();
+    })
+    .then(function(result) {
+        if (result.success && Array.isArray(result.data) && result.data.length && gjsEditor) {
+            result.data.forEach(function(asset) {
+                gjsEditor.AssetManager.add({
+                    src: asset.src,
+                    name: asset.name,
+                    type: 'image',
+                    width: asset.width,
+                    height: asset.height
+                });
+            });
+            gjsEditor.AssetManager.render();
+            showToast('✓ ' + result.data.length + ' imagen(es) subida(s)', 'success');
+        }
+        if (Array.isArray(result.errors) && result.errors.length) {
+            result.errors.forEach(function(msg) { showToast('⚠ ' + msg, 'warning'); });
+        }
+    })
+    .catch(function(err) {
+        showToast('✗ Error al subir: ' + err.message, 'error');
+    });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BIBLIOTECA DE MEDIOS
 // ═══════════════════════════════════════════════════════════════
 function loadAssets() {
     if (!CONFIG.assetsUrl || !gjsEditor) return;

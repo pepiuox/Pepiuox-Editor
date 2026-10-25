@@ -3,7 +3,7 @@ namespace App\Controllers;
 
 use App\Core\{Request, Response, View, Session, CSRF, Database, Auth};
 use App\Models\{Page, PageModel, Template, MetaTag};
-use App\Services\{PageService, AuditService};
+use App\Services\{PageService, AuditService, AssetUploadService};
 
 class PagesController
 {
@@ -270,6 +270,13 @@ class PagesController
         )));
     }
 
+    /**
+     * Sube imágenes para el gestor de assets del builder.
+     *
+     * La validación y el guardado viven en AssetUploadService (compartido con el
+     * editor de plantillas); aquí solo quedan el permiso y la forma de la
+     * respuesta que espera el cliente.
+     */
     public function uploadAsset(Request $req): void
     {
         if (!Auth::can('pages.edit')) {
@@ -277,144 +284,19 @@ class PagesController
             return;
         }
 
-        $files = $_FILES['files'] ?? null;
-        if (!$files || !isset($files['name'])) {
-            Response::json(['success' => false, 'errors' => ['No se recibieron archivos']]);
+        $result = (new AssetUploadService())->store($_FILES['files'] ?? null);
+
+        if (!$result['received']) {
+            Response::json(['success' => false, 'errors' => $result['errors']]);
             return;
-        }
-
-        $uploaded = [];
-        $errors   = [];
-        $names    = (array) $files['name'];
-        $allowed  = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
-        $maxBytes = 5 * 1024 * 1024;
-
-        for ($i = 0, $count = count($names); $i < $count; $i++) {
-            $originalName = (string) $names[$i];
-            $error    = is_array($files['error']) ? $files['error'][$i] : $files['error'];
-            $tmpName  = is_array($files['tmp_name']) ? $files['tmp_name'][$i] : $files['tmp_name'];
-            $size     = (int) (is_array($files['size']) ? $files['size'][$i] : $files['size']);
-            $ext      = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
-
-            if ($error !== UPLOAD_ERR_OK) {
-                $errors[] = 'Error al subir: ' . $originalName;
-                continue;
-            }
-            if (!in_array($ext, $allowed, true)) {
-                $errors[] = 'Tipo no permitido: ' . $originalName;
-                continue;
-            }
-            if ($size > $maxBytes) {
-                $errors[] = 'Archivo demasiado grande (máx 5MB): ' . $originalName;
-                continue;
-            }
-
-            $finfo = new \finfo(FILEINFO_MIME_TYPE);
-            $mime = (string) $finfo->file($tmpName);
-            if (!str_starts_with($mime, 'image/')) {
-                $errors[] = 'MIME inválido: ' . $originalName;
-                continue;
-            }
-
-            $yearMonth = date('Y/m');
-            $dir = rtrim(UPLOADS_PATH, '/\\') . '/' . $yearMonth;
-            if (!is_dir($dir) && !@mkdir($dir, 0775, true) && !is_dir($dir)) {
-                $errors[] = 'No se pudo crear el directorio de subida';
-                break;
-            }
-
-            // Se conserva el nombre original; si ya existe se añade -1, -2...
-            $filename = $this->uniqueAssetName($dir, $originalName);
-            $dest = $dir . '/' . $filename;
-
-            if (!move_uploaded_file($tmpName, $dest)) {
-                $errors[] = 'No se pudo guardar: ' . $originalName;
-                continue;
-            }
-            @chmod($dest, 0644);
-
-            [$width, $height] = $this->assetDimensions($dest, $ext);
-            $relPath = $yearMonth . '/' . $filename;
-
-            $uploaded[] = [
-                'src'           => url('uploads/' . $relPath),
-                'name'          => $filename,
-                'original_name' => $originalName,
-                'type'          => 'image',
-                'width'         => $width,
-                'height'        => $height,
-                'size'          => $size,
-                'uploaded_at'   => date('Y-m-d H:i:s'),
-            ];
         }
 
         Response::json([
             'success' => true,
-            'data' => $uploaded,
-            'errors' => $errors,
+            'data' => $result['uploaded'],
+            'errors' => $result['errors'],
         ]);
     }
-
-    /**
-     * Nombre de archivo seguro para URL que conserva el original.
-     * Si ya existe en el directorio, añade un sufijo numérico.
-     */
-    private function uniqueAssetName(string $dir, string $originalName): string
-    {
-        $ext  = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
-        $base = pathinfo($originalName, PATHINFO_FILENAME);
-
-        // Sin acentos, sin separadores de ruta y con espacios convertidos en guiones.
-        if (function_exists('iconv')) {
-            $ascii = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $base);
-            if ($ascii !== false) {
-                $base = $ascii;
-            }
-        }
-        $base = preg_replace('/[^A-Za-z0-9._-]+/', '-', $base) ?? '';
-        $base = trim(str_replace(['..', '/', '\\'], '', $base), '-._');
-
-        if ($base === '') {
-            $base = 'imagen';
-        }
-        $base = substr($base, 0, 80);
-
-        $candidate = $base . '.' . $ext;
-        $suffix = 1;
-        while (is_file($dir . '/' . $candidate)) {
-            $candidate = $base . '-' . $suffix . '.' . $ext;
-            $suffix++;
-            if ($suffix > 999) {
-                $candidate = $base . '-' . bin2hex(random_bytes(4)) . '.' . $ext;
-                break;
-            }
-        }
-
-        return $candidate;
-    }
-
-    /**
-     * Dimensiones de una imagen o de un SVG (por viewBox).
-     *
-     * @return array{0:int,1:int}
-     */
-    private function assetDimensions(string $path, string $ext): array
-    {
-        if ($ext === 'svg') {
-            $svg = @file_get_contents($path);
-            if ($svg && preg_match('/viewBox=["\']([^"\']+)["\']/', $svg, $matches)) {
-                $viewBox = preg_split('/[\s,]+/', trim($matches[1])) ?: [];
-                if (count($viewBox) === 4) {
-                    return [(int) $viewBox[2], (int) $viewBox[3]];
-                }
-            }
-            return [0, 0];
-        }
-
-        $info = @getimagesize($path);
-        return $info ? [(int) $info[0], (int) $info[1]] : [0, 0];
-    }
-
     public function getAssets(Request $req): void
     {
         Response::json(['success' => true, 'data' => $this->getExistingAssets()]);
@@ -425,6 +307,8 @@ class PagesController
         $uploadDir = UPLOADS_PATH;
         $assets = [];
         if (!is_dir($uploadDir)) return $assets;
+
+        $assetUploader = new AssetUploadService();
 
         $iterator = new \RecursiveIteratorIterator(
             new \RecursiveDirectoryIterator($uploadDir, \RecursiveDirectoryIterator::SKIP_DOTS),
@@ -446,7 +330,9 @@ class PagesController
             $relativePath = ltrim(substr($absolute, strlen(str_replace('\\', '/', rtrim($uploadDir, '/\\')))), '/');
             $publicUrl = url('uploads/' . $relativePath);
 
-            [$width, $height] = $this->assetDimensions($file->getPathname(), $ext);
+            // Las dimensiones las calcula el servicio de subida (misma lógica para
+            // lo que se sube y para lo que ya está en disco).
+            [$width, $height] = $assetUploader->dimensionsOf($file->getPathname(), $ext);
 
             $assets[] = [
                 'src' => $publicUrl,

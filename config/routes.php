@@ -239,6 +239,7 @@ $router->post('/admin/templates', [App\Controllers\TemplatesController::class, '
 
 // ✅ Rutas parametrizadas al final
 $router->get('/admin/templates/{id}/edit', [App\Controllers\TemplatesController::class, 'edit'], $auth);
+$router->post('/admin/templates/{id}/builder/upload', [App\Controllers\TemplatesController::class, 'uploadAsset'], $auth);
 $router->get('/admin/templates/{id}/versions', [App\Controllers\TemplatesController::class, 'versions'], $auth); // ✅ NUEVA
 $router->post('/admin/templates/{id}', [App\Controllers\TemplatesController::class, 'update'], $auth);
 $router->post('/admin/templates/{id}/versions', [App\Controllers\TemplatesController::class, 'createVersionAjax'], $auth); // ✅ NUEVA

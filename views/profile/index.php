@@ -27,8 +27,17 @@ $lastIp       = $user['last_ip'] ?? '—';
 $twoFactor    = (int)($user['two_factor_enabled'] ?? 0);
 $initial      = mb_substr($fullName ?: $username, 0, 1);
 
-// URL del avatar
-$avatarUrl = $avatar ? url('uploads/' . $avatar) : '';
+// URL del avatar.
+// El archivo se guarda en uploads/avatars/… (UPLOADS_PATH, fuera del document
+// root), no dentro de public/. Antes se comprobaba ROOT_PATH.'/public/uploads/':
+// esa ruta no existe, así que el perfil mostraba siempre la inicial.
+$avatarUrl = '';
+if (!empty($avatar)) {
+    $avatarRelative = ltrim(str_replace('\\', '/', (string) $avatar), '/');
+    if (is_file(UPLOADS_PATH . '/' . $avatarRelative)) {
+        $avatarUrl = url('uploads/' . $avatarRelative);
+    }
+}
 
 // Timezones (fallback si falla DateTimeZone)
 try {
@@ -55,7 +64,7 @@ $pageTitle = t('profile');
         <div class="card">
             <div class="card-body text-center">
                 <div class="avatar-large mx-auto mb-3" style="width:120px;height:120px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-dark));display:grid;place-items:center;font-size:3rem;color:var(--bg-principal);font-weight:700;overflow:hidden">
-                    <?php if ($avatarUrl && is_file(ROOT_PATH . '/public/uploads/' . $avatar)): ?>
+                    <?php if ($avatarUrl !== ''): ?>
                         <img src="<?= e($avatarUrl) ?>" alt="" style="width:100%;height:100%;object-fit:cover">
                     <?php else: ?>
                         <?= e(strtoupper($initial)) ?>
