@@ -3,7 +3,7 @@ namespace App\Controllers;
 
 use App\Core\{Request, Response, View, Session, CSRF, Database, Auth};
 use App\Models\{Page, PageModel, Template, MetaTag};
-use App\Services\{PageService, AuditService, AssetUploadService};
+use App\Services\{PageService, AuditService, AssetUploadService, MenuService, ActivityLoggerService};
 
 class PagesController
 {
@@ -23,6 +23,25 @@ class PagesController
         $status = $req->get('status');
         $pages = Page::all($status);
         Response::render(View::render('pages.index', compact('pages', 'status')));
+    }
+
+    /**
+     * Servicio de menús: se usa para mantener el menú automático sincronizado
+     * con las páginas publicadas (ver MenuService::syncDefaultMenu()).
+     */
+    private function menuService(): MenuService
+    {
+        return new MenuService($this->db, new ActivityLoggerService($this->db));
+    }
+
+    /** Sincroniza el menú automático sin romper la petición si algo falla. */
+    private function syncMenus(): void
+    {
+        try {
+            $this->menuService()->syncDefaultMenu();
+        } catch (\Throwable $e) {
+            error_log('[PagesController] No se pudo sincronizar el menú: ' . $e->getMessage());
+        }
     }
 
     public function create(Request $req): void
@@ -67,6 +86,8 @@ class PagesController
         }
 
         $this->saveSeo($id, $req);
+        // Si la página nace publicada, entra en el menú automático.
+        $this->syncMenus();
         // AuditService::log() recibe primero el usuario: con los argumentos
         // desordenados PHP lanzaba un TypeError y la petición acababa en 500.
         AuditService::log(Auth::id(), 'page_created', "Página creada: {$data['title']} (ID $id)", 'pages');
@@ -83,8 +104,10 @@ class PagesController
         $templates = Template::allActive();
         $pages = Page::all();
         $seo = MetaTag::forPage((int)$page['id']);
+        // Menús disponibles para asignar uno concreto a esta página.
+        $menus = $this->menuService()->listMenus();
 
-        Response::render(View::render('pages.edit', compact('page', 'templates', 'pages', 'seo')));
+        Response::render(View::render('pages.edit', compact('page', 'templates', 'pages', 'seo', 'menus')));
     }
 
     public function update(Request $req, array $params): void
@@ -118,6 +141,8 @@ class PagesController
 
         $data = [
             'template_id'  => $req->post('template_id') ?: null,
+            // Menú asignado a esta página. El builder no lo envía: se conserva.
+            'menu_id'      => $req->post('menu_id', $page['menu_id'] ?? null) ?: null,
             // El builder no envía parent_id: sin fallback se perdía la jerarquía.
             'parent_id'    => $req->post('parent_id', $page['parent_id'] ?? null) ?: null,
             'title'        => $title,
@@ -155,6 +180,9 @@ class PagesController
         }
 
         $this->saveSeo($id, $req);
+        // Publicar, cambiar de padre, despublicar o editar el título afecta al
+        // menú automático: se sincroniza tras guardar.
+        $this->syncMenus();
         // Firma real: log(?int $userId, string $action, ?string $details, ?string $context).
         // Antes se pasaba la acción como primer argumento y el TypeError que
         // lanzaba se comía la respuesta: el guardado sí estaba en la base de
@@ -176,6 +204,9 @@ class PagesController
         Page::delete($id);
         \App\Services\CacheService::invalidatePage($id);
         \App\Services\SitemapService::generate();
+        // El ítem del menú automático apunta a una página que ya no existe: el
+        // sync lo retira (los menús personalizados no se tocan).
+        $this->syncMenus();
         AuditService::log(Auth::id(), 'page_deleted', "Página eliminada ID $id", 'pages');
         Session::flash('flash.success', 'Página eliminada.');
         Response::redirect(url('admin/pages'));

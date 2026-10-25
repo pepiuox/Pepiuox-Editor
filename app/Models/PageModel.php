@@ -118,14 +118,15 @@ final class PageModel
     public function create(array $data): int
     {
         $sql = "INSERT INTO pages (
-                    user_id, template_id, parent_id, title, slug, description, h1,
+                    user_id, template_id, menu_id, parent_id, title, slug, description, h1,
                     content_html, content_css, content_js, content_php, grapesjs_data,
                     startpage, is_published, status, publish_at
-                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
         
         return (int) $this->db->insert($sql, [
             $data['user_id'],
             $data['template_id'] ?? null,
+            $data['menu_id'] ?? null,
             $data['parent_id'] ?? null,
             $data['title'],
             $data['slug'],
@@ -155,6 +156,7 @@ final class PageModel
     {
         $sql = "UPDATE pages SET
                     template_id = ?, 
+                    menu_id = ?,
                     parent_id = ?, 
                     title = ?, 
                     slug = ?,
@@ -173,6 +175,7 @@ final class PageModel
         
         return (bool) $this->db->execute($sql, [
             $data['template_id'] ?? null,
+            $data['menu_id'] ?? null,
             $data['parent_id'] ?? null,
             $data['title'],
             $data['slug'],
@@ -201,7 +204,7 @@ final class PageModel
         $params = [];
         
         $allowed = [
-            'template_id', 'parent_id', 'title', 'slug', 'description', 'h1',
+            'template_id', 'menu_id', 'parent_id', 'title', 'slug', 'description', 'h1',
             'content_html', 'content_css', 'content_js', 'content_php', 'grapesjs_data',
             'startpage', 'is_published', 'status', 'publish_at'
         ];

@@ -1,364 +1,175 @@
 <?php
 /**
- * Vista: Gestión de Menús
- * Versión coherente con el sistema unificado
+ * Listado de menús.
+ *
+ * Ruta: GET /admin/menus
+ * Controlador: MenuController::index()
+ *
+ * @package Views\Menus
  */
+
 $pageTitle = 'Menús';
-
-// ═══════════════════════════════════════════════════════════════════
-// HELPERS CSRF (protegidos contra redeclaración)
-// ═══════════════════════════════════════════════════════════════════
-if (!function_exists('csrf_field_html')) {
-    function csrf_field_html(): string {
-        if (class_exists('\App\Core\CSRF')) {
-            return \App\Core\CSRF::field();
-        }
-        $token = $_SESSION['_csrf_token'] ?? ($_SESSION['csrf_token'] ?? '');
-        return '<input type="hidden" name="_csrf_token" value="' . htmlspecialchars((string)$token) . '">';
-    }
-}
-
-if (!function_exists('get_csrf_token_js')) {
-    function get_csrf_token_js(): string {
-        if (class_exists('\App\Core\CSRF') && method_exists('\App\Core\CSRF', 'token')) {
-            return (string)\App\Core\CSRF::token();
-        }
-        return htmlspecialchars((string)($_SESSION['_csrf_token'] ?? ($_SESSION['csrf_token'] ?? '')));
-    }
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// VARIABLES CON FALLBACK SEGURO
-// ═══════════════════════════════════════════════════════════════════
-$items    = $items ?? [];
-$menu     = $menu ?? [];
-$groups   = $groups ?? [];
-$pages    = $pages ?? [];
-$group    = $group ?? 'main';
-$stats    = $stats ?? ['total' => 0, 'published' => 0, 'draft' => 0, 'groups' => 0];
-
-// ✅ CORRECCIÓN CRÍTICA: Priorizar el árbol jerárquico ($menu) sobre el plano ($items)
-// $menu viene de getAdminMenu() → estructura con 'children' para recursión
-// $items viene de getFlatMenu() → array plano sin jerarquía
-$menuData = !empty($menu) ? $menu : $items;
+$totalItems = (int) ($stats['items'] ?? 0);
 ?>
+<div class="card mb-3">
+    <div class="card-header">
+        <h3><i class="bi bi-menu-button-wide"></i> Menús del sitio</h3>
+        <div class="d-flex gap-2 flex-wrap">
+            <form method="post" action="<?= url('admin/menus/sync') ?>" style="display:inline">
+                <?= \App\Core\CSRF::field() ?>
+                <button class="btn btn-outline btn-sm" title="Regenerar el menú automático desde las páginas publicadas">
+                    <i class="bi bi-arrow-repeat"></i> Sincronizar automático
+                </button>
+            </form>
+            <form method="post" action="<?= url('admin/menus/repair') ?>" style="display:inline">
+                <?= \App\Core\CSRF::field() ?>
+                <button class="btn btn-ghost btn-sm" title="Deja un solo predeterminado y un solo principal por ubicación">
+                    <i class="bi bi-tools"></i> Reparar
+                </button>
+            </form>
+            <?php if (\App\Core\Auth::can('menus.create')): ?>
+                <a class="btn btn-primary btn-sm" href="<?= url('admin/menus/create') ?>">
+                    <i class="bi bi-plus"></i> Nuevo menú
+                </a>
+            <?php endif; ?>
+        </div>
+    </div>
 
-<div class="container-fluid py-3">
-    <div class="row">
-        <div class="col-12">
+    <div class="card-body">
+        <p class="text-muted" style="margin:0 0 1rem">
+            <strong>Automático</strong>: se genera solo con las páginas publicadas (no se edita a mano).
+            <strong>Principal</strong>: menú personalizado que sustituye al automático en su ubicación.
+            Si una página tiene un menú asignado, ese tiene prioridad sobre los dos anteriores.
+        </p>
 
-            <!-- HEADER -->
-            <div class="card shadow-sm mb-3">
-                <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
-                    <div class="d-flex align-items-center gap-2">
-                        <i class="bi bi-list-nested fs-4 text-primary"></i>
-                        <h4 class="mb-0 fw-bold">Gestión de Menús</h4>
-                        <?php if (!empty($stats['total'])): ?>
-                            <span class="badge bg-primary-subtle text-primary">
-                                <?= (int)$stats['total'] ?> elementos
-                            </span>
-                        <?php endif; ?>
-                    </div>
-                    <div class="d-flex gap-2 flex-wrap">
-                        <?php if (!empty($groups)): ?>
-                            <div class="btn-group btn-group-sm" role="group">
-                                <?php foreach ($groups as $g): ?>
-                                    <?php
-                                    // ✅ Soporta tanto array ['slug'=>'x','name'=>'y'] como string
-                                    $slug = is_array($g) ? ($g['slug'] ?? '') : (string)$g;
-                                    $name = is_array($g) ? ($g['name'] ?? $slug) : (string)$g;
-                                    ?>
-                                    <a class="btn <?= ($group === $slug) ? 'btn-primary' : 'btn-outline-primary' ?>"
-                                       href="<?= url('admin/menus?group=' . urlencode($slug)) ?>">
-                                        <?= e($name) ?>
-                                    </a>
-                                <?php endforeach; ?>
-                            </div>
-                        <?php endif; ?>
-                        <button class="btn btn-warning btn-sm" onclick="regenerateMenu()" title="Regenerar caché">
-                            <i class="bi bi-arrow-repeat"></i> Regenerar
-                        </button>
-                        <a href="<?= url('admin/menus/create') ?>" class="btn btn-success btn-sm">
-                            <i class="bi bi-plus-circle"></i> Nueva Página
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- FORMULARIO AÑADIR ITEM -->
-            <div class="card shadow-sm mb-3">
-                <div class="card-header bg-light">
-                    <h6 class="mb-0"><i class="bi bi-plus-square text-primary"></i> Añadir nuevo elemento</h6>
-                </div>
-                <div class="card-body">
-                    <form method="post" action="<?= url('admin/menus') ?>">
-                        <?= csrf_field_html() ?>
-                        <input type="hidden" name="menu_group" value="<?= e((string)$group) ?>">
-                        <div class="row g-3">
-                            <div class="col-md-3">
-                                <label class="form-label fw-semibold">Título <span class="text-danger">*</span></label>
-                                <input type="text" name="title" class="form-control" required placeholder="Ej: Inicio">
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label fw-semibold">URL</label>
-                                <input type="text" name="url" class="form-control" placeholder="/pagina o https://...">
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label fw-semibold">Página enlazada</label>
-                                <select name="page_id" class="form-select">
-                                    <option value="">— Ninguna —</option>
-                                    <?php foreach ((array)$pages as $p): ?>
-                                        <?php
-                                        // ✅ Verificar que $p sea un array con keys esperadas
-                                        if (!is_array($p)) continue;
-                                        $pageId    = (int)($p['id'] ?? 0);
-                                        $pageTitle = (string)($p['title'] ?? 'Sin título');
-                                        if ($pageId <= 0) continue;
-                                        ?>
-                                        <option value="<?= $pageId ?>">
-                                            <?= e($pageTitle) ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label fw-semibold">Target</label>
-                                <select name="target" class="form-select">
-                                    <option value="_self">Misma ventana</option>
-                                    <option value="_blank">Nueva ventana</option>
-                                </select>
-                            </div>
-                            <div class="col-md-1 d-flex align-items-end">
-                                <button type="submit" class="btn btn-primary w-100">
-                                    <i class="bi bi-plus-lg"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- ÁRBOL DE MENÚ -->
-            <div class="card shadow-sm">
-                <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0"><i class="bi bi-diagram-3 text-primary"></i> Estructura del Menú</h6>
-                    <small class="text-muted"><i class="bi bi-info-circle"></i> Arrastra para reordenar</small>
-                </div>
-                <div class="card-body">
-                    <?php if (!empty($menuData)): ?>
-                        <div class="alert alert-info py-2 mb-3">
-                            <i class="bi bi-lightbulb"></i>
-                            <small>Usa el <i class="bi bi-grip-vertical"></i> para arrastrar y reorganizar.</small>
-                        </div>
-                        <div id="menu-tree">
-                            <ul class="list-group sortable-menu" data-level="0">
-                                <?= _renderMenuTree($menuData) ?>
-                            </ul>
-                        </div>
-                    <?php else: ?>
-                        <div class="text-center py-5">
-                            <i class="bi bi-menu-button-wide display-1 text-muted"></i>
-                            <p class="text-muted mt-3 mb-4">No hay elementos en el menú</p>
-                            <a href="<?= url('admin/menus/create') ?>" class="btn btn-primary">
-                                <i class="bi bi-plus-circle"></i> Crear primer elemento
-                            </a>
-                        </div>
-                    <?php endif; ?>
-                </div>
-            </div>
-
+        <div class="d-flex gap-3 flex-wrap" style="font-size:.9rem">
+            <span><i class="bi bi-collection"></i> <?= (int) ($stats['menus'] ?? 0) ?> menú(s)</span>
+            <span><i class="bi bi-list-ul"></i> <?= $totalItems ?> elemento(s)</span>
+            <span><i class="bi bi-eye"></i> <?= (int) ($stats['published'] ?? 0) ?> visible(s)</span>
+            <span><i class="bi bi-eye-slash"></i> <?= (int) ($stats['hidden'] ?? 0) ?> oculto(s)</span>
         </div>
     </div>
 </div>
 
-<?php
-/**
- * ✅ Renderiza recursivamente los elementos del menú
- * Protegida contra redeclaración con prefijo _
- */
-if (!function_exists('_renderMenuTree')) {
-    function _renderMenuTree(array $items, int $level = 0): string
-    {
-        if (empty($items)) return '';
-        $html = '';
-        foreach ($items as $it) {
-            // ✅ Validar que sea un array
-            if (!is_array($it)) continue;
+<?php if (empty($menus)): ?>
+    <div class="card">
+        <div class="card-body">
+            <p style="margin:0">Todavía no hay menús. Crea uno o pulsa «Sincronizar automático» para generar el menú del sitio.</p>
+        </div>
+    </div>
+<?php endif; ?>
 
-            $id          = (int)($it['id'] ?? 0);
-            $parentId    = $it['parent_id'] ?? null;
-            $title       = htmlspecialchars((string)($it['title'] ?? 'Sin título'), ENT_QUOTES, 'UTF-8');
-            $url         = (string)($it['url'] ?? ('/' . ($it['slug'] ?? '')));
-            $icon        = htmlspecialchars((string)($it['icon'] ?? 'bi bi-link-45deg'), ENT_QUOTES, 'UTF-8');
-            $published   = !empty($it['is_published']);
-            $children    = (array)($it['children'] ?? []);
-            $hasChildren = !empty($children);
+<?php foreach ($menus as $menu): ?>
+    <?php
+        $menuId = (int) $menu['id'];
+        $isDefault = (int) $menu['is_default'] === 1;
+        $isPrimary = (int) $menu['is_primary'] === 1;
+        $isActive = (int) $menu['is_active'] === 1;
+        $tree = $menusTree[$menuId] ?? [];
+    ?>
+    <div class="card mb-3">
+        <div class="card-header">
+            <h3>
+                <i class="bi bi-<?= $isDefault ? 'magic' : 'list-nested' ?>"></i>
+                <?= e($menu['name']) ?>
+                <?php if ($isDefault): ?><span class="badge badge-published">automático</span><?php endif; ?>
+                <?php if ($isPrimary): ?><span class="badge badge-draft">principal</span><?php endif; ?>
+                <?php if (!$isActive): ?><span class="badge badge-archived">inactivo</span><?php endif; ?>
+            </h3>
+            <div class="d-flex gap-2 flex-wrap">
+                <a class="btn btn-ghost btn-sm" href="<?= url("admin/menus/{$menuId}/edit") ?>">
+                    <i class="bi bi-pencil"></i> Editar
+                </a>
+                <?php if (\App\Core\Auth::can('menus.create')): ?>
+                    <form method="post" action="<?= url("admin/menus/{$menuId}/duplicate") ?>" style="display:inline">
+                        <?= \App\Core\CSRF::field() ?>
+                        <button class="btn btn-ghost btn-sm" title="Duplicar este menú con sus elementos">
+                            <i class="bi bi-copy"></i>
+                        </button>
+                    </form>
+                <?php endif; ?>
+                <?php if (!$isDefault): ?>
+                    <form method="post" action="<?= url("admin/menus/{$menuId}/toggle") ?>" style="display:inline">
+                        <?= \App\Core\CSRF::field() ?>
+                        <button class="btn btn-ghost btn-sm" title="<?= $isActive ? 'Desactivar' : 'Activar' ?>">
+                            <i class="bi bi-<?= $isActive ? 'pause-circle' : 'play-circle' ?>"></i>
+                        </button>
+                    </form>
+                    <form method="post" action="<?= url("admin/menus/{$menuId}/default") ?>" style="display:inline"
+                          onsubmit="return confirm('¿Convertir este menú en el automático de su ubicación? El actual dejará de serlo.')">
+                        <?= \App\Core\CSRF::field() ?>
+                        <button class="btn btn-ghost btn-sm" title="Marcar como menú automático">
+                            <i class="bi bi-magic"></i>
+                        </button>
+                    </form>
+                <?php endif; ?>
+                <?php if (\App\Core\Auth::can('menus.delete') && !$isDefault): ?>
+                    <form method="post" action="<?= url("admin/menus/{$menuId}/delete") ?>" style="display:inline"
+                          onsubmit="return confirm('¿Eliminar este menú? Sus páginas no se borran.')">
+                        <?= \App\Core\CSRF::field() ?>
+                        <button class="btn btn-ghost btn-sm" title="Eliminar menú">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </form>
+                <?php endif; ?>
+            </div>
+        </div>
 
-            // ✅ Validar ID antes de renderizar
-            if ($id <= 0) continue;
+        <div class="card-body p-0">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Elemento</th>
+                        <th>Destino</th>
+                        <th>Estado</th>
+                        <th class="text-end">Hijos</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($tree)): ?>
+                        <tr>
+                            <td colspan="4" class="text-muted" style="padding:1rem">
+                                <?= $isDefault
+                                    ? 'Sin elementos todavía. Pulsa «Sincronizar automático» para generarlo desde las páginas publicadas.'
+                                    : 'Este menú no tiene elementos. Añádelos desde «Editar».' ?>
+                            </td>
+                        </tr>
+                    <?php else: ?>
+                        <?php
+                        $renderItems = static function (array $items, int $depth) use (&$renderItems): void {
+                            foreach ($items as $item) {
+                                $title = (string) ($item['title'] ?? '');
+                                $slug = (string) ($item['slug'] ?? '');
+                                $url = (string) ($item['url'] ?? '');
+                                $pageId = $item['page_id'] !== null ? (int) $item['page_id'] : null;
+                                $pagePublished = $item['page_status'] ?? null;
+                                $visible = (int) ($item['is_published'] ?? 0) === 1
+                                    && ($item['status'] ?? '') === 'published'
+                                    && ($pagePublished === null || $pagePublished === 'published');
 
-            $html .= '<li class="list-group-item menu-item" data-id="' . $id . '" data-parent="' . ($parentId ?? '') . '" data-level="' . $level . '">';
-            $html .= '<div class="d-flex justify-content-between align-items-center flex-wrap gap-2">';
-            $html .= '<div class="d-flex align-items-center gap-2 flex-grow-1">';
-            $html .= '<i class="bi bi-grip-vertical drag-handle text-muted" style="cursor:grab"></i>';
-            $html .= '<i class="' . $icon . ' text-primary fs-5"></i>';
-            $html .= '<strong class="text-dark">' . $title . '</strong>';
-            $html .= '<small class="text-muted text-truncate" style="max-width:250px">' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '</small>';
-            $html .= '<span class="badge ' . ($published ? 'bg-success' : 'bg-secondary') . '">';
-            $html .= $published ? 'Publicado' : 'Borrador';
-            $html .= '</span>';
-            if ($level > 0) {
-                $html .= '<span class="badge bg-info">Nivel ' . $level . '</span>';
-            }
-            if ($hasChildren) {
-                $html .= '<span class="badge bg-warning text-dark">' . count($children) . ' submenús</span>';
-            }
-            $html .= '</div>';
-            $html .= '<div class="btn-group btn-group-sm">';
-            $html .= '<a href="' . url('admin/menus/' . $id . '/edit') . '" class="btn btn-outline-primary" title="Editar"><i class="bi bi-pencil"></i></a>';
-            $html .= '<button type="button" onclick="toggleStatus(' . $id . ')" class="btn btn-outline-' . ($published ? 'secondary' : 'success') . '" title="Cambiar estado"><i class="bi bi-' . ($published ? 'eye-slash' : 'eye') . '"></i></button>';
-            $html .= '<button type="button" onclick="deleteItem(' . $id . ')" class="btn btn-outline-danger" title="Eliminar"><i class="bi bi-trash"></i></button>';
-            $html .= '</div>';
-            $html .= '</div>';
-            if ($hasChildren) {
-                $html .= '<ul class="list-group sortable-menu mt-2 ms-4 border-start border-2 border-primary-subtle">';
-                $html .= _renderMenuTree($children, $level + 1);
-                $html .= '</ul>';
-            }
-            $html .= '</li>';
-        }
-        return $html;
-    }
-}
-?>
+                                echo '<tr>';
+                                echo '<td style="padding-left:' . (12 + $depth * 22) . 'px">'
+                                    . ($depth > 0 ? '<i class="bi bi-arrow-return-right"></i> ' : '')
+                                    . e($title) . '</td>';
+                                echo '<td>' . ($pageId !== null
+                                    ? '<code>/' . e($slug) . '</code> <span class="text-muted">(página #' . $pageId . ')</span>'
+                                    : ($url !== '' ? e($url) : '<span class="text-muted">—</span>')) . '</td>';
+                                echo '<td>' . ($visible
+                                    ? '<span class="badge badge-published">visible</span>'
+                                    : '<span class="badge badge-archived">oculto</span>') . '</td>';
+                                echo '<td class="text-end">' . (isset($item['children']) ? count($item['children']) : 0) . '</td>';
+                                echo '</tr>';
 
-<style>
-.menu-item { transition: all 0.2s ease; border-left: 3px solid transparent !important; }
-.menu-item:hover { border-left-color: var(--bs-primary, #0d6efd) !important; background-color: rgba(13, 110, 253, 0.03); }
-.drag-handle { cursor: grab; font-size: 1.1rem; }
-.drag-handle:active { cursor: grabbing; }
-.sortable-ghost { opacity: 0.4; background: #e7f1ff !important; }
-.sortable-chosen { box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
-</style>
-
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-<script>
-const CSRF_TOKEN = '<?= get_csrf_token_js() ?>';
-const URL_BASE   = '<?= url("admin/menus") ?>';
-
-document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.sortable-menu').forEach(container => {
-        new Sortable(container, {
-            group: 'menu-tree',
-            handle: '.drag-handle',
-            animation: 150,
-            fallbackOnBody: true,
-            swapThreshold: 0.65,
-            onEnd: saveOrder
-        });
-    });
-});
-
-function saveOrder() {
-    const orderData = [];
-    let order = 0;
-    document.querySelectorAll('.menu-item').forEach(item => {
-        orderData.push({
-            id: item.dataset.id,
-            parent_id: item.dataset.parent || null,
-            level: item.dataset.level || 0,
-            order: order++
-        });
-    });
-
-    fetch(URL_BASE + '/reorder', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': CSRF_TOKEN,
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        body: JSON.stringify({ items: orderData })
-    })
-    .then(r => r.json())
-    .then(data => {
-        showNotification(
-            data.success ? 'Orden actualizado' : ('Error: ' + (data.error || 'desconocido')),
-            data.success ? 'success' : 'danger'
-        );
-    })
-    .catch(() => showNotification('Error de red al guardar', 'danger'));
-}
-
-function toggleStatus(id) {
-    if (!confirm('¿Cambiar el estado de publicación?')) return;
-    fetch(URL_BASE + '/' + id + '/toggle', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': CSRF_TOKEN,
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) location.reload();
-        else showNotification('Error: ' + (data.error || ''), 'danger');
-    });
-}
-
-function deleteItem(id) {
-    if (!confirm('¿Eliminar este elemento? Esta acción no se puede deshacer.')) return;
-    fetch(URL_BASE + '/' + id + '/delete', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': CSRF_TOKEN,
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) location.reload();
-        else showNotification('Error: ' + (data.error || ''), 'danger');
-    });
-}
-
-function regenerateMenu() {
-    if (!confirm('¿Regenerar la caché del menú?')) return;
-    fetch(URL_BASE + '/regenerate', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': CSRF_TOKEN,
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(r => r.json())
-    .then(data => {
-        showNotification(
-            data.success ? 'Caché regenerada' : 'Error al regenerar',
-            data.success ? 'success' : 'danger'
-        );
-    });
-}
-
-function showNotification(message, type = 'info') {
-    const icons = {
-        success: 'check-circle-fill',
-        danger: 'exclamation-triangle-fill',
-        info: 'info-circle-fill',
-        warning: 'exclamation-circle-fill'
-    };
-    const alert = document.createElement('div');
-    alert.className = `alert alert-${type} alert-dismissible fade show position-fixed shadow`;
-    alert.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-    alert.innerHTML = `
-        <i class="bi bi-${icons[type] || 'info-circle-fill'} me-2"></i>
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-    document.body.appendChild(alert);
-    setTimeout(() => alert.remove(), 4000);
-}
-</script>
+                                if (!empty($item['children'])) {
+                                    $renderItems($item['children'], $depth + 1);
+                                }
+                            }
+                        };
+                        $renderItems($tree, 0);
+                        ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+<?php endforeach; ?>

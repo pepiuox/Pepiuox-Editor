@@ -64,8 +64,9 @@ class PublicController
         // Construir HTML de la página
         $content = $this->renderer->buildPageHtml($page);
 
-        // Obtener menú
-        $menu = $this->renderer->getMenu();
+        // Obtener menú: se resuelve para ESTA página (menú asignado → principal
+        // de la ubicación → menú automático).
+        $menu = $this->renderer->menuForPage($page);
 
         // Renderizar la vista completa
         $this->renderLayout($page, $menu, $content);

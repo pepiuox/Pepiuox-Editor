@@ -256,7 +256,8 @@ $router->post('/admin/templates/{id}/duplicate', [App\Controllers\TemplatesContr
 $router->get('/admin/menus', [App\Controllers\MenuController::class, 'index'], $auth);
 $router->get('/admin/menus/create', [App\Controllers\MenuController::class, 'create'], $auth);
 $router->post('/admin/menus', [App\Controllers\MenuController::class, 'store'], $auth);
-$router->post('/admin/menus/reorder', [App\Controllers\MenuController::class, 'reorder'], $auth);
+$router->post('/admin/menus/sync', [App\Controllers\MenuController::class, 'sync'], $auth);
+$router->post('/admin/menus/repair', [App\Controllers\MenuController::class, 'repair'], $auth);
 $router->post('/admin/menus/regenerate', [App\Controllers\MenuController::class, 'regenerateCache'], $auth);
 
 // ✅ Rutas API/JSON (literales, antes de {id})
@@ -270,6 +271,13 @@ $router->post('/admin/menus/{id}', [App\Controllers\MenuController::class, 'upda
 $router->post('/admin/menus/{id}/delete', [App\Controllers\MenuController::class, 'delete'], $auth);
 $router->post('/admin/menus/{id}/duplicate', [App\Controllers\MenuController::class, 'duplicate'], $auth);
 $router->post('/admin/menus/{id}/toggle', [App\Controllers\MenuController::class, 'toggleStatus'], $auth);
+$router->post('/admin/menus/{id}/default', [App\Controllers\MenuController::class, 'setDefault'], $auth);
+
+// Ítems de un menú
+$router->post('/admin/menus/{id}/items', [App\Controllers\MenuController::class, 'addItem'], $auth);
+$router->post('/admin/menus/{id}/items/reorder', [App\Controllers\MenuController::class, 'reorderItems'], $auth);
+$router->post('/admin/menus/{id}/items/{item}/delete', [App\Controllers\MenuController::class, 'deleteItem'], $auth);
+$router->post('/admin/menus/{id}/items/{item}/move', [App\Controllers\MenuController::class, 'moveItem'], $auth);
 
 // ── 3.11. SEO ────────────────────────────────────────────────────
 $router->get('/admin/seo', [App\Controllers\SeoController::class, 'index'], $auth);

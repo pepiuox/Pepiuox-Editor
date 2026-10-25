@@ -1,386 +1,541 @@
 <?php
+declare(strict_types=1);
+
 namespace App\Controllers;
 
-use App\Core\{Request, Response, View, Session, CSRF, Auth};
+use App\Core\{Request, Response, View, Session, CSRF, Auth, Database};
 use App\Services\{MenuService, CacheService, AuditService, ActivityLoggerService};
 use Throwable;
 
 /**
- * Controlador de gestión de menús
+ * Controlador del sistema de menús.
+ *
+ * Dos niveles:
+ *  - Menús (catálogo `menus`): listar, crear, editar, activar, marcar como
+ *    automático o principal, eliminar.
+ *  - Ítems (`page_menu`): añadir, mover, eliminar y reordenar dentro de un menú.
+ *
+ * Además, «Sincronizar» reconstruye el menú automático a partir de las páginas
+ * publicadas.
+ *
+ * @package App\Controllers
  */
 class MenuController
 {
-    private MenuService $menuService;
-    private CacheService $cacheService;
-    private AuditService $auditService;
-    private ActivityLoggerService $logger;
-
     public function __construct(
-        MenuService $menuService,
-        CacheService $cacheService,
-        AuditService $auditService,
-        ActivityLoggerService $logger
+        private readonly MenuService $menuService,
+        private readonly CacheService $cacheService,
+        private readonly AuditService $auditService,
+        private readonly ActivityLoggerService $logger
     ) {
-        $this->menuService  = $menuService;
-        $this->cacheService = $cacheService;
-        $this->auditService = $auditService;
-        $this->logger       = $logger;
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    //  MENÚS
+    // ═══════════════════════════════════════════════════════════════
+
+    /** GET /admin/menus */
     public function index(Request $request): void
     {
         if (!Auth::can('menus.view')) {
-            Response::abort(403, 'No tienes permisos para ver el menú');
+            Response::abort(403, 'No tienes permisos para ver los menús');
         }
 
-        $userId   = Auth::id();
-        $group    = $request->get('group', 'main');
-        $items    = $this->menuService->getFlatMenu($group);
-        $menuTree = $this->menuService->getAdminMenu($userId);
-        $groups   = $this->menuService->getMenuGroups();
-        $pages    = $this->menuService->getAllPagesForSelect($userId);
-        $stats    = $this->menuService->getStats($userId);
+        $menus = $this->menuService->listMenus();
+        $stats = $this->menuService->getStats();
 
-        // ✅ Vista correcta: menus.index → views/menus/index.php
+        $tree = [];
+        foreach ($menus as $menu) {
+            $tree[(int) $menu['id']] = $this->menuService->getTree((int) $menu['id'], false);
+        }
+
         Response::render(View::render('menus.index', [
-            'items'    => $items,
-            'menu'     => $menuTree,
-            'menuTree' => $menuTree,
-            'group'    => $group,
-            'groups'   => $groups,
-            'pages'    => $pages,
-            'stats'    => $stats,
-            'userId'   => $userId,
+            'menus' => $menus,
+            'menusTree' => $tree,
+            'stats' => $stats,
+            'locations' => MenuService::LOCATIONS,
         ]));
     }
 
+    /** GET /admin/menus/create */
     public function create(Request $request): void
     {
+        if (!Auth::can('menus.create')) {
+            Response::abort(403, 'No tienes permisos para crear menús');
+        }
+
+        Response::render(View::render('menus.edit', [
+            'menu' => null,
+            'items' => [],
+            'pages' => $this->menuService->getAllPagesForSelect(),
+            'locations' => MenuService::LOCATIONS,
+        ]));
+    }
+
+    /** POST /admin/menus */
+    public function store(Request $request): void
+    {
+        CSRF::guard();
+        if (!Auth::can('menus.create')) {
+            Response::abort(403, 'No tienes permisos para crear menús');
+        }
+
+        $result = $this->menuService->createMenu([
+            'name' => (string) $request->post('name', ''),
+            'slug' => (string) $request->post('slug', ''),
+            'location' => (string) $request->post('location', 'header'),
+            'is_active' => (int) $request->post('is_active', 1),
+        ]);
+
+        if (!$result['success']) {
+            $this->fail($request, (string) $result['error'], 'admin/menus/create');
+            return;
+        }
+
+        $this->touch();
+
+        if ($request->isAjax()) {
+            Response::json($result);
+            return;
+        }
+
+        Session::flash('flash.success', (string) $result['message']);
+        Response::redirect(url('admin/menus/' . (int) $result['id'] . '/edit'));
+    }
+
+    /** GET /admin/menus/{id}/edit */
+    public function edit(Request $request, array $params): void
+    {
+        if (!Auth::can('menus.edit')) {
+            Response::abort(403, 'No tienes permisos para editar menús');
+        }
+
+        $id = (int) $params['id'];
+        $menu = $this->menuService->findMenu($id);
+
+        if (!$menu) {
+            Response::abort(404, 'Menú no encontrado');
+        }
+
+        Response::render(View::render('menus.edit', [
+            'menu' => $menu,
+            'items' => $this->menuService->getTree($id, false),
+            'pages' => $this->menuService->getAllPagesForSelect(),
+            'locations' => MenuService::LOCATIONS,
+        ]));
+    }
+
+    /** POST /admin/menus/{id} */
+    public function update(Request $request, array $params): void
+    {
+        CSRF::guard();
+        if (!Auth::can('menus.edit')) {
+            Response::abort(403, 'No tienes permisos para editar menús');
+        }
+
+        $id = (int) $params['id'];
+
+        $data = [
+            'name' => (string) $request->post('name', ''),
+            'slug' => (string) $request->post('slug', ''),
+            'location' => (string) $request->post('location', 'header'),
+            'is_primary' => (int) $request->post('is_primary', 0),
+        ];
+        // El menú automático no se puede desactivar: su estado lo manda el sistema.
+        $data['is_active'] = $request->post('is_active') !== null
+            ? (int) $request->post('is_active')
+            : 1;
+
+        $result = $this->menuService->updateMenu($id, $data);
+
+        if (!$result['success']) {
+            $this->fail($request, (string) $result['error'], "admin/menus/{$id}/edit");
+            return;
+        }
+
+        $this->touch();
+
+        if ($request->isAjax()) {
+            Response::json($result);
+            return;
+        }
+
+        Session::flash('flash.success', (string) $result['message']);
+        Response::redirect(url("admin/menus/{$id}/edit"));
+    }
+
+    /** POST /admin/menus/{id}/toggle */
+    public function toggleStatus(Request $request, array $params): void
+    {
+        CSRF::guard();
+        if (!Auth::can('menus.edit')) {
+            Response::abort(403);
+        }
+
+        $result = $this->menuService->toggleMenu((int) $params['id']);
+        if ($result['success']) {
+            $this->touch();
+        }
+
+        $this->respond($request, $result, 'admin/menus');
+    }
+
+    /** POST /admin/menus/{id}/delete */
+    public function delete(Request $request, array $params): void
+    {
+        CSRF::guard();
+        if (!Auth::can('menus.delete')) {
+            Response::abort(403, 'No tienes permisos para eliminar menús');
+        }
+
+        $result = $this->menuService->deleteMenu((int) $params['id']);
+        if ($result['success']) {
+            $this->touch();
+        }
+
+        $this->respond($request, $result, 'admin/menus');
+    }
+
+    /** POST /admin/menus/{id}/default */
+    public function setDefault(Request $request, array $params): void
+    {
+        CSRF::guard();
+        if (!Auth::can('menus.edit')) {
+            Response::abort(403);
+        }
+
+        $result = $this->menuService->setDefault((int) $params['id']);
+        if ($result['success']) {
+            $this->touch();
+        }
+
+        $this->respond($request, $result, 'admin/menus');
+    }
+
+    /** POST /admin/menus/{id}/duplicate */
+    public function duplicate(Request $request, array $params): void
+    {
+        CSRF::guard();
         if (!Auth::can('menus.create')) {
             Response::abort(403);
         }
 
-        $userId = Auth::id();
-        $group  = $request->get('group', 'main');
-
-        // ✅ Usa el servicio, NO Database::fetchAll() estático
-        $pages     = $this->menuService->getAllPagesForSelect($userId);
-        $menuItems = $this->menuService->getFlatMenu($group);
-        $groups    = $this->menuService->getMenuGroups();
-
-        Response::render(View::render('menus.create', [
-            'pages' => $pages, 'menuItems' => $menuItems,
-            'groups' => $groups, 'group' => $group,
-        ]));
-    }
-
-    public function store(Request $request): void
-    {
-        CSRF::guard();
-        if (!Auth::can('menus.create')) Response::abort(403);
-
-        $title     = $request->post('title');
-        $menuGroup = $request->post('menu_group', 'main');
-
-        if (empty($title)) {
-            $this->handleError($request, 'El título es obligatorio', 'admin/menus/create?group=' . $menuGroup);
+        $source = $this->menuService->findMenu((int) $params['id']);
+        if (!$source) {
+            $this->respond($request, ['success' => false, 'error' => 'Menú no encontrado'], 'admin/menus');
             return;
         }
 
-        try {
-            $data = [
-                'title'        => $title,
-                'slug'         => $request->post('slug') ?: null,
-                'url'          => $request->post('url'),
-                'icon'         => $request->post('icon'),
-                'page_id'      => $request->post('page_id') ?: null,
-                'parent_id'    => $request->post('parent_id') ?: null,
-                'menu_group'   => $menuGroup,
-                'is_published' => (int)$request->post('is_published', 1),
-                'status'       => $request->post('status', 'published'),
-                'target'       => $request->post('target', '_self'),
-                'order'        => $request->post('order') ?: $this->menuService->getNextOrder($menuGroup),
-            ];
+        $created = $this->menuService->createMenu([
+            'name' => $source['name'] . ' (copia)',
+            'slug' => $source['slug'] . '-copia',
+            'location' => $source['location'],
+            'is_active' => (int) $source['is_active'],
+        ]);
 
-            $result = $this->menuService->createPage(Auth::id(), $data);
-
-            if ($result['success']) {
-                $this->invalidateCacheAndLog('menu_item_created', "Item creado: {$title}");
-                $this->handleSuccess($request, $result['message'], 'admin/menus?group=' . $menuGroup, $result['id'] ?? null);
-            } else {
-                $this->handleError($request, $result['error'], 'admin/menus/create?group=' . $menuGroup);
-            }
-        } catch (Throwable $e) {
-            $this->handleException($request, $e, 'crear el item', 'admin/menus/create?group=' . $menuGroup);
+        if (!$created['success']) {
+            $this->respond($request, $created, 'admin/menus');
+            return;
         }
+
+        // Copiar los ítems conservando la jerarquía: primero los padres.
+        $newId = (int) $created['id'];
+        $items = $this->menuService->getItems((int) $source['id'], false);
+        $map = [];
+        foreach ($items as $item) {
+            $parentNew = $item['parent_id'] !== null ? ($map[(int) $item['parent_id']] ?? null) : null;
+            $result = $this->menuService->addItem($newId, [
+                'page_id' => $item['page_id'],
+                'title' => $item['title'],
+                'url' => (string) ($item['url'] ?? ''),
+                'icon' => (string) ($item['icon'] ?? ''),
+                'parent_id' => $parentNew,
+                'order' => (int) $item['order'],
+                'status' => (string) $item['status'],
+                'is_published' => (int) $item['is_published'],
+                'target' => (string) $item['target'],
+            ]);
+            if ($result['success']) {
+                $map[(int) $item['id']] = (int) $result['id'];
+            }
+        }
+
+        $this->touch();
+        $this->respond($request, ['success' => true, 'message' => 'Menú duplicado.'], 'admin/menus');
     }
 
-    public function edit(Request $request, array $params): void
-    {
-        if (!Auth::can('menus.edit')) Response::abort(403);
+    // ═══════════════════════════════════════════════════════════════
+    //  ÍTEMS
+    // ═══════════════════════════════════════════════════════════════
 
-        $id     = (int)$params['id'];
-        $userId = Auth::id();
-        $page   = $this->menuService->getPageById($id);
-
-        if (!$page) Response::abort(404, 'Página no encontrada');
-        if ((int)$page['user_id'] !== $userId) Response::abort(403);
-
-        $pages     = $this->menuService->getAllPagesForSelect($userId);
-        $menuItems = $this->menuService->getFlatMenu($page['menu_group'] ?? 'main');
-        // ✅ Usa el servicio
-        $groups    = $this->menuService->getMenuGroups();
-
-        Response::render(View::render('menus.edit', [
-            'page' => $page, 'pages' => $pages, 'menuItems' => $menuItems,
-            'groups' => $groups, 'group' => $page['menu_group'] ?? 'main',
-        ]));
-    }
-
-    public function update(Request $request, array $params): void
+    /** POST /admin/menus/{id}/items */
+    public function addItem(Request $request, array $params): void
     {
         CSRF::guard();
-        if (!Auth::can('menus.edit')) Response::abort(403);
-
-        $id        = (int)$params['id'];
-        $menuGroup = $request->post('menu_group', 'main');
-
-        try {
-            $data = [
-                'title' => $request->post('title'), 'slug' => $request->post('slug'),
-                'url' => $request->post('url'), 'icon' => $request->post('icon'),
-                'page_id' => $request->post('page_id') ?: null,
-                'parent_id' => $request->post('parent_id') ?: null,
-                'menu_group' => $menuGroup,
-                'is_published' => (int)$request->post('is_published', 1),
-                'status' => $request->post('status', 'published'),
-                'target' => $request->post('target', '_self'),
-                'order' => $request->post('order'),
-            ];
-
-            $result = $this->menuService->updatePage($id, Auth::id(), $data);
-
-            if ($result['success']) {
-                $this->invalidateCacheAndLog('menu_item_updated', "Item actualizado ID: {$id}");
-                $this->handleSuccess($request, $result['message'], 'admin/menus?group=' . $menuGroup);
-            } else {
-                $this->handleError($request, $result['error'], "admin/menus/{$id}/edit");
-            }
-        } catch (Throwable $e) {
-            $this->handleException($request, $e, 'actualizar', "admin/menus/{$id}/edit");
+        if (!Auth::can('menus.edit')) {
+            Response::abort(403, 'No tienes permisos para editar menús');
         }
+
+        $menuId = (int) $params['id'];
+
+        $result = $this->menuService->addItem($menuId, [
+            'page_id' => $request->post('page_id'),
+            'title' => (string) $request->post('title', ''),
+            'url' => (string) $request->post('url', ''),
+            'icon' => (string) $request->post('icon', ''),
+            'parent_id' => $request->post('parent_id'),
+            'order' => $request->post('order'),
+            'status' => (string) $request->post('status', 'published'),
+            'target' => (string) $request->post('target', '_self'),
+        ]);
+
+        if ($result['success']) {
+            $this->touch();
+        }
+
+        $this->respond($request, $result, "admin/menus/{$menuId}/edit");
     }
 
-    public function delete(Request $request, array $params): void
+    /** POST /admin/menus/{id}/items/{item}/delete */
+    public function deleteItem(Request $request, array $params): void
     {
         CSRF::guard();
-        if (!Auth::can('menus.delete')) Response::abort(403);
-
-        $id = (int)$params['id'];
-
-        try {
-            $page   = $this->menuService->getPageById($id);
-            $result = $this->menuService->deletePage($id, Auth::id());
-
-            if ($result['success']) {
-                $this->invalidateCacheAndLog('menu_item_deleted', "Item eliminado: " . ($page['title'] ?? $id));
-            }
-
-            if ($request->isAjax()) {
-                Response::json($result);
-            } else {
-                Session::flash($result['success'] ? 'flash.success' : 'flash.error', $result['message'] ?? $result['error']);
-                Response::redirect(url('admin/menus'));
-            }
-        } catch (Throwable $e) {
-            $this->handleException($request, $e, 'eliminar', null, false);
-            if (!$request->isAjax()) Response::redirect(url('admin/menus'));
+        if (!Auth::can('menus.edit')) {
+            Response::abort(403);
         }
+
+        $menuId = (int) $params['id'];
+        $result = $this->menuService->deleteItem($menuId, (int) $params['item']);
+
+        if ($result['success']) {
+            $this->touch();
+        }
+
+        $this->respond($request, $result, "admin/menus/{$menuId}/edit");
     }
 
-    public function reorder(Request $request): void
+    /** POST /admin/menus/{id}/items/{item}/move */
+    public function moveItem(Request $request, array $params): void
     {
         CSRF::guard();
-        if (!Auth::can('menus.edit')) Response::abort(403);
+        if (!Auth::can('menus.edit')) {
+            Response::abort(403);
+        }
 
-        $items = $request->post('items');
-        if (is_string($items)) $items = json_decode($items, true);
+        $menuId = (int) $params['id'];
+        $direction = (string) $request->post('direction', 'up');
+        $result = $this->menuService->moveItem($menuId, (int) $params['item'], $direction);
 
-        if (!$items || !is_array($items)) {
+        if ($result['success']) {
+            $this->touch();
+        }
+
+        $this->respond($request, $result, "admin/menus/{$menuId}/edit");
+    }
+
+    /** POST /admin/menus/{id}/items/reorder  (AJAX) */
+    public function reorderItems(Request $request, array $params): void
+    {
+        CSRF::guard();
+        if (!Auth::can('menus.edit')) {
+            Response::json(['success' => false, 'error' => 'Sin permisos'], 403);
+            return;
+        }
+
+        $menuId = (int) $params['id'];
+        $rows = $request->post('items');
+        if (is_string($rows)) {
+            $rows = json_decode($rows, true);
+        }
+        if (!is_array($rows) || $rows === []) {
             Response::json(['success' => false, 'error' => 'Datos inválidos'], 400);
             return;
         }
 
-        try {
-            $result = $this->menuService->updateOrder($items, Auth::id());
-            if ($result['success']) {
-                $this->invalidateCacheAndLog('menu_reordered', 'Menú reordenado');
-            }
-            Response::json($result);
-        } catch (Throwable $e) {
-            error_log('[MenuController] Error al reordenar: ' . $e->getMessage());
-            Response::json(['success' => false, 'error' => 'Error al reordenar'], 500);
+        $result = $this->menuService->reorderItems($menuId, $rows);
+        if ($result['success']) {
+            $this->touch();
         }
+
+        Response::json($result);
     }
 
-    public function toggleStatus(Request $request, array $params): void
+    // ═══════════════════════════════════════════════════════════════
+    //  SINCRONIZACIÓN Y UTILIDADES
+    // ═══════════════════════════════════════════════════════════════
+
+    /** POST /admin/menus/sync */
+    public function sync(Request $request): void
     {
         CSRF::guard();
-        if (!Auth::can('menus.edit')) Response::abort(403);
+        if (!Auth::can('menus.edit')) {
+            Response::abort(403);
+        }
 
-        $id   = (int)$params['id'];
-        $page = $this->menuService->getPageById($id);
+        $result = $this->menuService->syncDefaultMenu();
 
-        if (!$page) {
-            Response::json(['success' => false, 'error' => 'Página no encontrada']);
+        if ($result['success']) {
+            $this->touch();
+            Session::flash(
+                'flash.success',
+                sprintf(
+                    'Menú automático sincronizado: %d añadido(s), %d actualizado(s), %d retirado(s).',
+                    (int) $result['added'],
+                    (int) $result['updated'],
+                    (int) $result['removed']
+                )
+            );
+        } else {
+            Session::flash('flash.error', 'No se pudo sincronizar: ' . (string) $result['error']);
+        }
+
+        if ($request->isAjax()) {
+            Response::json($result);
             return;
         }
 
-        try {
-            $newStatus = $page['is_published'] ? 0 : 1;
-            $result = $this->menuService->updatePage($id, Auth::id(), ['is_published' => $newStatus]);
-            if ($result['success']) {
-                $this->invalidateCacheAndLog('menu_toggle_status', "Estado ID {$id} cambiado");
-            }
-            Response::json($result);
-        } catch (Throwable $e) {
-            Response::json(['success' => false, 'error' => 'Error al cambiar estado']);
-        }
+        Response::redirect(url('admin/menus'));
     }
 
+    /** POST /admin/menus/repair */
+    public function repair(Request $request): void
+    {
+        CSRF::guard();
+        if (!Auth::can('menus.edit')) {
+            Response::abort(403);
+        }
+
+        $result = $this->menuService->repair();
+        $this->touch();
+
+        Session::flash(
+            'flash.success',
+            $result['changes'] === []
+                ? 'No había nada que reparar.'
+                : 'Reparado: ' . implode(' ', $result['changes'])
+        );
+
+        if ($request->isAjax()) {
+            Response::json($result);
+            return;
+        }
+
+        Response::redirect(url('admin/menus'));
+    }
+
+    /** POST /admin/menus/regenerate  (compatibilidad: caché + sync) */
     public function regenerateCache(Request $request): void
     {
         CSRF::guard();
         if (!Auth::can('menus.edit')) {
-            if ($request->isAjax()) {
-                Response::json(['success' => false, 'error' => 'Sin permisos'], 403);
-                return;
-            }
             Response::abort(403);
         }
 
-        try {
-            // ✅ Usa instancias inyectadas
-            $this->cacheService->invalidateAllPages();
-            $this->auditService->log(Auth::id(), 'menu_cache_regenerated', 'Caché regenerada', 'menus');
-            $this->logger->logCurrentUser('menu_cache_regenerated', 'Regeneró la caché del menú');
+        $this->cacheService->invalidateAllPages();
+        $this->auditService->log(Auth::id(), 'menu_cache_regenerated', 'Caché de páginas invalidada desde menús', 'menus');
+        Session::flash('flash.success', 'Caché invalidada.');
 
-            if ($request->isAjax()) {
-                Response::json(['success' => true, 'message' => 'Caché regenerada']);
-            } else {
-                Session::flash('flash.success', 'Caché regenerada');
-                Response::redirect(url('admin/menus'));
-            }
-        } catch (Throwable $e) {
-            error_log('[MenuController] Error regenerar: ' . $e->getMessage());
-            if ($request->isAjax()) {
-                Response::json(['success' => false, 'error' => 'Error'], 500);
-            } else {
-                Session::flash('flash.error', 'Error al regenerar');
-                Response::redirect(url('admin/menus'));
-            }
+        if ($request->isAjax()) {
+            Response::json(['success' => true, 'message' => 'Caché invalidada']);
+            return;
         }
+
+        Response::redirect(url('admin/menus'));
     }
 
+    /** GET /admin/menus/json?menu={id}|?slug={slug} */
     public function getMenuJson(Request $request): void
     {
-        $group = $request->get('group', 'main');
-        try {
-            $menu = $this->menuService->getNavigationMenu($group);
-            Response::json(['success' => true, 'menu' => $menu, 'group' => $group]);
-        } catch (Throwable $e) {
-            Response::json(['success' => false, 'error' => 'Error']);
+        $menuId = (int) $request->get('menu', 0);
+        $slug = (string) $request->get('slug', '');
+
+        $menu = $menuId > 0
+            ? $this->menuService->findMenu($menuId)
+            : ($slug !== '' ? $this->menuService->findMenuBySlug($slug) : null);
+
+        if (!$menu) {
+            Response::json(['success' => false, 'error' => 'Menú no encontrado'], 404);
+            return;
         }
+
+        Response::json([
+            'success' => true,
+            'menu' => [
+                'id' => (int) $menu['id'],
+                'name' => $menu['name'],
+                'slug' => $menu['slug'],
+                'location' => $menu['location'],
+                'is_active' => (int) $menu['is_active'],
+                'is_default' => (int) $menu['is_default'],
+                'is_primary' => (int) $menu['is_primary'],
+            ],
+            'items' => $this->menuService->getTree((int) $menu['id'], false),
+        ]);
     }
 
+    /** GET /admin/menus/{id}/breadcrumb (migas de una página) */
     public function getBreadcrumb(Request $request, array $params): void
     {
-        $id = (int)$params['id'];
-        try {
-            $breadcrumb = $this->menuService->getBreadcrumb($id);
-            Response::json(['success' => true, 'breadcrumb' => $breadcrumb]);
-        } catch (Throwable $e) {
-            Response::json(['success' => false, 'error' => 'Error']);
-        }
+        Response::json([
+            'success' => true,
+            'breadcrumb' => $this->menuService->getBreadcrumb((int) $params['id']),
+        ]);
     }
 
+    /** GET /admin/menus/stats */
     public function stats(Request $request): void
     {
-        if (!Auth::can('menus.view')) Response::abort(403);
-        try {
-            $stats = $this->menuService->getStats(Auth::id());
-            Response::json(['success' => true, 'stats' => $stats]);
-        } catch (Throwable $e) {
-            Response::json(['success' => false, 'error' => 'Error']);
+        if (!Auth::can('menus.view')) {
+            Response::abort(403);
         }
+
+        Response::json(['success' => true, 'stats' => $this->menuService->getStats()]);
     }
 
-    public function duplicate(Request $request, array $params): void
-    {
-        CSRF::guard();
-        if (!Auth::can('menus.create')) Response::abort(403);
-
-        $id = (int)$params['id'];
-        try {
-            $result = $this->menuService->duplicatePage($id, Auth::id());
-            if ($result['success']) {
-                $this->invalidateCacheAndLog('menu_item_duplicated', "Item duplicado ID: {$id}");
-                $this->handleSuccess($request, $result['message'], 'admin/menus', $result['id'] ?? null);
-            } else {
-                $this->handleError($request, $result['error'], 'admin/menus');
-            }
-        } catch (Throwable $e) {
-            $this->handleException($request, $e, 'duplicar', 'admin/menus');
-        }
-    }
-
-    // ──────────────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════
     //  HELPERS
-    // ──────────────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════
 
-    private function invalidateCacheAndLog(string $action, string $description): void
+    /**
+     * Invalida la caché de páginas y registra el cambio.
+     *
+     * El menú se pinta en el layout público en cada petición, pero la caché de
+     * páginas guarda el HTML completo: si no se invalida, un cambio de menú no
+     * se vería hasta que caducara.
+     */
+    private function touch(): void
     {
         try {
             $this->cacheService->invalidateAllPages();
-            $this->auditService->log(Auth::id(), $action, $description, 'menus');
-            $this->logger->logCurrentUser($action, $description);
+            $this->auditService->log(Auth::id(), 'menu_changed', 'Cambio en menús', 'menus');
+            $this->logger->logCurrentUser('menu_changed', 'Cambio en menús');
         } catch (Throwable $e) {
-            error_log('[MenuController] Error invalidateCacheAndLog: ' . $e->getMessage());
+            error_log('[MenuController] Error invalidando caché: ' . $e->getMessage());
         }
     }
 
-    private function handleSuccess(Request $request, string $message, string $redirect, ?int $id = null): void
+    /**
+     * @param array{success:bool,message?:string,error?:string} $result
+     */
+    private function respond(Request $request, array $result, string $redirect): void
     {
         if ($request->isAjax()) {
-            $response = ['success' => true, 'message' => $message];
-            if ($id !== null) $response['id'] = $id;
-            Response::json($response);
-        } else {
-            Session::flash('flash.success', $message);
-            Response::redirect(url($redirect));
+            Response::json($result);
+            return;
         }
+
+        Session::flash($result['success'] ? 'flash.success' : 'flash.error', (string) ($result['message'] ?? $result['error'] ?? ''));
+        Response::redirect(url($redirect));
     }
 
-    private function handleError(Request $request, string $error, string $redirect): void
+    private function fail(Request $request, string $error, string $redirect): void
     {
         if ($request->isAjax()) {
-            Response::json(['success' => false, 'error' => $error]);
-        } else {
-            Session::flash('flash.error', $error);
-            Response::redirect(url($redirect));
+            Response::json(['success' => false, 'error' => $error], 422);
+            return;
         }
-    }
 
-    private function handleException(Request $request, Throwable $e, string $action, ?string $redirect, bool $redirectOnError = true): void
-    {
-        error_log("[MenuController] Error al {$action}: " . $e->getMessage());
-        if ($request->isAjax()) {
-            Response::json(['success' => false, 'error' => "Error al {$action}"]);
-        } elseif ($redirectOnError && $redirect) {
-            Session::flash('flash.error', "Error al {$action}");
-            Response::redirect(url($redirect));
-        } else {
-            Session::flash('flash.error', "Error al {$action}");
-        }
+        Session::flash('flash.error', $error);
+        Response::redirect(url($redirect));
     }
 }

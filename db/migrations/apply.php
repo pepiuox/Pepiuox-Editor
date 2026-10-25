@@ -109,7 +109,9 @@ foreach ($statements as $index => $statement) {
         echo '  [' . ($index + 1) . "] APLICADA   " . mb_substr($single, 0, 90) . "\n";
     } catch (PDOException $e) {
         $code = (int) ($e->errorInfo[1] ?? 0);
-        if ($code === 1060 || $code === 1061) {
+        // 1060/1061/1022: columna, índice o clave duplicados.
+        // 1091: DROP de algo que ya no está. 1826: FK con el mismo nombre.
+        if (in_array($code, [1060, 1061, 1022, 1091, 1826], true)) {
             $skipped++;
             echo '  [' . ($index + 1) . "] OMITIDA    ya existía: " . mb_substr($single, 0, 90) . "\n";
             continue;

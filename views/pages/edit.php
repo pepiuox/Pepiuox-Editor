@@ -108,6 +108,25 @@ $pages = $pages ?? [];
                         
                         <div class="form-group">
                             <label class="form-label">
+                                <i class="bi bi-menu-button-wide"></i> Menú de navegación
+                            </label>
+                            <select name="menu_id" class="form-select">
+                                <option value="">— Usar el del sitio (automático o principal) —</option>
+                                <?php foreach (($menus ?? []) as $m): ?>
+                                    <option value="<?= (int) $m['id'] ?>"
+                                        <?= ($page['menu_id'] ?? null) == $m['id'] ? 'selected' : '' ?>>
+                                        <?= e($m['name']) ?>
+                                        (<?= e((string) $m['location']) ?><?= (int) $m['is_default'] === 1 ? ' · automático' : '' ?>)
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <small class="text-muted">
+                                Si eliges un menú, esta página lo mostrará en lugar del menú del sitio.
+                            </small>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
                                 <i class="bi bi-flag"></i> Estado
                             </label>
                             <select name="status" class="form-select">

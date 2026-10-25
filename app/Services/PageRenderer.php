@@ -220,45 +220,86 @@ class PageRenderer
     }
 
     /**
-     * Obtiene el menú completo con caché
+     * Menú de navegación que corresponde a una página.
+     *
+     * El árbol lo resuelve MenuService (menú de la página → menú principal de la
+     * ubicación → menú automático) y aquí solo se sanea y se cachea en memoria
+     * para esta petición.
+     *
+     * @param array<string, mixed>|null $page
+     * @return array<int, array<string, mixed>>
      */
-    public function getMenu(?int $parentId = null): array
+    public function menuForPage(?array $page, string $location = 'header'): array
     {
-        $cacheKey = 'menu_' . ($parentId ?? 'root');
-        
+        $cacheKey = 'menu_' . $location . '_' . (int) ($page['menu_id'] ?? 0) . '_' . (int) ($page['id'] ?? 0);
+
         if (isset(self::$menuCache[$cacheKey])) {
             return self::$menuCache[$cacheKey];
         }
 
+        $service = new MenuService(new Database(), new ActivityLoggerService(new Database()));
+        $tree = $service->navigationFor($page, $location);
+
+        $menu = $this->sanitizeMenuItems($tree);
+        self::$menuCache[$cacheKey] = $menu;
+
+        return $menu;
+    }
+
+    /**
+     * Menú por defecto (sin página concreta): útil para 404 y vistas de respaldo.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function getMenu(?int $parentId = null): array
+    {
+        $menu = $this->menuForPage(null, 'header');
+
         if ($parentId === null) {
-            $items = Database::fetchAll(
-                "SELECT * FROM page_menu 
-                 WHERE parent_id IS NULL AND status = 'published' AND is_published = 1
-                 ORDER BY `order` ASC, sort ASC"
-            );
-        } else {
-            $items = Database::fetchAll(
-                "SELECT * FROM page_menu 
-                 WHERE parent_id = ? AND status = 'published' AND is_published = 1
-                 ORDER BY `order` ASC, sort ASC",
-                [$parentId]
-            );
+            return $menu;
         }
 
-        foreach ($items as &$item) {
-            // Procesar datos del menú
-            $item['title'] = htmlspecialchars($item['title'] ?? '', ENT_QUOTES, 'UTF-8');
-            $item['icon'] = htmlspecialchars($item['icon'] ?? '', ENT_QUOTES, 'UTF-8');
-            $item['url'] = htmlspecialchars($item['url'] ?? '', ENT_QUOTES, 'UTF-8');
-            $item['slug'] = $this->sanitizeSlug($item['slug'] ?? '');
-            $item['target'] = htmlspecialchars($item['target'] ?? '', ENT_QUOTES, 'UTF-8');
-            
-            // Obtener hijos
-            $item['children'] = $this->getMenu((int)$item['id']);
-        }
+        // Compatibilidad: si alguien pide una rama concreta del menú resuelto.
+        $find = static function (array $items, int $id) use (&$find): array {
+            foreach ($items as $item) {
+                if ((int) $item['id'] === $id) {
+                    return $item['children'] ?? [];
+                }
+                if (!empty($item['children'])) {
+                    $found = $find($item['children'], $id);
+                    if ($found !== []) {
+                        return $found;
+                    }
+                }
+            }
+            return [];
+        };
 
-        self::$menuCache[$cacheKey] = $items;
-        return $items;
+        return $find($menu, $parentId);
+    }
+
+    /**
+     * Sanea los ítems del menú para pintarlos (escape + slug normalizado).
+     *
+     * @param array<int, array<string, mixed>> $items
+     * @return array<int, array<string, mixed>>
+     */
+    private function sanitizeMenuItems(array $items): array
+    {
+        $out = [];
+        foreach ($items as $item) {
+            $item['title'] = htmlspecialchars((string) ($item['title'] ?? ''), ENT_QUOTES, 'UTF-8');
+            $item['icon'] = htmlspecialchars((string) ($item['icon'] ?? ''), ENT_QUOTES, 'UTF-8');
+            $item['url'] = htmlspecialchars((string) ($item['url'] ?? ''), ENT_QUOTES, 'UTF-8');
+            $item['slug'] = $this->sanitizeSlug((string) ($item['slug'] ?? ''));
+            $item['target'] = htmlspecialchars((string) ($item['target'] ?? ''), ENT_QUOTES, 'UTF-8');
+
+            $children = $item['children'] ?? [];
+            $item['children'] = is_array($children) ? $this->sanitizeMenuItems($children) : [];
+
+            $out[] = $item;
+        }
+        return $out;
     }
 
     /**
