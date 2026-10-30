@@ -244,7 +244,34 @@ SettingService::set('general', 'site_timezone', $originalTz !== '' ? $originalTz
 SiteSettings::flush();
 date_default_timezone_set(SiteSettings::timezone());
 
-echo "\n== 13. Limpieza (la prueba no debe dejar rastro en el sitio) ==\n";
+echo "\n== 13. Request::uri() no recorta prefijos de texto ==\n";
+// Regresión: con la app servida en /public/index.php, `str_starts_with($uri,
+// '/public')` convertía «/public-theme.css» en «/-theme.css» y la hoja dinámica
+// acababa en el 404 del catch-all. En Apache pasaba siempre; en el servidor
+// embebido no, porque su SCRIPT_NAME es distinto.
+$originalServer = $_SERVER;
+$_SERVER['SCRIPT_NAME'] = '/public/index.php';
+$request = new \App\Core\Request();
+
+$_SERVER['REQUEST_URI'] = '/public-theme.css';
+check('/public-theme.css no se recorta', $request->uri() === '/public-theme.css', $request->uri());
+
+$_SERVER['REQUEST_URI'] = '/public-theme.css?v=abc';
+check('la query no afecta', $request->uri() === '/public-theme.css', $request->uri());
+
+$_SERVER['REQUEST_URI'] = '/site.webmanifest';
+check('/site.webmanifest intacta', $request->uri() === '/site.webmanifest', $request->uri());
+
+$_SERVER['SCRIPT_NAME'] = '/app/index.php';
+$_SERVER['REQUEST_URI'] = '/app/pagina';
+check('un subdirectorio real sí se recorta', $request->uri() === '/pagina', $request->uri());
+
+$_SERVER['REQUEST_URI'] = '/app/page/apple';
+check('sólo se recorta el primer segmento', $request->uri() === '/page/apple', $request->uri());
+
+$_SERVER = $originalServer;
+
+echo "\n== 14. Limpieza (la prueba no debe dejar rastro en el sitio) ==\n";
 $cleanup = PublicThemeService::save(['logo_alt' => '']);
 check('texto alternativo devuelto a vacío', $cleanup['ok'] && PublicThemeService::get('logo_alt') === '', PublicThemeService::get('logo_alt'));
 check('tema final = oscuro', PublicThemeService::get('theme') === 'oscuro', PublicThemeService::get('theme'));

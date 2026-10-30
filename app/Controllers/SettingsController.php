@@ -143,7 +143,7 @@ class SettingsController
     }
 
     /**
-     * `POST /admin/settings/public` — guarda tema, colores, alt y CSS.
+     * `POST /admin/settings/brand` — guarda tema, colores, alt y CSS.
      *
      * Valida **todo** antes de escribir: si un color o el CSS no pasan, no se
      * persiste nada y se devuelven los errores juntos.
@@ -185,7 +185,7 @@ class SettingsController
     }
 
     /**
-     * `POST /admin/settings/public/asset` — sube un logo o un favicon.
+     * `POST /admin/settings/brand/asset` — sube un logo o un favicon.
      *
      * Espera `multipart/form-data` con `slot` y `asset`.
      */
@@ -221,7 +221,7 @@ class SettingsController
     }
 
     /**
-     * `POST /admin/settings/public/asset/delete` — elimina el archivo del hueco.
+     * `POST /admin/settings/brand/asset/delete` — elimina el archivo del hueco.
      */
     public function deleteAsset(Request $req): void
     {
@@ -247,7 +247,7 @@ class SettingsController
     }
 
     /**
-     * `POST /admin/settings/public/reset` — vuelve al preset indicado.
+     * `POST /admin/settings/brand/reset` — vuelve al preset indicado.
      *
      * Reversible sin riesgo: sólo reescribe las 16 claves de color. No borra
      * logotipos, favicon ni CSS personalizado.

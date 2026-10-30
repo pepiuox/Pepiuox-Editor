@@ -8,7 +8,7 @@
  *
  *  - Formulario A → `admin/settings/update`            (grupos del sistema)
  *  - Huecos de logo y favicon → un formulario por hueco
- *  - Formulario B → `admin/settings/public`            (tema, colores, CSS)
+ *  - Formulario B → `admin/settings/brand`            (tema, colores, CSS)
  *
  * El panel no cambia de aspecto: se reutilizan `card`, `nav-tabs`, `form-grid`,
  * `form-control` y `btn` de `maker.css`, y los widgets nuevos usan clases con
@@ -215,7 +215,7 @@ $tabs = [
          ══════════════════════════════════════════════════════════ -->
     <div class="tab-content <?= $activeTab === 'logos' ? 'active' : '' ?>" data-tab="logos" id="tab-logos" role="tabpanel" aria-labelledby="tabbtn-logos">
       <p class="form-text">
-        PNG, JPG, WEBP o SVG · máximo 2 MB · se conservan las proporciones originales.
+        PNG, JPG, WEBP o SVG · máximo <?= e(\App\Services\SettingsAssetService::humanMaxUpload(false)) ?> · se conservan las proporciones originales.
         El logo de escritorio, tablet y móvil se sirve con <code>&lt;picture&gt;</code>, así que el navegador
         elige el adecuado en cada tamaño de pantalla.
       </p>
@@ -242,7 +242,7 @@ $tabs = [
               <?php endif; ?>
             </div>
 
-            <form method="post" action="<?= url('admin/settings/public/asset') ?>"
+            <form method="post" action="<?= url('admin/settings/brand/asset') ?>"
                   enctype="multipart/form-data" class="ppf-asset-form">
               <?= \App\Core\CSRF::field() ?>
               <input type="hidden" name="slot" value="<?= e($slot) ?>">
@@ -255,7 +255,7 @@ $tabs = [
             </form>
 
             <?php if ($currentUrl !== null): ?>
-              <form method="post" action="<?= url('admin/settings/public/asset/delete') ?>"
+              <form method="post" action="<?= url('admin/settings/brand/asset/delete') ?>"
                     class="ppf-asset-delete" data-confirm="¿Eliminar «<?= e($meta['label']) ?>»? El sitio volverá a la marca textual.">
                 <?= \App\Core\CSRF::field() ?>
                 <input type="hidden" name="slot" value="<?= e($slot) ?>">
@@ -274,7 +274,7 @@ $tabs = [
          ══════════════════════════════════════════════════════════ -->
     <div class="tab-content <?= $activeTab === 'favicon' ? 'active' : '' ?>" data-tab="favicon" id="tab-favicon" role="tabpanel" aria-labelledby="tabbtn-favicon">
       <p class="form-text">
-        ICO, PNG o SVG · máximo 512 KB. Solo se emiten en el <code>&lt;head&gt;</code> público las
+        ICO, PNG o SVG · máximo <?= e(\App\Services\SettingsAssetService::humanMaxUpload(true)) ?>. Solo se emiten en el <code>&lt;head&gt;</code> público las
         etiquetas de los archivos que existan, así que no quedan referencias rotas.
         El <code>site.webmanifest</code> se genera con los iconos disponibles.
       </p>
@@ -298,7 +298,7 @@ $tabs = [
               <?php endif; ?>
             </div>
 
-            <form method="post" action="<?= url('admin/settings/public/asset') ?>"
+            <form method="post" action="<?= url('admin/settings/brand/asset') ?>"
                   enctype="multipart/form-data" class="ppf-asset-form">
               <?= \App\Core\CSRF::field() ?>
               <input type="hidden" name="slot" value="<?= e($slot) ?>">
@@ -311,7 +311,7 @@ $tabs = [
             </form>
 
             <?php if ($currentUrl !== null): ?>
-              <form method="post" action="<?= url('admin/settings/public/asset/delete') ?>"
+              <form method="post" action="<?= url('admin/settings/brand/asset/delete') ?>"
                     class="ppf-asset-delete" data-confirm="¿Eliminar <?= e($meta['label']) ?>?">
                 <?= \App\Core\CSRF::field() ?>
                 <input type="hidden" name="slot" value="<?= e($slot) ?>">
@@ -328,7 +328,7 @@ $tabs = [
     <!-- ══════════════════════════════════════════════════════════
          D · IDENTIDAD · TEMAS · COLORES · CSS (un solo formulario)
          ══════════════════════════════════════════════════════════ -->
-    <form method="post" action="<?= url('admin/settings/public') ?>" id="publicSettingsForm">
+    <form method="post" action="<?= url('admin/settings/brand') ?>" id="publicSettingsForm">
       <?= \App\Core\CSRF::field() ?>
       <input type="hidden" name="return_tab" value="identity" data-return-tab>
 
@@ -465,7 +465,7 @@ $tabs = [
     </form>
 
     <!-- Restablecer colores: formulario propio para no mezclarlo con el guardado -->
-    <form method="post" action="<?= url('admin/settings/public/reset') ?>" id="ppfResetForm"
+    <form method="post" action="<?= url('admin/settings/brand/reset') ?>" id="ppfResetForm"
           data-confirm="¿Restablecer los 16 colores al tema seleccionado? No se borran logos, favicon ni CSS.">
       <?= \App\Core\CSRF::field() ?>
       <input type="hidden" name="theme" value="<?= e($currentTheme === 'personalizado' ? 'oscuro' : $currentTheme) ?>" id="ppfResetTheme">

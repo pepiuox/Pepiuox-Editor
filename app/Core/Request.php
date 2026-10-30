@@ -72,9 +72,13 @@ class Request
         // Normalizar slashes
         $uri = str_replace('\\', '/', $uri);
 
-        // Quitar el directorio base del script
-        $base = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'])), '/');
-        if ($base !== '/' && $base !== '' && str_starts_with($uri, $base)) {
+        // Quitar el directorio base del script (cuando la app vive en un
+        // subdirectorio). La comparación es por SEGMENTO de ruta, no por texto:
+        // con un `str_starts_with` a secas, `/public-theme.css` se recortaba a
+        // `/-theme.css` porque «/public» es prefijo de «/public-…», y la ruta
+        // del CSS dinámico acababa cayendo en el 404 del catch-all.
+        $base = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '')), '/');
+        if ($base !== '' && $base !== '/' && ($uri === $base || str_starts_with($uri, $base . '/'))) {
             $uri = substr($uri, strlen($base));
         }
 

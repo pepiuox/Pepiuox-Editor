@@ -54,10 +54,15 @@
     # ═══════════════════════════════════════════════════════════════
     # 5. REDIRECCIÓN PARA ELIMINAR /public/ DE LA URL
     #    Si alguien accede a https://dominio.com/public/foo → redirige a /foo
+    #
+    #    La condición va ANCLADA al inicio de la ruta a propósito. Antes no lo
+    #    estaba (`%{THE_REQUEST} /public/([^\s?]*)`) y mordía cualquier URL con
+    #    un segmento «public» en medio: /admin/settings/public/asset se
+    #    convertía en un 301 a /asset y terminaba en «404 La página solicitada
+    #    no existe». Cualquier ruta futura con ese segmento habría roto igual.
     # ═══════════════════════════════════════════════════════════════
-    RewriteCond %{THE_REQUEST} /public/([^\s?]*) [NC]
-    RewriteRule ^ %1 [L,NE,R=301]
-    # RewriteRule ^ %1 [L,NE,R=302]
+    RewriteCond %{THE_REQUEST} ^[A-Z]+\s/+public/[^\s?]* [NC]
+    RewriteRule ^public/?(.*)$ /$1 [L,NE,R=301]
 
     # ═══════════════════════════════════════════════════════════════
     # 6. REESCRITURA INTERNA HACIA /public/

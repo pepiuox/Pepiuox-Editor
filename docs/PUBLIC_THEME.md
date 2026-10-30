@@ -4,7 +4,7 @@ Módulo que permite al administrador cambiar la identidad visual del **sitio
 público** (logos, favicon, tema, colores y CSS adicional) sin tocar código, y
 sin que el **panel de administración** cambie un píxel.
 
-Estado: **implementado y verificado** (2026-10-26). 92 comprobaciones de servicio
+Estado: **implementado y verificado** (2026-10-26). 97 comprobaciones de servicio
 y 65 de extremo a extremo en verde. Ver [tests/public-theme/README.md](../tests/public-theme/README.md).
 
 ---
@@ -87,9 +87,9 @@ mismos campos y nombres; ahora cada grupo tiene su propio botón de guardado.
 ## 2. Arquitectura
 
 ```
-panel  ──POST /admin/settings/public────────┐
-       ──POST /admin/settings/public/asset──┤
-       ──POST /admin/settings/public/reset──┤
+panel  ──POST /admin/settings/brand────────┐
+       ──POST /admin/settings/brand/asset──┤
+       ──POST /admin/settings/brand/reset──┤
                                             ▼
                                  SettingsController  (permiso + CSRF + flash)
                                             │
@@ -106,6 +106,32 @@ panel  ──POST /admin/settings/public────────┐
         GET /public-theme.css  ←──── views/public/layout.php
         GET /site.webmanifest        (único consumidor)
 ```
+
+### Por qué los endpoints se llaman `brand` y no `public`
+
+Los cuatro endpoints de escritura viven bajo `/admin/settings/brand*` **a
+propósito**. La primera versión usaba `/admin/settings/public*` y en Apache
+fallaba con un 404 al subir cualquier imagen. Dos causas, las dos corregidas en
+su dueño:
+
+1. **`.htaccess`**: la regla que quita `/public/` de la URL no estaba anclada al
+   inicio, así que cualquier ruta con un segmento `public` en medio se
+   convertía en un 301 (`/asset`). Ahora la condición exige que la ruta
+   *empiece* por `/public/`.
+2. **`Request::uri()`**: recortaba el directorio base comparando texto
+   (`str_starts_with($uri, '/public')`), de modo que `/public-theme.css` se
+   convertía en `/-theme.css` y caía en el 404 del catch-all. Ahora compara por
+   segmento (`$base . '/'`).
+
+Aunque las dos están arregladas, el prefijo `brand` evita volver a pisar la
+palabra reservada de despliegue y, de paso, invalida los 301 que el navegador
+pudiera haber cacheado con las URLs antiguas. Hay regresión automática del punto
+2 en `tests/public-theme/service-test.php` (bloque 13).
+
+> Verificado contra el Apache real del proyecto (`localhost:170`, Apache 2.4.68):
+> `/public-theme.css` → 200 `text/css`, los cuatro POST de `brand` → 302 a
+> `/login` sin sesión (antes 301 → `/asset` → 404).
+
 
 | Archivo | Responsabilidad |
 | --- | --- |
@@ -279,10 +305,10 @@ php -l app/Services/PublicThemeService.php   # y el resto de archivos tocados
 # 2. Migración (idempotente: se puede relanzar)
 php db/migrations/apply.php 2026_10_26_public_visual_settings.up.sql
 
-# 3. Prueba de servicio (84 comprobaciones)
+# 3. Prueba de servicio (97 comprobaciones)
 php tests/public-theme/service-test.php
 
-# 4. Prueba HTTP (55 comprobaciones) — ver tests/public-theme/README.md
+# 4. Prueba HTTP (65 comprobaciones) — ver tests/public-theme/README.md
 ```
 
 ---

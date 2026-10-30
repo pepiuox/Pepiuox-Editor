@@ -59,13 +59,46 @@ Fuera:
 - [x] Subida rechazada para archivo con MIME falsificado y para SVG con `<script>` — comprobado: bloques B y C de e2e (el SVG guardado no contiene `<script>` ni `onmouseover`).
 - [x] Favicon eliminado desaparece del `<head>` público — comprobado: bloque D + K de e2e.
 - [x] Permiso: POST sin `settings.manage` responde 403 — comprobado: bloque H de e2e con sesión de rol Manager.
-- [ ] Commit acotado a los archivos de esta funcionalidad — pendiente de ejecutar.
+- [x] Commit acotado a los archivos de esta funcionalidad — comprobado: commits `5e00390`, `04e6e95`, `f84dc22` y el de esta corrección, siempre con `git commit -- <rutas>` para no arrastrar cambios ajenos.
+
+## Incidencia: 404 al subir imágenes (2026-10-30)
+
+Síntoma reportado por el usuario: al subir un logo, «404 La página solicitada no
+existe».
+
+Diagnóstico contra el Apache real del proyecto (`localhost:170`, Apache 2.4.68):
+
+```
+POST /admin/settings/public/asset  →  301 → /asset  →  404
+```
+
+Dos causas independientes, cada una suficiente para romperlo:
+
+1. `.htaccess` raíz: la regla que elimina `/public/` de la URL no estaba anclada
+   al inicio, así que mordía cualquier ruta con un segmento `public` en medio.
+   Corregido con `RewriteCond %{THE_REQUEST} ^[A-Z]+\s/+public/` +
+   `RewriteRule ^public/?(.*)$ /$1`.
+2. `Request::uri()`: recortaba el directorio base del script comparando texto,
+   de modo que `/public-theme.css` se convertía en `/-theme.css` (el servidor
+   embebido de las pruebas no lo reproducía porque su `SCRIPT_NAME` es otro).
+   Corregido comparando por segmento. Afectaba también a la hoja de estilos
+   pública, que en Apache devolvía 404.
+
+Además se renombraron los endpoints de escritura a `/admin/settings/brand*` para
+no usar `public` como segmento y esquivar los 301 que el navegador pudiera tener
+cacheados, y la interfaz anuncia ahora el tope de subida real
+(`min(propio, upload_max_filesize, post_max_size)`; en este entorno PHP limita a
+2 MB).
+
+Verificado en Apache tras el arreglo: `/public-theme.css` → 200 `text/css` con
+las 16 variables; `/site.webmanifest` → 200; los cuatro POST de `brand` → 302 a
+`/login` sin sesión (antes 301 → `/asset`).
 
 ## Resultado de las pruebas
 
 | Suite | Comando | Resultado real |
 | --- | --- | --- |
-| Servicio | `php tests/public-theme/service-test.php` | 92 pasan, 0 fallan |
+| Servicio | `php tests/public-theme/service-test.php` | 97 pasan, 0 fallan |
 | Extremo a extremo | `./tests/public-theme/e2e.ps1` con servidor embebido | 65 pasan, 0 fallan |
 
 Ambas suites son idempotentes y limpian lo que escriben: se ejecutaron dos veces

@@ -15,7 +15,7 @@ manifiesto y los helpers.
 php tests/public-theme/service-test.php
 ```
 
-Salida esperada: `Resultado: 92 pasan, 0 fallan` y código de salida 0.
+Salida esperada: `Resultado: 97 pasan, 0 fallan` y código de salida 0.
 Escribe en la tabla `settings` (grupo `public`) y deja el tema en `oscuro` al
 terminar, que es el valor por defecto.
 
@@ -57,6 +57,12 @@ La prueba **crea y luego borra** sus propios archivos en
 grupo `public` vacías o en su valor por defecto. Si se interrumpe a medias,
 basta con repetirla o vaciar las claves con
 `php tests/public-theme/support.php set public logo_header ""`.
+
+> ⚠️ **Ejecútala en una copia de la base de datos, no sobre la configuración
+> real.** Usa los huecos `logo_header`, `logo_tablet`, `logo_menu`,
+> `logo_multinivel` y `favicon_32`, y al terminar los deja vacíos: si ya tenías
+> imágenes ahí, las pierde. El bloque N también escribe y restaura el nombre del
+> sitio y la meta descripción de SEO.
 
 ## Cobertura de los criterios de aceptación
 

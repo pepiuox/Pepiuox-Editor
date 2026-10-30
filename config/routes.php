@@ -58,7 +58,7 @@ $router->get('/robots.txt', [App\Controllers\SeoController::class, 'robots']);
 // ── 1.1.b. Identidad visual de la web pública ────────────────────
 // Recursos anónimos que pide el navegador de cualquier visitante: la hoja de
 // estilos generada desde la configuración y el manifiesto de iconos. Sólo
-// lectura; la escritura vive bajo /admin/settings/public*.
+// lectura; la escritura vive bajo /admin/settings/brand*.
 $router->get('/public-theme.css', [App\Controllers\PublicThemeController::class, 'css']);
 $router->get('/site.webmanifest', [App\Controllers\PublicThemeController::class, 'manifest']);
 
@@ -357,10 +357,10 @@ $router->post('/admin/settings/update', [App\Controllers\SettingsController::cla
 // ── 3.16.b. Personalización visual de la web pública ─────────────
 // Todas comprueban además `settings.manage` dentro del controlador: el
 // middleware $auth sólo garantiza que hay sesión, no qué puede hacer.
-$router->post('/admin/settings/public', [App\Controllers\SettingsController::class, 'updatePublic'], $auth);
-$router->post('/admin/settings/public/asset', [App\Controllers\SettingsController::class, 'uploadAsset'], $auth);
-$router->post('/admin/settings/public/asset/delete', [App\Controllers\SettingsController::class, 'deleteAsset'], $auth);
-$router->post('/admin/settings/public/reset', [App\Controllers\SettingsController::class, 'resetPublic'], $auth);
+$router->post('/admin/settings/brand', [App\Controllers\SettingsController::class, 'updatePublic'], $auth);
+$router->post('/admin/settings/brand/asset', [App\Controllers\SettingsController::class, 'uploadAsset'], $auth);
+$router->post('/admin/settings/brand/asset/delete', [App\Controllers\SettingsController::class, 'deleteAsset'], $auth);
+$router->post('/admin/settings/brand/reset', [App\Controllers\SettingsController::class, 'resetPublic'], $auth);
 
 // ── 3.17. Backups ────────────────────────────────────────────────
 $router->get('/admin/backups', [App\Controllers\BackupsController::class, 'index'], $auth);

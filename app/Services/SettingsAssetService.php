@@ -46,6 +46,53 @@ final class SettingsAssetService
     private const FAVICON_MAX_BYTES = 524288;
 
     /**
+     * Tope real de subida, en texto, para la interfaz.
+     *
+     * No basta con el tope propio: PHP corta antes si `upload_max_filesize` o
+     * `post_max_size` son menores, y entonces el navegador sube un archivo que
+     * el servidor rechaza sin llegar a nuestra validación. La interfaz anuncia
+     * el menor de los tres para no prometer lo que el entorno no permite.
+     *
+     * @param bool $isFavicon true para favicons, false para logotipos.
+     */
+    public static function humanMaxUpload(bool $isFavicon): string
+    {
+        $limit = $isFavicon ? self::FAVICON_MAX_BYTES : self::LOGO_MAX_BYTES;
+
+        foreach (['upload_max_filesize', 'post_max_size'] as $directive) {
+            $ini = self::iniToBytes((string) ini_get($directive));
+            if ($ini > 0 && $ini < $limit) {
+                $limit = $ini;
+            }
+        }
+
+        return $limit >= 1048576
+            ? round($limit / 1048576, 1) . ' MB'
+            : round($limit / 1024) . ' KB';
+    }
+
+    /**
+     * Convierte un valor de php.ini («2M», «512K», «1G») a bytes.
+     */
+    private static function iniToBytes(string $value): int
+    {
+        $value = trim($value);
+        if ($value === '' || $value === '-1') {
+            return 0; // sin límite
+        }
+
+        $unit = strtolower(substr($value, -1));
+        $number = (int) $value;
+
+        return match ($unit) {
+            'g'     => $number * 1073741824,
+            'm'     => $number * 1048576,
+            'k'     => $number * 1024,
+            default => (int) $value,
+        };
+    }
+
+    /**
      * @param string $uploadsPath Raíz de subidas (por defecto `UPLOADS_PATH`).
      */
     public function __construct(
