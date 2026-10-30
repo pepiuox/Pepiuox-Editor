@@ -32,7 +32,11 @@ const files = fs.readdirSync(blocksDir).filter((f) => f.endsWith('.js')).sort();
 const blocks = [];
 
 // pro-templates.js declara la categoría con constantes (QUICK, HERO, NAV, FOOTER).
-const CONSTANTS = { QUICK: 'px-quick', HERO: 'px-hero', NAV: 'px-nav', FOOTER: 'px-footer' };
+const CONSTANTS = {
+    QUICK: 'px-quick', HERO: 'px-hero', NAV: 'px-nav', FOOTER: 'px-footer',
+    L: 'px-layout', N: 'px-nav', C: 'px-content', A: 'px-actions', K: 'px-cards',
+    F: 'px-forms', B: 'px-bs', D: 'px-data', FT: 'px-footer'
+};
 
 files.forEach((file) => {
     const source = fs.readFileSync(path.join(blocksDir, file), 'utf8');
