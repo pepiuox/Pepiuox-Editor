@@ -51,12 +51,85 @@ window.BlocksLibrary = (function () {
      * guardada, porque el contenido vive en el proyecto y no en el bloque.
      */
     var HIDE = [
+        // Fichero duplicado: blocks-bs.js repite lo que ya ofrece
+        // blocks-bootstrap.js (reescrito y coherente con Bootstrap 5.3).
+        'bs-navbar', 'bs-hero', 'bs-footer', 'bs-cards-row', 'bs-card', 'bs-alert',
+        'bs-accordion', 'bs-tabs', 'bs-form', 'bs-grid-3', 'bs-progress', 'bs-badge',
+        'bs-breadcrumb', 'bs-pagination', 'bs-pricing', 'bs-cta', 'bs-login', 'bs-search-bar',
+        'bs-buttons', 'bs-modal',
+        // second-blocks.js: mismo concepto con menos calidad
+        'navbar-bs', 'hero-section', 'features-3col', 'footer-custom',
+        'pricing-card', 'contact-form-card',
+        // Redundantes sueltos
         'bootstrap-btn-lg', 'bootstrap-btn-sm', 'bootstrap-btn-group',
-        'bootstrap-img-thumbnail',
-        'btn-social-twitter', 'btn-social-facebook',
-        'divider', 'spacer',
-        'navbar-dark', 'navbar-bs'
+        'bootstrap-img-thumbnail', 'btn-social-twitter', 'btn-social-facebook',
+        'divider', 'spacer', 'navbar-dark'
     ];
+
+    /**
+     * Icono de Bootstrap por bloque: se busca por palabra clave en id y nombre.
+     * Se usa solo si el bloque no declara icono o si declara uno de Font Awesome
+     * (el editor carga las dos familias y mezclarlas se ve inconsistente).
+     */
+    var ICONS = [
+        [/hero|jumbotron/, 'bi-easel2'],
+        [/navbar|nav\b|menu/, 'bi-menu-button-wide'],
+        [/breadcrumb/, 'bi-chevron-right'],
+        [/pagination/, 'bi-three-dots'],
+        [/tabs|pestan/, 'bi-folder2-open'],
+        [/accordion/, 'bi-chevron-expand'],
+        [/dropdown/, 'bi-caret-down-square'],
+        [/modal/, 'bi-window-stack'],
+        [/offcanvas/, 'bi-layout-sidebar-inset'],
+        [/toast|tooltip/, 'bi-chat-square-text'],
+        [/carousel|slider/, 'bi-images'],
+        [/gallery|galer/, 'bi-grid-3x3-gap'],
+        [/video/, 'bi-play-btn'],
+        [/map/, 'bi-geo-alt'],
+        [/img|image|foto|figura|photo/, 'bi-image'],
+        [/table|tabla/, 'bi-table'],
+        [/dashboard|stats|chart|estadist/, 'bi-bar-chart'],
+        [/form|contact|newsletter|login|registro|suscrip/, 'bi-input-cursor-text'],
+        [/input|select|radio|check|switch|range/, 'bi-ui-checks'],
+        [/pricing|precio|price/, 'bi-tags'],
+        [/testimon|opinion|review/, 'bi-chat-quote'],
+        [/team|equipo|perfil|profile/, 'bi-people'],
+        [/feature|caracterist|beneficio/, 'bi-grid-1x2'],
+        [/footer|pie/, 'bi-layout-text-window-reverse'],
+        [/cta|banner|call/, 'bi-megaphone'],
+        [/btn|button|boton/, 'bi-hand-index'],
+        [/alert|aviso/, 'bi-exclamation-triangle'],
+        [/badge|etiqueta|tag/, 'bi-tag'],
+        [/progress/, 'bi-bar-chart-steps'],
+        [/list|lista/, 'bi-list-ul'],
+        [/heading|titulo|title|h1|h2|h3/, 'bi-type-h1'],
+        [/text|texto|paragraph|parrafo|quote|cita/, 'bi-paragraph'],
+        [/icon/, 'bi-star'],
+        [/container|row|grid|column|col|layout|section|seccion/, 'bi-columns-gap'],
+        [/divider|separator|hr/, 'bi-dash-lg'],
+        [/faq|pregunta/, 'bi-question-circle'],
+        [/card|tarjeta/, 'bi-card-text'],
+        [/sidebar/, 'bi-layout-sidebar'],
+        [/landing|page|pagina|plantilla|template/, 'bi-window-desktop']
+    ];
+
+    var CATEGORY_ICON = {
+        'px-quick': 'bi-magic', 'px-layout': 'bi-columns-gap', 'px-nav': 'bi-menu-button-wide',
+        'px-hero': 'bi-easel2', 'px-content': 'bi-paragraph', 'px-actions': 'bi-hand-index',
+        'px-cards': 'bi-card-text', 'px-forms': 'bi-input-cursor-text', 'px-bs': 'bi-bootstrap',
+        'px-data': 'bi-table', 'px-footer': 'bi-layout-text-window-reverse', 'px-other': 'bi-box'
+    };
+
+    /** Icono adecuado para un bloque, buscando en su id y su nombre. */
+    function iconFor(id, label, categoryKey) {
+        var probe = (id + ' ' + label).toLowerCase();
+        for (var i = 0; i < ICONS.length; i++) {
+            if (ICONS[i][0].test(probe)) {
+                return ICONS[i][1];
+            }
+        }
+        return CATEGORY_ICON[categoryKey] || 'bi-box';
+    }
 
     var installed = false;
 
@@ -185,6 +258,22 @@ window.BlocksLibrary = (function () {
         var key = resolveCategory(block.id, plainLabel(block.get('label')), category.id, category.label);
         var meta = CATEGORIES[key] || CATEGORIES['px-other'];
 
+        // Etiqueta limpia: varios ficheros meten el icono dentro del `label`
+        // (`<i class="fas fa-…"></i> Sección`). El icono va en `media`, no en el
+        // texto: si no, se ve duplicado y descuadra la tarjeta.
+        var rawLabel = String(block.get('label') || '');
+        var label = plainLabel(rawLabel) || block.id;
+        if (rawLabel !== label) {
+            block.set('label', label, { silent: silent !== false });
+        }
+
+        // Icono propio: se respeta el que ya sea de Bootstrap Icons; el de Font
+        // Awesome se sustituye para que toda la biblioteca use una sola familia.
+        var media = String(block.get('media') || '');
+        if (media === '' || /fa[srlb]?\s+fa-/.test(media)) {
+            block.set('media', '<i class="bi ' + iconFor(block.id, label, key) + '"></i>', { silent: silent !== false });
+        }
+
         block.set('category', {
             id: key,
             label: meta.label,
@@ -193,7 +282,6 @@ window.BlocksLibrary = (function () {
         }, { silent: silent !== false });
 
         var attributes = Object.assign({}, block.get('attributes') || {});
-        var label = plainLabel(block.get('label')) || block.id;
         var description = plainLabel(block.get('description') || '');
         attributes.title = description ? label + ' — ' + description : label;
         block.set('attributes', attributes, { silent: true });
