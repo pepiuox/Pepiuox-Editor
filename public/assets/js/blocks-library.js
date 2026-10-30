@@ -251,6 +251,43 @@ window.BlocksLibrary = (function () {
         return { id: String(raw || ''), label: '' };
     }
 
+    /**
+     * Convierte los estilos de guía en línea en utilidades de Bootstrap.
+     *
+     * Los ficheros heredados (`uiblocks.js`, `advance.js`, `blocks-advanced.js`,
+     * `blocks-bs-advanced.js`, `bs-block-advanced.js`) marcan las zonas con
+     * `style="padding:20px; border:1px dashed #ddd"` y grises fijos. Eso no
+     * respeta el tema ni la grilla. Se sustituye por sus clases equivalentes:
+     *
+     *   padding:20px            → p-4
+     *   border:1px dashed #ddd  → border border-2 border-secondary-subtle rounded-3
+     *   background:#f8f9fa      → bg-body-tertiary
+     *
+     * Solo actúa sobre esos patrones conocidos: cualquier otro estilo del bloque
+     * se deja intacto para no cambiar el diseño de nadie.
+     */
+    function normalizeContent(block, silent) {
+        var content = block.get('content');
+        if (typeof content !== 'string' || content.indexOf('style=') === -1) return;
+
+        var normalized = content
+            // Relleno fijo de guía
+            .replace(/style="[^"]*padding:\s*(?:1[6-9]|[2-9]\d)px[^"]*"/g, 'class="p-4"')
+            // Borde discontinuo de guía (con o sin relleno en el mismo style)
+            .replace(/style="[^"]*border:\s*1px\s+dashed[^"]*"/g, 'class="p-4 border border-2 border-secondary-subtle rounded-3"')
+            // Grises de Bootstrap antiguos escritos a mano
+            .replace(/background:\s*#f8f9fa/gi, 'background:var(--bs-tertiary-bg)')
+            .replace(/background:\s*#e9ecef/gi, 'background:var(--bs-secondary-bg)')
+            .replace(/color:\s*#6c757d/gi, 'color:var(--bs-secondary-color)')
+            // Colores primarios fijos
+            .replace(/background:\s*#0d6efd/gi, 'background:var(--bs-primary)')
+            .replace(/color:\s*#0d6efd/gi, 'color:var(--bs-primary)');
+
+        if (normalized !== content) {
+            block.set('content', normalized, { silent: silent !== false });
+        }
+    }
+
     function applyCanonical(block, silent) {
         if (!block || typeof block.get !== 'function') return;
 
@@ -273,6 +310,8 @@ window.BlocksLibrary = (function () {
         if (media === '' || /fa[srlb]?\s+fa-/.test(media)) {
             block.set('media', '<i class="bi ' + iconFor(block.id, label, key) + '"></i>', { silent: silent !== false });
         }
+
+        normalizeContent(block, silent);
 
         block.set('category', {
             id: key,
