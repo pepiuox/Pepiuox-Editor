@@ -178,8 +178,9 @@ final class SettingsAssetService
             return $this->fail('No se pudo guardar la configuración del archivo.');
         }
 
-        if ($previous !== null && $previous !== $relative) {
-            $this->unlinkRelative($previous);
+        if ($previous !== null && $previous !== $relative && !$this->unlinkRelative($previous)) {
+            $warnings[] = 'El archivo anterior no se pudo borrar del disco (' . $previous
+                . '); revisa los permisos de uploads/.';
         }
 
         if ($isFavicon && $checked['width'] > 512) {
@@ -223,9 +224,15 @@ final class SettingsAssetService
             return $this->fail('No se pudo actualizar la configuración.');
         }
 
-        $this->unlinkRelative($previous);
+        $warnings = [];
+        if (!$this->unlinkRelative($previous)) {
+            // El sitio ya no usa la imagen, pero el archivo sigue en disco. No
+            // se oculta: antes un @unlink silencioso dejaba huérfanos sin avisar.
+            $warnings[] = 'La imagen se quitó del sitio, pero no se pudo borrar el archivo del disco ('
+                . $previous . '). Revisa los permisos de uploads/.';
+        }
 
-        return ['ok' => true, 'message' => 'Imagen eliminada.', 'warnings' => [], 'url' => null];
+        return ['ok' => true, 'message' => 'Imagen eliminada.', 'warnings' => $warnings, 'url' => null];
     }
 
     /**
@@ -276,20 +283,32 @@ final class SettingsAssetService
     /**
      * Borra un archivo por su ruta relativa, sólo si está dentro de
      * `uploads/settings/`. Ignora cualquier ruta que no cumpla el patrón.
+     *
+     * @return bool true si el archivo ya no está (o no había nada que borrar);
+     *              false si existe y no se pudo borrar.
      */
-    private function unlinkRelative(string $relative): void
+    private function unlinkRelative(string $relative): bool
     {
         if (preg_match('#^settings/(logos|favicons)/[A-Za-z0-9][A-Za-z0-9._-]{0,120}$#', $relative) !== 1) {
-            return;
+            return true;
         }
         if (str_contains($relative, '..')) {
-            return;
+            return true;
         }
 
         $absolute = rtrim(str_replace('\\', '/', $this->uploadsPath), '/') . '/' . $relative;
-        if (is_file($absolute)) {
-            @unlink($absolute);
+        if (!is_file($absolute)) {
+            return true;
         }
+
+        if (@unlink($absolute)) {
+            return true;
+        }
+
+        // Antes esto se perdía en un @unlink silencioso: el administrador veía
+        // «imagen eliminada» y el archivo seguía ocupando espacio.
+        error_log('[SettingsAsset] No se pudo borrar ' . $absolute . ' (permisos?)');
+        return false;
     }
 
     /**

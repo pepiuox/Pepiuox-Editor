@@ -15,7 +15,7 @@ manifiesto y los helpers.
 php tests/public-theme/service-test.php
 ```
 
-Salida esperada: `Resultado: 97 pasan, 0 fallan` y código de salida 0.
+Salida esperada: `Resultado: 106 pasan, 0 fallan` y código de salida 0.
 Escribe en la tabla `settings` (grupo `public`) y deja el tema en `oscuro` al
 terminar, que es el valor por defecto.
 
@@ -50,7 +50,7 @@ Necesita tres cosas:
    ./tests/public-theme/e2e.ps1
    ```
 
-Salida esperada: `Resultado E2E: 65 pasan, 0 fallan`.
+Salida esperada: `Resultado E2E: 73 pasan, 0 fallan`.
 
 La prueba **crea y luego borra** sus propios archivos en
 `uploads/settings/logos` y `uploads/settings/favicons`, y deja las claves del

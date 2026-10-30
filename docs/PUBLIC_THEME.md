@@ -4,8 +4,8 @@ Módulo que permite al administrador cambiar la identidad visual del **sitio
 público** (logos, favicon, tema, colores y CSS adicional) sin tocar código, y
 sin que el **panel de administración** cambie un píxel.
 
-Estado: **implementado y verificado** (2026-10-26). 97 comprobaciones de servicio
-y 65 de extremo a extremo en verde. Ver [tests/public-theme/README.md](../tests/public-theme/README.md).
+Estado: **implementado y verificado** (2026-10-26). 106 comprobaciones de servicio
+y 73 de extremo a extremo en verde. Ver [tests/public-theme/README.md](../tests/public-theme/README.md).
 
 ---
 
@@ -222,6 +222,36 @@ etiqueta `style`), `@import`, `expression(`, `javascript:`, `vbscript:`,
 
 ---
 
+## 5.b Legibilidad: el color del texto se calcula, no se hereda
+
+Un color HEX válido puede ser ilegible: texto oscuro sobre un botón azul, gris
+claro sobre blanco. Eso pasó de verdad — el botón «Panel Admin» del navbar tenía
+el color de texto fijado en el layout base (`#04120f`) mientras el tema ponía el
+fondo, así que con un tema de botón azul el texto desaparecía.
+
+Ahora `PublicThemeService` ajusta antes de publicar:
+
+| Qué | Regla |
+| --- | --- |
+| Texto principal, atenuado y enlaces | `ensureContrast()` los acerca a blanco o negro **lo justo** para llegar a 4.5:1 sobre el fondo real del sitio |
+| Texto de los botones (`.btn-accent`, `.btn-primary`) | `contrastColor()` elige entre blanco y casi negro el que más contrasta con el fondo del botón, en reposo y en hover |
+| Botones fantasma y chip de usuario | usan los tokens de texto ya ajustados |
+
+No se modifica el valor guardado: el ajuste se calcula al generar el CSS, así que
+el HEX que ve el administrador sigue siendo el que eligió. Los cinco temas
+predefinidos cumplen AA en texto, atenuado, enlace y botón (comprobado en
+`service-test.php` bloque 14).
+
+### Dos barras de guardado
+
+La pantalla tiene dos formularios (sistema y personalización) y cada uno tiene su
+barra. Antes ambas estaban siempre visibles y pulsar la de arriba estando en
+«Temas» enviaba el formulario equivocado: el tema no se guardaba y parecía que la
+aplicación lo ignoraba. Ahora cada barra declara sus pestañas
+(`data-form-scope`) y sólo aparece en las suyas.
+
+---
+
 ## 6. Seguridad
 
 | Vector | Medida |
@@ -305,10 +335,10 @@ php -l app/Services/PublicThemeService.php   # y el resto de archivos tocados
 # 2. Migración (idempotente: se puede relanzar)
 php db/migrations/apply.php 2026_10_26_public_visual_settings.up.sql
 
-# 3. Prueba de servicio (97 comprobaciones)
+# 3. Prueba de servicio (106 comprobaciones)
 php tests/public-theme/service-test.php
 
-# 4. Prueba HTTP (65 comprobaciones) — ver tests/public-theme/README.md
+# 4. Prueba HTTP (73 comprobaciones) — ver tests/public-theme/README.md
 ```
 
 ---

@@ -25,6 +25,19 @@
     const tabButtons = Array.from(document.querySelectorAll('.nav-tabs .nav-link[data-tab]'));
     const panes = Array.from(document.querySelectorAll('.tab-content[data-tab]'));
 
+    // Barras de guardado: cada formulario tiene la suya y sólo se muestra en las
+    // pestañas que ese formulario envía. Si no, conviven dos botones «Guardar» y
+    // el de arriba envía el formulario que no contiene lo que estás editando.
+    const actionBars = Array.from(document.querySelectorAll('[data-form-scope]'));
+
+    const syncActionBars = (id) => {
+        actionBars.forEach((bar) => {
+            const scope = (bar.dataset.formScope || '').split(/\s+/).filter(Boolean);
+            // `is-off` y no `hidden`: .d-flex de Bootstrap gana a [hidden].
+            bar.classList.toggle('is-off', !scope.includes(id));
+        });
+    };
+
     const activateTab = (id, updateHash = true) => {
         if (!id || !panes.some((pane) => pane.dataset.tab === id)) {
             id = 'general';
@@ -38,6 +51,7 @@
         panes.forEach((pane) => {
             pane.classList.toggle('active', pane.dataset.tab === id);
         });
+        syncActionBars(id);
 
         // Cada formulario recuerda en qué pestaña estaba el usuario, para que
         // el redirect posterior lo devuelva aquí y no a la primera.

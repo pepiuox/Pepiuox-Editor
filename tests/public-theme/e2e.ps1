@@ -232,13 +232,73 @@ foreach ($slot in 'logo_header', 'favicon_32', 'logo_tablet', 'logo_menu', 'logo
     $left = (& php "$PSScriptRoot\support.php" get public $slot).Trim()
     Check "clave $slot vacía al terminar" ($left -eq '') "valor=$left"
 }
-$orphans = @(Get-ChildItem "$root\uploads\settings" -Recurse -File -ErrorAction SilentlyContinue)
-Check 'no quedan archivos de prueba en uploads/settings' ($orphans.Count -eq 0) ($orphans.Name -join ', ')
+# Solo se miran los huecos que usa esta prueba: si el usuario tiene sus propios
+# logos, no es asunto de la suite ni debe hacerla fallar.
+$prefijos = @('logo_header-', 'logo_tablet-', 'logo_menu-', 'logo_multinivel-', 'logo_footer-', 'favicon_32-')
+$sobras = @(Get-ChildItem "$root\uploads\settings" -Recurse -File -ErrorAction SilentlyContinue |
+    Where-Object { $name = $_.Name; ($prefijos | Where-Object { $name.StartsWith($_) }).Count -gt 0 })
+if ($sobras.Count -gt 0) {
+    # Puede ser legítimo: si la carpeta tiene una ACL que impide borrar (pasa en
+    # este equipo: «Everyone: DeleteSubdirectoriesAndFiles Deny» heredada), la
+    # aplicación ya avisa al administrador y deja el archivo huérfano.
+    Write-Host ("  AVISO quedan " + $sobras.Count + " archivo(s) de pruebas anteriores: " + ($sobras.Name -join ', '))
+    Write-Host "        bórralos a mano o corrige la ACL de uploads/."
+}
 # El CSS de prueba no puede quedarse guardado en el sitio del usuario.
 curl.exe -s -o NUL @admin -d "theme=oscuro" -d "custom_css=" -d "custom_css_enabled=0" `
     -d "_csrf_token=$csrf" "$base/admin/settings/brand" | Out-Null
 $leftCss = (& php "$PSScriptRoot\support.php" get public custom_css).Trim()
 Check 'CSS personalizado vacío al terminar' ($leftCss -eq '') "valor=$leftCss"
+
+Write-Host "`n== P. Elegir tema y guardarlo: el fallo reportado =="
+# El formulario real envia el tema Y los 16 colores del preset (el JS los
+# rellena al pulsar la tarjeta). Se reproduce ese envio exacto.
+$body = @(
+    '-d', 'theme=claro',
+    '-d', 'logo_alt=',
+    '-d', 'custom_css=',
+    '-d', 'custom_css_enabled=0',
+    '-d', "`_csrf_token=$csrf",
+    '-d', 'colors[color_primary]=#0d6efd',
+    '-d', 'colors[color_secondary]=#6c757d',
+    '-d', 'colors[color_accent]=#ffc107',
+    '-d', 'colors[color_background]=#ffffff',
+    '-d', 'colors[color_section_bg]=#f8f9fa',
+    '-d', 'colors[color_text]=#212529',
+    '-d', 'colors[color_text_muted]=#6c757d',
+    '-d', 'colors[color_link]=#0d6efd',
+    '-d', 'colors[color_button]=#0d6efd',
+    '-d', 'colors[color_border]=#dee2e6',
+    '-d', 'colors[color_header_bg]=#ffffff',
+    '-d', 'colors[color_footer_bg]=#f8f9fa',
+    '-d', 'colors[color_sidebar_bg]=#f8f9fa',
+    '-d', 'colors[color_menu_bg]=#ffffff',
+    '-d', 'colors[color_multinivel_bg]=#ffffff',
+    '-d', 'colors[color_menu_hover]=#e9ecef'
+)
+$redirect = curl.exe -s -o NUL -w "%{redirect_url}" @admin @body "$base/admin/settings/brand"
+$tema = (& php "$PSScriptRoot\support.php" get public theme).Trim()
+Check 'el tema se guarda en la base de datos' ($tema -eq 'claro') "valor=$tema"
+Check 'el redirect vuelve a la pestaña Temas' ($redirect -match 'tab=themes') "redirect=$redirect"
+$css = (curl.exe -s "$base/public-theme.css") -join "`n"
+Check 'el CSS publicado usa el fondo claro' ($css -match '--public-background:\s*#ffffff')
+Check 'el CSS publicado fija el color del texto de los botones' ($css -match '(?s)\.btn-accent[^{]*\{[^}]*color:\s*#[0-9a-f]{6}')
+$html = (curl.exe -s "$base/") -join "`n"
+Check 'el documento publico cambia a tema claro' ($html -match 'data-bs-theme="light"')
+
+Write-Host "`n== Q. Una sola barra de guardado por formulario =="
+$panel = (Get-Content "$env:TEMP\ppf_panel_3.html" -Raw -ErrorAction SilentlyContinue)
+curl.exe -s -o "$env:TEMP\ppf_panel_3.html" @admin "$base/admin/settings" | Out-Null
+$panel = Get-Content "$env:TEMP\ppf_panel_3.html" -Raw
+Check 'la barra del sistema declara sus pestañas' ($panel -match 'data-form-scope="general seo cache mail"')
+Check 'la barra de personalizacion declara las suyas' ($panel -match 'data-form-scope="identity themes colors css"')
+Check 'el boton de personalizacion esta dentro de su formulario' ($panel -match '(?s)id="publicSettingsForm".*?Guardar personalización')
+Remove-Item "$env:TEMP\ppf_panel_3.html" -ErrorAction SilentlyContinue
+
+# Volver al tema del usuario
+curl.exe -s -o NUL @admin -d "theme=oscuro" -d "_csrf_token=$csrf" "$base/admin/settings/brand/reset" | Out-Null
+$tema = (& php "$PSScriptRoot\support.php" get public theme).Trim()
+Check 'tema restaurado a oscuro' ($tema -eq 'oscuro') "valor=$tema"
 
 Write-Host "`n─────────────────────────────"
 Write-Host "Resultado E2E: $pass pasan, $fail fallan"

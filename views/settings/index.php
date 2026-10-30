@@ -202,7 +202,12 @@ $tabs = [
         </div>
       </div>
 
-      <div class="d-flex justify-end gap-2 mt-4 pt-3 border-top">
+      <!-- Barra de guardado del sistema: sólo visible en sus propias pestañas.
+           Antes esta barra y la de personalización estaban siempre visibles a la
+           vez, y pulsar la de arriba estando en «Temas» enviaba el formulario
+           equivocado: el tema no se guardaba y parecía que la app lo ignoraba. -->
+      <div class="d-flex justify-end gap-2 mt-4 pt-3 border-top ppf-actions"
+           data-form-scope="general seo cache mail">
         <button type="button" class="btn btn-ghost" onclick="history.back()">Cancelar</button>
         <button type="submit" class="btn btn-primary">
           <i class="bi bi-check-circle"></i> Guardar Configuración
@@ -457,7 +462,8 @@ $tabs = [
         <p class="ppf-css-status" id="ppfCssStatus" role="status" aria-live="polite"></p>
       </div>
 
-      <div class="d-flex justify-end gap-2 mt-4 pt-3 border-top">
+      <div class="d-flex justify-end gap-2 mt-4 pt-3 border-top ppf-actions"
+           data-form-scope="identity themes colors css">
         <button type="submit" class="btn btn-primary">
           <i class="bi bi-check-circle"></i> Guardar personalización
         </button>
@@ -532,6 +538,9 @@ $tabs = [
 .ppf-asset-delete{margin-top:-.2rem}
 .ppf-danger{color:#ff7b72}
 .ppf-note{display:flex;gap:.5rem;align-items:flex-start;margin-top:1rem;padding:.7rem .9rem;border-radius:8px;background:rgba(0,212,170,.08);border:1px solid rgba(0,212,170,.25);font-size:.85rem}
+/* Barra de guardado oculta: se usa una clase, no [hidden], porque .d-flex de
+   Bootstrap tiene display:flex !important y ganaría. */
+.ppf-actions.is-off{display:none !important}
 .ppf-note--info{margin-top:0;margin-bottom:1rem;background:rgba(13,110,253,.10);border-color:rgba(13,110,253,.35)}
 .ppf-link-btn{background:none;border:0;padding:0;margin-left:.35rem;color:inherit;font:inherit;font-weight:600;text-decoration:underline;cursor:pointer}
 .ppf-link-btn:hover{opacity:.8}

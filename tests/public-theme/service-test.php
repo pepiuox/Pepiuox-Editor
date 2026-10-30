@@ -269,6 +269,38 @@ check('un subdirectorio real sí se recorta', $request->uri() === '/pagina', $re
 $_SERVER['REQUEST_URI'] = '/app/page/apple';
 check('sólo se recorta el primer segmento', $request->uri() === '/page/apple', $request->uri());
 
+echo "\n== 14. Legibilidad: el tema nunca deja texto invisible ==\n";
+check('contraste blanco/negro = 21:1', abs(PublicThemeService::contrastRatio('#ffffff', '#000000') - 21.0) < 0.01, (string) PublicThemeService::contrastRatio('#ffffff', '#000000'));
+check('texto sobre fondo claro es oscuro', PublicThemeService::contrastColor('#ffffff') === '#06110e', PublicThemeService::contrastColor('#ffffff'));
+check('texto sobre fondo oscuro es claro', PublicThemeService::contrastColor('#000000') === '#ffffff', PublicThemeService::contrastColor('#000000'));
+check('un color que ya cumple no se toca', PublicThemeService::ensureContrast('#e6edf3', '#0d1117') === '#e6edf3', PublicThemeService::ensureContrast('#e6edf3', '#0d1117'));
+check('una pareja ilegible se corrige', PublicThemeService::contrastRatio(PublicThemeService::ensureContrast('#777777', '#888888'), '#888888') >= 4.5, PublicThemeService::ensureContrast('#777777', '#888888'));
+check('mix a la mitad', PublicThemeService::mix('#000000', '#ffffff', 0.5) === '#808080', PublicThemeService::mix('#000000', '#ffffff', 0.5));
+
+// El fallo reportado fue «el texto del botón de ir al admin no se ve»: el CSS
+// publicado debe fijar el color del texto de los botones, no heredarlo.
+$css = PublicThemeService::css();
+check('el CSS fija el color del texto de .btn-accent', (bool) preg_match('/\.btn-accent[^{]*\{[^}]*color:\s*#[0-9a-f]{6}/i', $css), 'sin color explícito en .btn-accent');
+check('el CSS fija el color del texto de .btn-primary', (bool) preg_match('/\.btn-primary[^{]*\{[^}]*color:\s*#[0-9a-f]{6}/i', $css), 'sin color explícito en .btn-primary');
+
+$peores = [];
+foreach (PublicThemeService::THEME_PRESETS as $id => $preset) {
+    $c    = $preset['colors'];
+    $fondo = $c['color_background'];
+    $pares = [
+        'texto'  => PublicThemeService::contrastRatio(PublicThemeService::ensureContrast($c['color_text'], $fondo), $fondo),
+        'tenue'  => PublicThemeService::contrastRatio(PublicThemeService::ensureContrast($c['color_text_muted'], $fondo), $fondo),
+        'enlace' => PublicThemeService::contrastRatio(PublicThemeService::ensureContrast($c['color_link'], $fondo), $fondo),
+        'botón'  => PublicThemeService::contrastRatio(PublicThemeService::contrastColor($c['color_button']), $c['color_button']),
+    ];
+    foreach ($pares as $que => $ratio) {
+        if ($ratio < 4.5) {
+            $peores[] = "{$id}/{$que}={$ratio}";
+        }
+    }
+}
+check('los 5 temas predefinidos cumplen AA en texto, atenuado, enlace y botón', $peores === [], implode(', ', $peores));
+
 $_SERVER = $originalServer;
 
 echo "\n== 14. Limpieza (la prueba no debe dejar rastro en el sitio) ==\n";

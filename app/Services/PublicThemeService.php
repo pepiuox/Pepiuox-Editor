@@ -408,9 +408,34 @@ final class PublicThemeService
     {
         $values = self::all();
 
+        // ── Legibilidad garantizada ─────────────────────────────────
+        // Los colores los elige una persona, y una combinación válida en HEX
+        // puede dejar el texto ilegible (texto oscuro sobre botón azul, gris
+        // claro sobre blanco…). Antes de publicar, cada color de texto se ajusta
+        // lo justo para alcanzar el mínimo AA sobre su fondo real. El valor
+        // guardado no se toca: el ajuste se calcula al generar el CSS.
+        $background = self::normalizeHex($values['color_background']) ?? '#0d1117';
+        $text       = self::ensureContrast($values['color_text'] ?? '', $background, 4.5);
+        $textMuted  = self::ensureContrast($values['color_text_muted'] ?? '', $background, 4.5);
+        $link       = self::ensureContrast($values['color_link'] ?? '', $background, 4.5);
+        $buttonBg   = self::normalizeHex($values['color_button'] ?? '') ?? '#00d4aa';
+        $primaryBg  = self::normalizeHex($values['color_primary'] ?? '') ?? '#00d4aa';
+        $buttonText  = self::contrastColor($buttonBg);
+        $primaryText = self::contrastColor($primaryBg);
+        $footerText  = self::ensureContrast($values['color_text'] ?? '', $values['color_footer_bg'] ?? $background, 4.5);
+        $headerText  = self::ensureContrast($values['color_text'] ?? '', $values['color_header_bg'] ?? $background, 4.5);
+
         $declarations = '';
         foreach (self::COLOR_LABELS as $key => $label) {
             $hex = self::normalizeHex($values[$key] ?? '') ?? self::defaults()[$key];
+            // El valor publicado es el ajustado, para que las variables que
+            // consume el sitio ya sean legibles.
+            $hex = match ($key) {
+                'color_text'       => $text,
+                'color_text_muted' => $textMuted,
+                'color_link'       => $link,
+                default            => $hex,
+            };
             $var = str_replace('color_', '', $key);
             $var = str_replace('_bg', '-bg', $var);
             $declarations .= '    --public-' . str_replace('_', '-', $var) . ': ' . $hex . ";\n";
@@ -419,6 +444,8 @@ final class PublicThemeService
         $accent      = self::normalizeHex($values['color_accent']) ?? '#00d4aa';
         $border      = self::normalizeHex($values['color_border']) ?? '#30363d';
         $accentHover = self::shade($accent, self::luminance($accent) < 0.5 ? 14 : -14);
+        $buttonHover = self::shade($buttonBg, self::luminance($buttonBg) < 0.5 ? 14 : -14);
+        $primaryHover = self::shade($primaryBg, self::luminance($primaryBg) < 0.5 ? 14 : -14);
         [$br, $bg, $bb] = self::toRgb($border);
 
         $css = "/* Generado por PublicThemeService — no editar a mano. */\n";
@@ -442,27 +469,48 @@ final class PublicThemeService
 body.public-site a { color: var(--public-link); }
 body.public-site a:hover,
 body.public-site a:focus-visible { color: var(--accent-hover); }
-body.public-site .navbar-main { background-color: var(--public-header-bg); border-bottom-color: var(--public-border); }
+body.public-site .navbar-main { background-color: var(--public-header-bg); border-bottom-color: var(--public-border); color: {$headerText}; }
 body.public-site .navbar-collapse { background-color: var(--public-menu-bg); }
 body.public-site .navbar .nav-link:hover,
 body.public-site .navbar .nav-link:focus-visible,
 body.public-site .navbar .nav-link.active { background-color: var(--public-menu-hover); }
 body.public-site .navbar .dropdown-menu,
 body.public-site .navbar .dropdown-submenu > .dropdown-menu { background-color: var(--public-multinivel-bg); border-color: var(--public-border); }
-body.public-site .footer { background-color: var(--public-footer-bg); border-top-color: var(--public-border); }
+body.public-site .footer { background-color: var(--public-footer-bg); border-top-color: var(--public-border); color: {$footerText}; }
 body.public-site .sidebar,
 body.public-site .public-sidebar { background-color: var(--public-sidebar-bg); }
-body.public-site .btn-accent { background-color: var(--public-button); border-color: var(--public-button); }
-body.public-site .btn-accent:hover,
-body.public-site .btn-accent:focus-visible { background-color: var(--accent-hover); border-color: var(--accent-hover); }
-/* Primario y secundario necesitan consumidor propio: si no, son dos colores
-   configurables que no cambian nada en pantalla. */
-body.public-site .btn-primary { background-color: var(--public-primary); border-color: var(--public-primary); }
-body.public-site .btn-primary:hover,
-body.public-site .btn-primary:focus-visible { background-color: var(--public-secondary); border-color: var(--public-secondary); }
+CSS;
+
+        // ── Botones: el texto se calcula, nunca se hereda ───────────
+        // El fallo reportado («no se ve el texto del botón de ir al admin»)
+        // venía de que el color del texto estaba fijado en el layout base
+        // (#04120f) mientras el fondo lo ponía el tema: con un tema de botón
+        // azul, quedaba texto casi negro sobre azul.
+        $css .= "body.public-site .btn-accent,\n"
+            . "body.public-site .btn-accent i,\n"
+            . "body.public-site .btn-accent span { color: {$buttonText}; }\n"
+            . "body.public-site .btn-accent { background-color: var(--public-button); border-color: var(--public-button); }\n"
+            . "body.public-site .btn-accent:hover,\n"
+            . "body.public-site .btn-accent:focus-visible { background-color: {$buttonHover}; border-color: {$buttonHover}; color: " . self::contrastColor($buttonHover) . "; }\n"
+            . "body.public-site .btn-primary,\n"
+            . "body.public-site .btn-primary i,\n"
+            . "body.public-site .btn-primary span { color: {$primaryText}; }\n"
+            . "body.public-site .btn-primary { background-color: var(--public-primary); border-color: var(--public-primary); }\n"
+            . "body.public-site .btn-primary:hover,\n"
+            . "body.public-site .btn-primary:focus-visible { background-color: {$primaryHover}; border-color: {$primaryHover}; color: " . self::contrastColor($primaryHover) . "; }\n"
+            . "body.public-site .btn-nav-ghost { color: var(--public-text); border-color: var(--public-border); }\n"
+            . "body.public-site .btn-nav-ghost:hover,\n"
+            . "body.public-site .btn-nav-ghost:focus-visible { color: var(--public-accent); border-color: var(--public-accent); }\n"
+            . "body.public-site .btn-nav-icon { color: var(--public-text-muted); border-color: var(--public-border); }\n"
+            . "body.public-site .user-chip { color: var(--public-text); }\n"
+            . "body.public-site .user-chip .user-role { color: var(--public-text-muted); }\n";
+
+        $css .= <<<CSS
+/* El atenuado usa el color secundario, pero sólo si es legible: si no, manda
+   el texto atenuado ya ajustado. */
 body.public-site .text-muted,
 body.public-site .form-text,
-body.public-site small.text-muted { color: var(--public-secondary) !important; }
+body.public-site small.text-muted { color: var(--public-text-muted) !important; }
 body.public-site .brand-logo { max-height: 44px; width: auto; }
 body.public-site .brand-logo--footer { max-height: 36px; }
 body.public-site .brand-logo--sidebar { max-height: 32px; }
@@ -972,5 +1020,89 @@ CSS;
             (int) hexdec(substr($value, 2, 2)),
             (int) hexdec(substr($value, 4, 2)),
         ];
+    }
+
+    /**
+     * Razón de contraste WCAG 2.1 entre dos colores (1:1 a 21:1).
+     */
+    public static function contrastRatio(string $foreground, string $background): float
+    {
+        $a = self::luminance($foreground);
+        $b = self::luminance($background);
+
+        return (max($a, $b) + 0.05) / (min($a, $b) + 0.05);
+    }
+
+    /**
+     * Color de texto legible sobre el fondo dado (claro u oscuro).
+     *
+     * Se usa para los botones: el fondo lo elige el administrador, el texto se
+     * calcula. Así ningún tema deja un botón con texto invisible.
+     */
+    public static function contrastColor(string $background): string
+    {
+        // Blanco sobre fondos oscuros, casi negro sobre fondos claros. Se
+        // comparan las dos opciones y se queda la que más contraste da.
+        $dark  = '#06110e';
+        $light = '#ffffff';
+
+        return self::contrastRatio($dark, $background) >= self::contrastRatio($light, $background)
+            ? $dark
+            : $light;
+    }
+
+    /**
+     * Ajusta un color de texto lo mínimo para alcanzar el contraste pedido
+     * sobre el fondo indicado. Si ya cumple, lo devuelve igual.
+     *
+     * @param float $minimum Mínimo WCAG (4.5 = AA para texto normal).
+     */
+    public static function ensureContrast(string $foreground, string $background, float $minimum = 4.5): string
+    {
+        $foreground = self::normalizeHex($foreground) ?? '#000000';
+        $background = self::normalizeHex($background) ?? '#ffffff';
+
+        if (self::contrastRatio($foreground, $background) >= $minimum) {
+            return $foreground;
+        }
+
+        // Se avanza hacia el extremo que MÁS contraste da sobre este fondo (no
+        // siempre es el blanco: sobre un gris medio, el negro da más), en pasos,
+        // y se para en cuanto se alcanza el mínimo: no se pierde la identidad
+        // del color más de lo imprescindible.
+        $white = self::contrastRatio('#ffffff', $background);
+        $black = self::contrastRatio('#000000', $background);
+        $target = $white >= $black ? '#ffffff' : '#000000';
+
+        if (max($white, $black) < $minimum) {
+            // Ningún extremo llega: se devuelve el mejor disponible.
+            return $target;
+        }
+
+        for ($step = 1; $step <= 20; $step++) {
+            $candidate = self::mix($foreground, $target, $step / 20);
+            if (self::contrastRatio($candidate, $background) >= $minimum) {
+                return $candidate;
+            }
+        }
+
+        return $target;
+    }
+
+    /**
+     * Mezcla lineal de dos colores: `$ratio` 0 devuelve `$a`, 1 devuelve `$b`.
+     */
+    public static function mix(string $a, string $b, float $ratio): string
+    {
+        $ratio = max(0.0, min(1.0, $ratio));
+        [$ar, $ag, $ab] = self::toRgb($a);
+        [$br, $bg, $bb] = self::toRgb($b);
+
+        return sprintf(
+            '#%02x%02x%02x',
+            (int) round($ar + ($br - $ar) * $ratio),
+            (int) round($ag + ($bg - $ag) * $ratio),
+            (int) round($ab + ($bb - $ab) * $ratio)
+        );
     }
 }
