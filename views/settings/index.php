@@ -93,6 +93,15 @@ $tabs = [
 
       <!-- 1. GENERAL -->
       <div class="tab-content <?= $activeTab === 'general' ? 'active' : '' ?>" data-tab="general" id="tab-general" role="tabpanel" aria-labelledby="tabbtn-general">
+        <div class="ppf-note ppf-note--info">
+          <i class="bi bi-broadcast"></i>
+          <span>
+            Estos valores se aplican en la <strong>web pública</strong>: nombre en la cabecera,
+            el pie y el título de la pestaña del navegador; descripción en la meta descripción
+            cuando la página no trae la suya; idioma en <code>&lt;html lang&gt;</code>; zona horaria
+            en las fechas del sitio.
+          </span>
+        </div>
         <div class="form-grid">
           <div class="form-group">
             <label class="form-label">Nombre del Sitio</label>
@@ -335,7 +344,13 @@ $tabs = [
         </div>
         <div class="ppf-note">
           <i class="bi bi-info-circle"></i>
-          El nombre del sitio, la descripción y el idioma se configuran en la pestaña <strong>General</strong>.
+          <span>
+            El <strong>nombre</strong>, la <strong>descripción</strong>, el <strong>idioma</strong> y la
+            <strong>zona horaria</strong> se editan en la pestaña General y se aplican en la cabecera,
+            el pie, el título de la pestaña del navegador, la meta descripción y el manifiesto del
+            sitio público.
+            <button type="button" class="ppf-link-btn" data-goto-tab="general">Ir a General</button>
+          </span>
         </div>
       </div>
 
@@ -512,6 +527,9 @@ $tabs = [
 .ppf-asset-delete{margin-top:-.2rem}
 .ppf-danger{color:#ff7b72}
 .ppf-note{display:flex;gap:.5rem;align-items:flex-start;margin-top:1rem;padding:.7rem .9rem;border-radius:8px;background:rgba(0,212,170,.08);border:1px solid rgba(0,212,170,.25);font-size:.85rem}
+.ppf-note--info{margin-top:0;margin-bottom:1rem;background:rgba(13,110,253,.10);border-color:rgba(13,110,253,.35)}
+.ppf-link-btn{background:none;border:0;padding:0;margin-left:.35rem;color:inherit;font:inherit;font-weight:600;text-decoration:underline;cursor:pointer}
+.ppf-link-btn:hover{opacity:.8}
 .ppf-theme-grid{display:grid;gap:1rem;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
 .ppf-theme-card{position:relative;display:block;cursor:pointer}
 .ppf-theme-input{position:absolute;opacity:0;width:1px;height:1px}

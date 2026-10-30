@@ -15,7 +15,7 @@ manifiesto y los helpers.
 php tests/public-theme/service-test.php
 ```
 
-Salida esperada: `Resultado: 65 pasan, 0 fallan` y código de salida 0.
+Salida esperada: `Resultado: 84 pasan, 0 fallan` y código de salida 0.
 Escribe en la tabla `settings` (grupo `public`) y deja el tema en `oscuro` al
 terminar, que es el valor por defecto.
 
@@ -50,7 +50,7 @@ Necesita tres cosas:
    ./tests/public-theme/e2e.ps1
    ```
 
-Salida esperada: `Resultado E2E: 30 pasan, 0 fallan`.
+Salida esperada: `Resultado E2E: 55 pasan, 0 fallan`.
 
 La prueba **crea y luego borra** sus propios archivos en
 `uploads/settings/logos` y `uploads/settings/favicons`, y deja las claves del
@@ -62,11 +62,12 @@ basta con repetirla o vaciar las claves con
 
 | Criterio del encargo | Dónde se comprueba |
 | --- | --- |
+| Nombre, descripción, idioma y zona horaria desde Configuración | `service-test.php` bloque 12 · `e2e.ps1` bloque N |
 | Carga y actualización de logotipos | `e2e.ps1` bloques A, C, I |
 | Imágenes distintas por dispositivo | `e2e.ps1` bloque E (`<picture>`) |
 | Actualización del favicon | `e2e.ps1` bloque D |
 | Persistencia de temas y colores | `service-test.php` bloque 8 · `e2e.ps1` bloque J |
 | Aplicación del CSS personalizado | `service-test.php` bloques 5 y 2 |
 | Vistas públicas correctas | `e2e.ps1` bloques D, E, F |
-| El panel no cambia | `service-test.php` bloque 3 (todo el CSS bajo `body.public-site`) + revisión de `views/layouts/admin.php` |
+| El panel no cambia | `service-test.php` bloque 3 (todo el CSS bajo `body.public-site`) + `e2e.ps1` bloque M + revisión de `views/layouts/admin.php` |
 | Operaciones de carga seguras | `service-test.php` bloques 6 y 7 · `e2e.ps1` bloques B, H |

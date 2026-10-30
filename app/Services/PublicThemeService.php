@@ -358,6 +358,9 @@ final class PublicThemeService
 
     /**
      * Texto alternativo de los logotipos.
+     *
+     * Orden: el texto configurado en Configuración → Identidad visual y, si
+     * está vacío, el nombre del sitio guardado en Configuración → General.
      */
     public static function logoAlt(): string
     {
@@ -365,7 +368,7 @@ final class PublicThemeService
         if ($alt !== '') {
             return $alt;
         }
-        return (string) ($GLOBALS['cfg']['app_name'] ?? 'PePiuoX Editor');
+        return SiteSettings::name();
     }
 
     /**
@@ -694,7 +697,9 @@ CSS;
      */
     public static function manifest(): array
     {
-        $name = (string) ($GLOBALS['cfg']['app_name'] ?? 'PePiuoX Editor');
+        // El nombre que verá el móvil al añadir el sitio a la pantalla de
+        // inicio es el configurado en General, no el del archivo de config.
+        $name = SiteSettings::name();
 
         $icons = [];
         foreach (self::FAVICON_SLOTS as $slot => $meta) {

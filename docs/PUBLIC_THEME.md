@@ -4,8 +4,45 @@ Módulo que permite al administrador cambiar la identidad visual del **sitio
 público** (logos, favicon, tema, colores y CSS adicional) sin tocar código, y
 sin que el **panel de administración** cambie un píxel.
 
-Estado: **implementado y verificado** (2026-10-26). 74 comprobaciones de servicio
-y 45 de extremo a extremo en verde. Ver [tests/public-theme/README.md](../tests/public-theme/README.md).
+Estado: **implementado y verificado** (2026-10-26). 84 comprobaciones de servicio
+y 55 de extremo a extremo en verde. Ver [tests/public-theme/README.md](../tests/public-theme/README.md).
+
+---
+
+## 0. Identidad del sitio: lo que se guarda en «General» y ahora sí se aplica
+
+Antes, `Configuración → General` guardaba el nombre en la base de datos pero el
+sitio público seguía pintando `app_name` de `config/config.php`: cambiar el
+nombre no cambiaba nada en pantalla.
+
+`app/Services/SiteSettings.php` es ahora el único punto que decide de dónde sale
+cada dato, con esta precedencia y caché por petición:
+
+```
+valor guardado en `settings`  →  valor de config/config.php  →  literal
+```
+
+| Dato | Clave | Dónde se ve |
+| --- | --- | --- |
+| Nombre del sitio | `general.site_name` | Marca de la cabecera (navbar), pie, `<title>`, `og:site_name`, `site.webmanifest`, `alt` de los logos |
+| Descripción corta | `general.site_description` | `<meta name="description">` cuando la página y el SEO por defecto están vacíos |
+| Idioma | `general.site_locale` | `<html lang>` (normaliza `es_ES` → `es`) |
+| Zona horaria | `general.site_timezone` | Fechas del sitio, aplicada en `App::boot()` |
+| Título SEO | `seo.default_meta_title` | `<title>` cuando la página no trae título |
+| Descripción SEO | `seo.default_meta_description` | `<meta name="description">` antes que la descripción corta |
+
+Cadena de resolución del `<meta name="description">`:
+`descripción de la página → seo.default_meta_description → general.site_description`.
+
+El título de documento se compone como `{título de la página} · {nombre del
+sitio}`, sin duplicar cuando coinciden, y se escapa **una sola vez** (antes se
+escapaba en el controlador y otra vez en la vista, así que un `&` salía como
+`&amp;amp;`).
+
+El panel no cambia: `views/layouts/admin.php` mantiene su `<title>` y su marca, y
+no lee nada de `SiteSettings`. Coste: una consulta más por petición en
+`App::boot()` (caché de petición, tabla con índice único); se acepta a cambio de
+que la zona horaria configurada sea la que de verdad se usa.
 
 ---
 
@@ -223,10 +260,10 @@ php -l app/Services/PublicThemeService.php   # y el resto de archivos tocados
 # 2. Migración (idempotente: se puede relanzar)
 php db/migrations/apply.php 2026_10_26_public_visual_settings.up.sql
 
-# 3. Prueba de servicio (74 comprobaciones)
+# 3. Prueba de servicio (84 comprobaciones)
 php tests/public-theme/service-test.php
 
-# 4. Prueba HTTP (45 comprobaciones) — ver tests/public-theme/README.md
+# 4. Prueba HTTP (55 comprobaciones) — ver tests/public-theme/README.md
 ```
 
 ---

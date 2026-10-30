@@ -12,14 +12,21 @@
 
 use App\Core\Auth;
 use App\Services\PageRenderer;
+use App\Services\SiteSettings;
 
-$pageTitle       = htmlspecialchars($page['title'] ?? 'PePiuoX Editor', ENT_QUOTES, 'UTF-8');
-$pageDescription = $page['description'] ?? '';
-$pageSlug        = $page['slug'] ?? '';
+// Metadatos: la página manda; si no trae, se usan los valores por defecto de
+// Configuración → SEO (y, en última instancia, el nombre y la descripción del
+// sitio). El título se compone aquí y se escapa una sola vez.
+$pageTitleRaw    = (string) ($page['title'] ?? '');
+$pageDescRaw     = (string) ($page['description'] ?? '');
+$pageSlug        = (string) ($page['slug'] ?? '');
+$pageTitle       = e(SiteSettings::titleFor($pageTitleRaw));
+$pageDescription = SiteSettings::descriptionFor($pageDescRaw);
+$siteLanguage    = SiteSettings::language();
 
-// Nombre de la aplicación: llega del controlador; si falta, se cae al global o al literal.
-$appName = $appName ?? (isset($GLOBALS['cfg']['app_name']) ? $GLOBALS['cfg']['app_name'] : 'PePiuoX Editor');
-$appName = trim((string) $appName) !== '' ? trim((string) $appName) : 'PePiuoX Editor';
+// Nombre del sitio: llega del controlador (que lo lee de Configuración); si
+// faltase, se resuelve aquí con la misma regla.
+$appName = trim((string) ($appName ?? '')) !== '' ? trim((string) $appName) : SiteSettings::name();
 
 // Marca en dos tonos: primera palabra neutra, resto en acento.
 $brandParts = preg_split('/\s+/', $appName, 2) ?: [];
@@ -36,12 +43,18 @@ $userInitial = function_exists('mb_substr') ? mb_substr($userName, 0, 1) : subst
 $userInitial = strtoupper($userInitial !== '' ? $userInitial : 'U');
 ?>
 <!DOCTYPE html>
-<html lang="es" data-bs-theme="<?= \App\Services\PublicThemeService::isDark() ? 'dark' : 'light' ?>">
+<html lang="<?= e($siteLanguage) ?>" data-bs-theme="<?= \App\Services\PublicThemeService::isDark() ? 'dark' : 'light' ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= $pageTitle ?></title>
-    <meta name="description" content="<?= htmlspecialchars($pageDescription, ENT_QUOTES, 'UTF-8') ?>">
+    <?php if ($pageDescription !== ''): ?>
+    <meta name="description" content="<?= e($pageDescription) ?>">
+    <?php endif; ?>
+    <meta property="og:site_name" content="<?= e($appName) ?>">
+    <?php if ($pageDescription !== ''): ?>
+    <meta property="og:description" content="<?= e($pageDescription) ?>">
+    <?php endif; ?>
 
     <?php
     // Favicon gestionado desde Configuración → Favicon. Sólo se emiten las

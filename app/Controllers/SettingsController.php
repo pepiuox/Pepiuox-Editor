@@ -6,7 +6,7 @@ namespace App\Controllers;
 
 use App\Core\{Request, Response, View, Session, CSRF, Auth};
 use App\Models\Setting;
-use App\Services\{SettingService, AuditService, PublicThemeService, SettingsAssetService};
+use App\Services\{SettingService, AuditService, PublicThemeService, SettingsAssetService, SiteSettings};
 
 /**
  * Módulo de configuración del sistema.
@@ -124,6 +124,11 @@ class SettingsController
         try {
             Setting::updateBatch($updateData);
             SettingService::clearCache(); // Limpiar caché para la siguiente petición
+            // La identidad del sitio (nombre, descripción, idioma, zona horaria)
+            // se cachea aparte: sin esto, el sitio público seguiría pintando el
+            // nombre anterior durante el resto de la petición.
+            SiteSettings::flush();
+            PublicThemeService::flush();
 
             AuditService::log(Auth::id(), 'settings_updated', 'Configuración del sistema actualizada', 'settings');
             Session::flash('flash.success', 'Configuración guardada correctamente.');

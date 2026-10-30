@@ -2,6 +2,7 @@
 namespace App\Core;
 
 use App\Services\TranslationService;
+use App\Services\SiteSettings;
 use App\Controllers\AuthController;
 
 class App
@@ -10,6 +11,16 @@ class App
     {
         $cfg = require CONFIG_PATH . '/config.php';
         date_default_timezone_set($cfg['timezone'] ?? 'UTC');
+
+        // La zona horaria de Configuración → General manda sobre la del archivo.
+        // Se aplica al arrancar para que fechas, tokens y registros coincidan.
+        // Si la base de datos no responde o el valor no es válido, se queda la
+        // del archivo: este paso nunca puede tumbar una petición.
+        try {
+            date_default_timezone_set(SiteSettings::timezone());
+        } catch (\Throwable $e) {
+            error_log('[App] Zona horaria del sitio no aplicada: ' . $e->getMessage());
+        }
 
         if ($cfg['debug'] ?? false) {
             error_reporting(E_ALL);

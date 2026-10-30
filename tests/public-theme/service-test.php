@@ -34,6 +34,7 @@ require_once APP_PATH . '/Helpers/functions.php';
 use App\Services\ImageUploadValidator;
 use App\Services\PublicThemeService;
 use App\Services\SettingService;
+use App\Services\SiteSettings;
 use App\Services\SvgSanitizer;
 
 $passed = 0;
@@ -51,7 +52,21 @@ function check(string $name, bool $condition, string $detail = ''): void
     echo "  FALLA {$name}" . ($detail !== '' ? " → {$detail}" : '') . "\n";
 }
 
-echo "== 1. Lectura de configuración ==\n";
+echo "== 0. Estado de partida ==\n";
+// Esta suite escribe en la tabla `settings`. Para que dos ejecuciones seguidas
+// den el mismo resultado y las comprobaciones de valores por defecto tengan
+// sentido, se normaliza primero: el tema «oscuro» es la paleta original del
+// sitio y sus colores coinciden con los de la migración.
+PublicThemeService::resetColors('oscuro');
+check('estado de partida normalizado (tema oscuro)', PublicThemeService::get('theme') === 'oscuro', PublicThemeService::get('theme'));
+
+// Línea base de los ajustes que el bloque 12 modifica temporalmente. Se
+// comprueba al final que quedaron como estaban: una prueba no debe dejar el
+// sitio configurado a su gusto.
+$baselineTimezone = SiteSettings::timezone();
+$baselineLocale   = (string) SettingService::get('general', 'site_locale', 'es');
+
+echo "\n== 1. Lectura de configuración ==\n";
 $all = PublicThemeService::all();
 check('34 claves gestionadas', count($all) === 34, 'count=' . count($all));
 check('tema por defecto = oscuro', ($all['theme'] ?? '') === 'oscuro', $all['theme'] ?? 'null');
@@ -193,10 +208,39 @@ check('getPublicSettings() devuelve 34 claves', count(getPublicSettings()) === 3
 check('public_theme_css_url() incluye versión', str_contains(public_theme_css_url(), 'public-theme.css?v='));
 check('public_logo() devuelve null sin configuración', public_logo('logo_header') === null);
 
-echo "\n== 12. Limpieza (la prueba no debe dejar rastro en el sitio) ==\n";
+echo "\n== 12. Identidad del sitio: manda Configuración, no el archivo ==\n";
+check('name() devuelve el nombre guardado', SiteSettings::name() === trim((string) SettingService::get('general', 'site_name', '')), SiteSettings::name());
+check('language() normaliza es_ES a es', (static function (): bool {
+    $original = (string) SettingService::get('general', 'site_locale', 'es');
+    SettingService::set('general', 'site_locale', 'es_ES');
+    SiteSettings::flush();
+    $result = SiteSettings::language() === 'es';
+    SettingService::set('general', 'site_locale', $original !== '' ? $original : 'es');
+    SiteSettings::flush();
+    return $result;
+})(), SiteSettings::language());
+check('titleFor compone «página · sitio»', SiteSettings::titleFor('Inicio') === 'Inicio · ' . SiteSettings::name(), SiteSettings::titleFor('Inicio'));
+check('titleFor no duplica el nombre', SiteSettings::titleFor(SiteSettings::name()) === SiteSettings::name(), SiteSettings::titleFor(SiteSettings::name()));
+check('titleFor sin título cae al por defecto', SiteSettings::titleFor('') === SiteSettings::defaultTitle(), SiteSettings::titleFor(''));
+check('descriptionFor respeta la de la página', SiteSettings::descriptionFor('Propia') === 'Propia');
+check('descriptionFor cae al defecto', SiteSettings::descriptionFor('') === SiteSettings::defaultDescription(), SiteSettings::descriptionFor(''));
+
+$originalTz = (string) SettingService::get('general', 'site_timezone', 'Europe/Madrid');
+SettingService::set('general', 'site_timezone', 'America/Lima');
+SiteSettings::flush();
+check('timezone() lee la guardada', SiteSettings::timezone() === 'America/Lima', SiteSettings::timezone());
+\App\Core\App::boot();
+check('App::boot aplica la zona horaria guardada', date_default_timezone_get() === 'America/Lima', date_default_timezone_get());
+SettingService::set('general', 'site_timezone', $originalTz !== '' ? $originalTz : 'Europe/Madrid');
+SiteSettings::flush();
+date_default_timezone_set(SiteSettings::timezone());
+
+echo "\n== 13. Limpieza (la prueba no debe dejar rastro en el sitio) ==\n";
 $cleanup = PublicThemeService::save(['logo_alt' => '']);
 check('texto alternativo devuelto a vacío', $cleanup['ok'] && PublicThemeService::get('logo_alt') === '', PublicThemeService::get('logo_alt'));
 check('tema final = oscuro', PublicThemeService::get('theme') === 'oscuro', PublicThemeService::get('theme'));
+check('zona horaria restaurada a la de partida', SiteSettings::timezone() === $baselineTimezone, SiteSettings::timezone() . ' ≠ ' . $baselineTimezone);
+check('idioma restaurado al de partida', (string) SettingService::get('general', 'site_locale', 'es') === $baselineLocale, (string) SettingService::get('general', 'site_locale', 'es'));
 check('sin CSS personalizado guardado', PublicThemeService::get('custom_css') === '', PublicThemeService::get('custom_css'));
 
 echo "\n─────────────────────────────────────────\n";

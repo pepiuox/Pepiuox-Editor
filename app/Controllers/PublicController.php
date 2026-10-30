@@ -5,6 +5,7 @@ use App\Core\Request;
 use App\Core\Auth;
 use App\Core\View;
 use App\Services\PageRenderer;
+use App\Services\SiteSettings;
 use App\Core\Response;
 
 class PublicController
@@ -85,13 +86,17 @@ class PublicController
 
         View::partial('public.layout', [
             'page' => [
-                'title'       => $this->renderer->getPageTitle($page),
-                'description' => $this->renderer->getPageDescription($page),
-                'slug'        => $this->renderer->getPageSlug($page),
+                // Sin escapar: el layout compone el título con el nombre del
+                // sitio y escapa una sola vez. Antes se escapaba aquí y otra
+                // vez en la vista, y un «&» salía como «&amp;amp;».
+                'title'       => (string) ($page['title'] ?? ''),
+                'description' => (string) ($page['description'] ?? ''),
+                'slug'        => (string) ($page['slug'] ?? ''),
             ],
             'menu'     => $menu,
             'content'  => $content,
-            'appName'  => $GLOBALS['cfg']['app_name'] ?? 'PePiuoX Editor',
+            // El nombre sale de Configuración → General → «Nombre del Sitio».
+            'appName'  => SiteSettings::name(),
             'authUser' => $isLoggedIn ? Auth::user() : null,
         ]);
     }

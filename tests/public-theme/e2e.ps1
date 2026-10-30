@@ -152,6 +152,51 @@ Check 'el panel no lleva la clase public-site en <body>' (-not ($panel -match '<
 Check 'el panel muestra las 11 pestanas' (([regex]::Matches($panel, 'data-tab="')).Count -ge 22) 'cuenta inesperada'
 Remove-Item "$env:TEMP\ppf_panel.html" -ErrorAction SilentlyContinue
 
+Write-Host "`n== N. Nombre, descripcion e idioma del sitio (Configuracion -> General) =="
+$origName = (& php "$PSScriptRoot\support.php" get general site_name).Trim()
+$origDesc = (& php "$PSScriptRoot\support.php" get general site_description).Trim()
+
+# 1. Guardar desde el formulario real de Configuracion
+$code = curl.exe -s -o NUL -w "%{http_code}" @admin `
+    --data-urlencode "settings[general][site_name]=Taller Prueba & Cia" `
+    -d "_csrf_token=$csrf" "$base/admin/settings/update"
+Check 'guardar el nombre responde 302' ($code -eq '302') "http=$code"
+$saved = (& php "$PSScriptRoot\support.php" get general site_name).Trim()
+Check 'el nombre queda en la base de datos' ($saved -eq 'Taller Prueba & Cia') "valor=$saved"
+
+# 2. Y se ve en el sitio publico
+# La marca del navbar lleva aria-label siempre (con logo o con texto), asi que
+# se comprueba ahi: el bloque A dejo un logo configurado y entonces no hay
+# wordmark de texto.
+$html = (curl.exe -s "$base/") -join "`n"
+Check 'el nombre aparece en la cabecera (navbar)' ($html -match 'aria-label="Taller Prueba &amp; Cia · Inicio"') 'no aparece en la cabecera'
+Check 'el <title> lleva el nombre del sitio' ($html -match '<title>[^<]*Taller Prueba &amp; Cia</title>') 'titulo sin el nombre'
+Check 'og:site_name lleva el nombre' ($html -match 'og:site_name" content="Taller Prueba &amp; Cia"')
+Check 'el & se escapa una sola vez' (-not ($html -match '&amp;amp;')) 'doble escape detectado'
+
+# 3. Descripcion: la cadena es pagina -> SEO por defecto -> descripcion del sitio
+$origSeoDesc = (& php "$PSScriptRoot\support.php" get seo default_meta_description).Trim()
+curl.exe -s -o NUL @admin --data-urlencode "settings[general][site_description]=Descripcion de prueba del sitio" `
+    --data-urlencode "settings[seo][default_meta_description]=" `
+    -d "_csrf_token=$csrf" "$base/admin/settings/update" | Out-Null
+$html = (curl.exe -s "$base/") -join "`n"
+Check 'sin SEO por defecto, manda la descripcion del sitio' ($html -match '<meta name="description" content="Descripcion de prueba del sitio"') 'meta description no actualizada'
+
+curl.exe -s -o NUL @admin --data-urlencode "settings[seo][default_meta_description]=Meta de prueba SEO" `
+    -d "_csrf_token=$csrf" "$base/admin/settings/update" | Out-Null
+$html = (curl.exe -s "$base/") -join "`n"
+Check 'con SEO por defecto, manda la de SEO' ($html -match '<meta name="description" content="Meta de prueba SEO"') 'la SEO por defecto no gana'
+
+# 4. Restaurar
+curl.exe -s -o NUL @admin --data-urlencode "settings[general][site_name]=$origName" `
+    --data-urlencode "settings[general][site_description]=$origDesc" `
+    --data-urlencode "settings[seo][default_meta_description]=$origSeoDesc" `
+    -d "_csrf_token=$csrf" "$base/admin/settings/update" | Out-Null
+$restored = (& php "$PSScriptRoot\support.php" get general site_name).Trim()
+Check 'nombre restaurado al terminar' ($restored -eq $origName) "valor=$restored"
+$restoredSeo = (& php "$PSScriptRoot\support.php" get seo default_meta_description).Trim()
+Check 'SEO por defecto restaurado' ($restoredSeo -eq $origSeoDesc) "valor=$restoredSeo"
+
 Write-Host "`n== K. Limpieza (la prueba no debe dejar rastro en el sitio) =="
 foreach ($slot in 'logo_header', 'favicon_32', 'logo_tablet') {
     curl.exe -s -o NUL @admin -d "slot=$slot" -d "_csrf_token=$csrf" `

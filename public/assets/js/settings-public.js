@@ -59,6 +59,15 @@
         || document.querySelector('.nav-tabs .nav-link.active')?.dataset.tab;
     activateTab(initial, false);
 
+    // Atajos dentro de un panel: botones que llevan a otra pestaña
+    // (por ejemplo, del aviso de «Identidad visual» a «General»).
+    document.querySelectorAll('[data-goto-tab]').forEach((button) => {
+        button.addEventListener('click', () => {
+            activateTab(button.dataset.gotoTab);
+            document.querySelector(`.nav-tabs .nav-link[data-tab="${button.dataset.gotoTab}"]`)?.focus();
+        });
+    });
+
     // ──────────────────────────────────────────────────────────────
     //  Colores: selector ↔ HEX ↔ muestra en vivo
     // ──────────────────────────────────────────────────────────────
