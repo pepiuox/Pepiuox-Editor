@@ -38,25 +38,40 @@ final class PublicThemeService
     /**
      * Áreas de logotipo configurables.
      *
-     * `key`  → sufijo de la clave en `settings` (`public_<key>`).
-     * `dir`  → subdirectorio dentro de `uploads/settings/`.
-     * `label`→ etiqueta humana.
-     * `hint` → tamaño recomendado que muestra la interfaz.
+     * `key`    → sufijo de la clave en `settings` (`public_<key>`).
+     * `label`  → etiqueta humana.
+     * `hint`   → tamaño recomendado que muestra la interfaz.
+     * `where`  → dónde se pinta de verdad. Si un hueco no tiene consumidor se
+     *            oculta en la interfaz (`HIDDEN_SLOTS`) para no ofrecer un
+     *            control que no hace nada.
      *
-     * @var array<string, array{label: string, hint: string}>
+     * @var array<string, array{label: string, hint: string, where: string}>
      */
     public const LOGO_SLOTS = [
-        'logo_header'     => ['label' => 'Logo principal del encabezado', 'hint' => 'Ancho 240–320 px, alto libre, fondo transparente'],
-        'logo_desktop'    => ['label' => 'Logo para escritorio',          'hint' => 'Ancho 320 px a 2x (640 px)'],
-        'logo_tablet'     => ['label' => 'Logo para tablet',              'hint' => 'Ancho 220 px a 2x (440 px)'],
-        'logo_mobile'     => ['label' => 'Logo para móvil',               'hint' => 'Ancho 160 px a 2x (320 px)'],
-        'logo_menu'       => ['label' => 'Logo del menú principal',       'hint' => 'Cuadrado 64×64 px', 'note' => 'Se guarda, pero el menú actual no tiene hueco de marca propio: hoy no se muestra en ninguna página.'],
-        'logo_multinivel' => ['label' => 'Logo de menús multinivel',      'hint' => 'Cuadrado 40×40 px', 'note' => 'Se guarda, pero los submenús actuales no admiten imagen: hoy no se muestra.'],
-        'logo_footer'     => ['label' => 'Logo del pie de página',        'hint' => 'Ancho 200 px, alto libre'],
-        'logo_sidebar'    => ['label' => 'Logo de la barra lateral',      'hint' => 'Ancho 180 px, alto libre', 'note' => 'Se guarda, pero el sitio público no tiene barra lateral: hoy no se muestra.'],
-        'logo_dark'       => ['label' => 'Logo alternativo para fondos oscuros', 'hint' => 'Versión clara de la marca'],
-        'logo_light'      => ['label' => 'Logo alternativo para fondos claros',  'hint' => 'Versión oscura de la marca'],
+        'logo_header'     => ['label' => 'Logo principal del encabezado', 'hint' => 'Ancho 240–320 px, alto libre, fondo transparente', 'where' => 'Cabecera del sitio'],
+        'logo_desktop'    => ['label' => 'Logo para escritorio',          'hint' => 'Ancho 320 px a 2x (640 px)', 'where' => 'Cabecera, pantallas de 992 px o más'],
+        'logo_tablet'     => ['label' => 'Logo para tablet',              'hint' => 'Ancho 220 px a 2x (440 px)', 'where' => 'Cabecera, pantallas de 576 a 991 px'],
+        'logo_mobile'     => ['label' => 'Logo para móvil',               'hint' => 'Ancho 160 px a 2x (320 px)', 'where' => 'Cabecera, pantallas de menos de 576 px'],
+        'logo_menu'       => ['label' => 'Logo del menú principal',       'hint' => 'Cuadrado 64×64 px', 'where' => 'Cabecera del menú desplegado en móvil'],
+        'logo_multinivel' => ['label' => 'Logo de menús multinivel',      'hint' => 'Cuadrado 40×40 px', 'where' => 'Cabecera de cada desplegable y submenú'],
+        'logo_footer'     => ['label' => 'Logo del pie de página',        'hint' => 'Ancho 200 px, alto libre', 'where' => 'Pie del sitio'],
+        'logo_sidebar'    => ['label' => 'Logo de la barra lateral',      'hint' => 'Ancho 180 px, alto libre', 'where' => 'Sin componente: se oculta en la interfaz'],
+        'logo_dark'       => ['label' => 'Logo alternativo para fondos oscuros', 'hint' => 'Versión clara de la marca', 'where' => 'Cabecera con el sistema en modo oscuro'],
+        'logo_light'      => ['label' => 'Logo alternativo para fondos claros',  'hint' => 'Versión oscura de la marca', 'where' => 'Cabecera con el sistema en modo claro'],
     ];
+
+    /**
+     * Huecos que se guardan pero **no se ofrecen** en la interfaz porque el
+     * sitio público todavía no tiene el componente donde pintarlos.
+     *
+     * `logo_sidebar`: no existe barra lateral en el layout público. El valor
+     * sigue en `settings` y `public_logo('logo_sidebar')` lo devuelve, así que
+     * en cuanto haya un componente con esa clase basta con quitar la clave de
+     * esta lista.
+     *
+     * @var array<int, string>
+     */
+    public const HIDDEN_SLOTS = ['logo_sidebar'];
 
     /**
      * Huecos de favicon configurables.
@@ -451,9 +466,42 @@ body.public-site small.text-muted { color: var(--public-secondary) !important; }
 body.public-site .brand-logo { max-height: 44px; width: auto; }
 body.public-site .brand-logo--footer { max-height: 36px; }
 body.public-site .brand-logo--sidebar { max-height: 32px; }
+body.public-site .brand-logo--menu { max-height: 40px; width: auto; }
 CSS;
 
+        // ── Logo de menús multinivel ────────────────────────────────
+        // Se pinta como cabecera de cada desplegable (.dropdown-menu), incluidos
+        // los submenús, sin tocar el generador de menús: cero DOM añadido y
+        // cero cambios cuando no hay logo configurado.
+        $multinivelLogo = self::assetUrl('logo_multinivel');
+        if ($multinivelLogo !== null) {
+            $safeUrl = str_replace(['"', '\\', '(', ')'], ['%22', '%5C', '%28', '%29'], $multinivelLogo);
+            $css .= "\nbody.public-site .navbar ul.dropdown-menu::before {\n"
+                . "    content: \"\";\n"
+                . "    display: block;\n"
+                . "    height: 28px;\n"
+                . "    margin: .4rem .75rem .3rem;\n"
+                . "    background-image: url(\"{$safeUrl}\");\n"
+                . "    background-repeat: no-repeat;\n"
+                . "    background-position: left center;\n"
+                . "    background-size: contain;\n"
+                . "}\n";
+        }
+
         return $css . "\n";
+    }
+
+    /**
+     * Huecos de logotipo que la interfaz debe mostrar.
+     *
+     * Excluye los de `HIDDEN_SLOTS`: son ajustes que aún no tienen componente
+     * donde pintarse y ofrecerlos sería prometer algo que no ocurre.
+     *
+     * @return array<string, array{label: string, hint: string, where: string}>
+     */
+    public static function visibleLogoSlots(): array
+    {
+        return array_diff_key(self::LOGO_SLOTS, array_flip(self::HIDDEN_SLOTS));
     }
 
     /**

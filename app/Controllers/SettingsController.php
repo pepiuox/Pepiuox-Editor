@@ -66,7 +66,9 @@ class SettingsController
         Response::render(View::render('settings.index', [
             'settings'     => $settings,
             'public'       => $public,
-            'logoSlots'    => PublicThemeService::LOGO_SLOTS,
+            // Sólo los huecos que tienen dónde pintarse: los demás se ocultan
+            // en la interfaz en lugar de ofrecer un control sin efecto.
+            'logoSlots'    => PublicThemeService::visibleLogoSlots(),
             'faviconSlots' => PublicThemeService::FAVICON_SLOTS,
             'colorLabels'  => PublicThemeService::COLOR_LABELS,
             'presets'      => PublicThemeService::THEME_PRESETS,

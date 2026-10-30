@@ -186,6 +186,17 @@ $userInitial = strtoupper($userInitial !== '' ? $userInitial : 'U');
             color: var(--accent);
         }
 
+        /* Logo del menú principal: sólo visible con el menú desplegado en móvil,
+           donde la cabecera ya muestra la marca del sitio. */
+        .menu-brand {
+            padding: .75rem 0 .25rem;
+        }
+
+        .brand-logo--menu {
+            max-height: 40px;
+            width: auto;
+        }
+
         .navbar-toggler {
             border: 1px solid var(--border-color);
             border-radius: var(--radius-sm);
@@ -731,6 +742,18 @@ $userInitial = strtoupper($userInitial !== '' ? $userInitial : 'U');
             </button>
 
             <div class="collapse navbar-collapse" id="mainNav">
+                <?php
+                // Logo del menú principal. Sólo se pinta cuando el administrador
+                // ha configurado uno: si no existe, el bloque entero desaparece y
+                // el menú queda exactamente como estaba.
+                $logoMenu = public_logo('logo_menu');
+                ?>
+                <?php if ($logoMenu !== null): ?>
+                <div class="menu-brand d-lg-none">
+                    <img class="brand-logo brand-logo--menu" src="<?= e($logoMenu) ?>" alt="<?= e(public_logo_alt()) ?>">
+                </div>
+                <?php endif; ?>
+
                 <?= (new PageRenderer())->renderMenuHtml($menu ?? []) ?>
 
                 <!-- Acciones según el estado de sesión -->

@@ -4,8 +4,8 @@ Módulo que permite al administrador cambiar la identidad visual del **sitio
 público** (logos, favicon, tema, colores y CSS adicional) sin tocar código, y
 sin que el **panel de administración** cambie un píxel.
 
-Estado: **implementado y verificado** (2026-10-26). 84 comprobaciones de servicio
-y 55 de extremo a extremo en verde. Ver [tests/public-theme/README.md](../tests/public-theme/README.md).
+Estado: **implementado y verificado** (2026-10-26). 92 comprobaciones de servicio
+y 65 de extremo a extremo en verde. Ver [tests/public-theme/README.md](../tests/public-theme/README.md).
 
 ---
 
@@ -53,12 +53,30 @@ que la zona horaria configurada sea la que de verdad se usa.
 | Pestaña | Qué hace |
 | --- | --- |
 | Identidad visual | Texto alternativo de los logotipos (accesibilidad) |
-| Logotipos e iconos | 10 huecos: subir, previsualizar, reemplazar, eliminar |
+| Logotipos e iconos | 9 huecos visibles de 10: subir, previsualizar, reemplazar, eliminar |
 | Favicon | 4 huecos (ICO, 16, 32, apple-touch) + `site.webmanifest` |
 | Temas | 5 tarjetas: claro, oscuro, corporativo, minimalista, personalizado |
 | Colores | 16 colores con selector y HEX, con indicador de contraste AA |
 | CSS personalizado | Editor, activar/desactivar, restaurar, validación previa |
 | Vista previa | Muestra en vivo + el sitio real en un iframe |
+
+Cada tarjeta de logotipo indica **dónde se pinta** (`where` en
+`PublicThemeService::LOGO_SLOTS`), para que no haya que adivinar:
+
+| Hueco | Dónde se ve |
+| --- | --- |
+| `logo_header` / `logo_desktop` | Cabecera del sitio (992 px o más) |
+| `logo_tablet` / `logo_mobile` | Cabecera a 576–991 px / menos de 576 px (`<picture>`) |
+| `logo_menu` | Cabecera del menú desplegado en móvil |
+| `logo_multinivel` | Cabecera de cada desplegable y submenú |
+| `logo_footer` | Pie del sitio |
+| `logo_dark` / `logo_light` | Cabecera según el modo del sistema |
+| `logo_sidebar` | **Oculto en la interfaz**: no existe barra lateral todavía |
+
+Los huecos sin componente se esconden con `PublicThemeService::HIDDEN_SLOTS`
+hoy hay uno) en vez de ofrecer un control que no hace nada. El valor sigue en
+`settings` y `public_logo('logo_sidebar')` lo devuelve, así que en cuanto exista
+un componente con esa clase basta con quitar la clave de esa lista.
 
 Permiso necesario: **`settings.manage`** (Super admin lo tiene por bypass).
 Las cuatro pestañas anteriores (General, SEO, Cache, Correo) siguen ahí, con sus
@@ -214,7 +232,7 @@ etiqueta `style`), `@import`, `expression(`, `javascript:`, `vbscript:`,
 | --- | --- | --- |
 | D1 | `<source>` de `prefers-color-scheme` antes que los de ancho: un móvil en modo oscuro recibía el logo de escritorio | **Corregido**: orden móvil → tablet → esquema; verificado leyendo el HTML servido |
 | D2 | `--public-primary` y `--public-secondary` se generaban sin consumidor | **Corregido**: `.btn-primary` y `.text-muted`/`.form-text` del sitio público |
-| D3 | `logo_menu`, `logo_multinivel`, `logo_sidebar` y `--public-sidebar-bg` sin elemento en el layout | **Mitigado**: la interfaz avisa en esos tres huecos de que hoy no se muestran |
+| D3 | `logo_menu`, `logo_multinivel`, `logo_sidebar` y `--public-sidebar-bg` sin elemento en el layout | **Resuelto**: `logo_menu` se pinta en la cabecera del menú móvil y `logo_multinivel` en la cabecera de cada desplegable (vía CSS, sin DOM añadido); `logo_sidebar` se oculta en la interfaz hasta que exista el componente |
 | D4 | El contraste del color de fondo se medía contra sí mismo (siempre 1.0:1) | **Corregido**: esa fila se mide contra el texto |
 | D5 | Cambiar de pestaña marcaba el formulario como «modificado» | **Corregido**: `return_tab` excluido de la instantánea |
 | D6 | El campo HEX no se enviaba sin JavaScript | **Corregido**: lleva `name`, y el servidor valida igual |
@@ -230,11 +248,12 @@ etiqueta `style`), `@import`, `expression(`, `javascript:`, `vbscript:`,
 
 ## 7. Limitaciones conocidas (honestas)
 
-1. **Logo de sidebar y de menús multinivel**: se guardan y se sirven por
-   `public_logo('logo_sidebar')` / `public_logo('logo_multinivel')`, pero el
-   layout público actual **no tiene** barra lateral ni un hueco de logo dentro de
-   los submenús, así que hoy no se ven en ninguna página. El dato queda listo
-   para cuando exista ese componente.
+1. **`logo_sidebar` está oculto a propósito**: el layout público no tiene barra
+   lateral, así que ofrecer el hueco sería prometer algo que no ocurre. El valor
+   se conserva y `public_logo('logo_sidebar')` lo devuelve; el día que exista el
+   componente, se quita de `HIDDEN_SLOTS` y aparece solo. `logo_menu` y
+   `logo_multinivel` **sí se pintan** ya (cabecera del menú móvil y cabecera de
+   cada desplegable, esta última vía CSS sin añadir DOM).
 2. **Variantes por fondo**: `logo_dark` y `logo_light` se eligen con
    `prefers-color-scheme`, que manda sobre las variantes por tamaño si ambas
    están definidas. Es una limitación de `<picture>` (una sola `<source>` gana).

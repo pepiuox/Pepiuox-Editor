@@ -197,8 +197,36 @@ Check 'nombre restaurado al terminar' ($restored -eq $origName) "valor=$restored
 $restoredSeo = (& php "$PSScriptRoot\support.php" get seo default_meta_description).Trim()
 Check 'SEO por defecto restaurado' ($restoredSeo -eq $origSeoDesc) "valor=$restoredSeo"
 
+Write-Host "`n== O. Los diez huecos: unos se pintan y otros se ocultan =="
+# logo_menu -> cabecera del menu desplegado en movil
+curl.exe -s -o NUL @admin -F "slot=logo_menu" -F "asset=@$media/logo.png" -F "_csrf_token=$csrf" `
+    "$base/admin/settings/public/asset" | Out-Null
+$html = (curl.exe -s "$base/") -join "`n"
+Check 'logo_menu se pinta en la cabecera del menu' ($html -match 'class="menu-brand d-lg-none"') 'no aparece el bloque del menu'
+Check 'usa el archivo subido' ($html -match 'brand-logo--menu" src="[^"]*logo_menu-')
+
+# logo_multinivel -> cabecera de cada desplegable, via CSS
+curl.exe -s -o NUL @admin -F "slot=logo_multinivel" -F "asset=@$media/logo.png" -F "_csrf_token=$csrf" `
+    "$base/admin/settings/public/asset" | Out-Null
+$css = (curl.exe -s "$base/public-theme.css") -join "`n"
+Check 'logo_multinivel llega a los desplegables' ($css -match 'ul\.dropdown-menu::before') 'falta la regla de los submenus'
+Check 'la regla apunta al archivo configurado' ($css -match 'logo_multinivel-[0-9a-f]+\.png') 'la regla no referencia el archivo'
+
+# logo_sidebar -> sin componente: no debe ofrecerse en la interfaz
+curl.exe -s -o "$env:TEMP\ppf_panel_2.html" @admin "$base/admin/settings" | Out-Null
+$panel = Get-Content "$env:TEMP\ppf_panel_2.html" -Raw
+Check 'la interfaz NO ofrece el hueco de la barra lateral' (-not ($panel -match 'logo_sidebar')) 'sigue apareciendo logo_sidebar'
+Check 'la interfaz ofrece el hueco del menu' ($panel -match 'name="slot" value="logo_menu"')
+Check 'la interfaz ofrece el hueco multinivel' ($panel -match 'name="slot" value="logo_multinivel"')
+# Cada hueco aparece dos veces en el HTML (formulario de subida y de borrado),
+# asi que se cuentan los nombres distintos, no las apariciones.
+$slotsPanel = [regex]::Matches($panel, 'value="(logo_[a-z_]+)"') |
+    ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
+Check 'la interfaz ofrece 9 huecos de logo' ($slotsPanel.Count -eq 9) ("distintos=" + $slotsPanel.Count)
+Remove-Item "$env:TEMP\ppf_panel_2.html" -ErrorAction SilentlyContinue
+
 Write-Host "`n== K. Limpieza (la prueba no debe dejar rastro en el sitio) =="
-foreach ($slot in 'logo_header', 'favicon_32', 'logo_tablet') {
+foreach ($slot in 'logo_header', 'favicon_32', 'logo_tablet', 'logo_menu', 'logo_multinivel') {
     curl.exe -s -o NUL @admin -d "slot=$slot" -d "_csrf_token=$csrf" `
         "$base/admin/settings/public/asset/delete" | Out-Null
     $left = (& php "$PSScriptRoot\support.php" get public $slot).Trim()

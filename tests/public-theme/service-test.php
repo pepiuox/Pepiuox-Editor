@@ -199,6 +199,15 @@ check('manifiesto sin iconos si no hay archivos', $manifest['icons'] === []);
 check('assetUrl de un slot sin configurar es null', PublicThemeService::assetUrl('logo_header') === null);
 check('slot inexistente es null', PublicThemeService::assetUrl('slot_inventado') === null);
 
+echo "\n== 9.b. Huecos con y sin destino ==\n";
+$visibles = PublicThemeService::visibleLogoSlots();
+check('se ofrecen 9 de los 10 huecos de logo', count($visibles) === 9, 'count=' . count($visibles));
+check('logo_sidebar se oculta (sin componente)', !isset($visibles['logo_sidebar']));
+check('logo_menu sí se ofrece (menú móvil)', isset($visibles['logo_menu']));
+check('logo_multinivel sí se ofrece (desplegables)', isset($visibles['logo_multinivel']));
+check('el catálogo completo sigue teniendo 10', count(PublicThemeService::LOGO_SLOTS) === 10);
+check('cada hueco declara dónde se pinta', !in_array('', array_column(PublicThemeService::LOGO_SLOTS, 'where'), true));
+
 echo "\n== 10. Corrección del defecto preexistente ==\n";
 check('SettingService::clearCache() existe', method_exists(SettingService::class, 'clearCache'));
 

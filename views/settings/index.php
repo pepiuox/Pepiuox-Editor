@@ -226,6 +226,9 @@ $tabs = [
             <header class="ppf-asset-head">
               <span class="ppf-asset-title"><?= e($meta['label']) ?></span>
               <span class="ppf-asset-hint"><?= e($meta['hint']) ?></span>
+              <?php if (!empty($meta['where'])): ?>
+                <span class="ppf-asset-where"><i class="bi bi-geo-alt"></i> <?= e($meta['where']) ?></span>
+              <?php endif; ?>
               <?php if (!empty($meta['note'])): ?>
                 <span class="ppf-asset-note"><i class="bi bi-exclamation-circle"></i> <?= e($meta['note']) ?></span>
               <?php endif; ?>
@@ -517,6 +520,8 @@ $tabs = [
 .ppf-asset-head{display:flex;flex-direction:column;gap:.15rem}
 .ppf-asset-title{font-weight:600;font-size:.9rem}
 .ppf-asset-hint{font-size:.75rem;opacity:.7}
+.ppf-asset-where{font-size:.72rem;opacity:.85;display:flex;gap:.3rem;align-items:flex-start;margin-top:.15rem}
+.ppf-asset-where i{opacity:.7;margin-top:.1rem}
 .ppf-asset-note{font-size:.72rem;line-height:1.35;display:flex;gap:.35rem;align-items:flex-start;margin-top:.15rem;padding:.3rem .45rem;border-radius:6px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);color:#f59e0b}
 .ppf-asset-preview{display:flex;align-items:center;justify-content:center;min-height:88px;padding:.5rem;border-radius:8px;background:repeating-conic-gradient(rgba(139,148,158,.18) 0% 25%,transparent 0% 50%) 50%/14px 14px}
 .ppf-asset-preview img{max-width:100%;max-height:80px;object-fit:contain}

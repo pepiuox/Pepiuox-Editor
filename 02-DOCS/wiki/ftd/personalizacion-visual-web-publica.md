@@ -65,8 +65,8 @@ Fuera:
 
 | Suite | Comando | Resultado real |
 | --- | --- | --- |
-| Servicio | `php tests/public-theme/service-test.php` | 84 pasan, 0 fallan |
-| Extremo a extremo | `./tests/public-theme/e2e.ps1` con servidor embebido | 55 pasan, 0 fallan |
+| Servicio | `php tests/public-theme/service-test.php` | 92 pasan, 0 fallan |
+| Extremo a extremo | `./tests/public-theme/e2e.ps1` con servidor embebido | 65 pasan, 0 fallan |
 
 Ambas suites son idempotentes y limpian lo que escriben: se ejecutaron dos veces
 seguidas con el mismo resultado y sin dejar archivos ni claves de prueba.
