@@ -125,19 +125,21 @@ window.EditorKit = (function () {
             return;
         }
 
+        // La biblioteca se engancha ANTES de registrar los bloques: así cada
+        // bloque recibe su categoría canónica en el mismo instante en que se
+        // añade, antes de que el panel lo pinte. Si el fichero no está cargado,
+        // se sigue igual: es una mejora, no un requisito.
+        if (window.BlocksLibrary && typeof window.BlocksLibrary.install === 'function') {
+            try {
+                window.BlocksLibrary.install(editor);
+            } catch (err) {
+                console.warn('[EditorKit] La biblioteca de bloques no se pudo enganchar:', err);
+            }
+        }
+
         var loadNext = function (index) {
             if (index >= urls.length) {
                 console.log('✅ Bloques cargados: ' + urls.length + ' fichero(s)');
-                // La biblioteca visual se engancha aquí: necesita todos los
-                // bloques registrados para agrupar, retirar duplicados y pintar
-                // las miniaturas una sola vez.
-                if (window.BlocksLibrary && typeof window.BlocksLibrary.enhance === 'function') {
-                    try {
-                        window.BlocksLibrary.enhance(editor);
-                    } catch (err) {
-                        console.warn('[EditorKit] La biblioteca de bloques no se pudo aplicar:', err);
-                    }
-                }
                 if (typeof onDone === 'function') onDone(urls.length);
                 return;
             }
