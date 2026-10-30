@@ -111,12 +111,19 @@
             const picker = document.querySelector(`#picker_${key}`);
             if (!picker) return;
 
-            const ratio = contrastRatio(picker.value, background);
+            // El propio fondo contra sí mismo siempre da 1.0:1 y no informa de
+            // nada. Para esa fila se mide el texto, que es lo que se lee encima.
+            const reference = key === 'color_background'
+                ? (document.querySelector('#picker_color_text')?.value || '#000000')
+                : background;
+            const ratio = contrastRatio(picker.value, reference);
             const label = ratio >= 7 ? 'AAA' : (ratio >= 4.5 ? 'AA' : 'Bajo');
             badge.textContent = `${ratio.toFixed(1)}:1 ${label}`;
             badge.classList.toggle('is-pass', ratio >= 4.5);
             badge.classList.toggle('is-fail', ratio < 4.5);
-            badge.title = `Contraste ${ratio.toFixed(2)}:1 sobre el fondo principal`;
+            badge.title = key === 'color_background'
+                ? `Contraste del texto principal sobre este fondo: ${ratio.toFixed(2)}:1`
+                : `Contraste ${ratio.toFixed(2)}:1 sobre el fondo principal`;
         });
     };
 
@@ -168,10 +175,20 @@
     // ──────────────────────────────────────────────────────────────
     //  Presets de tema → rellenan los 16 colores
     // ──────────────────────────────────────────────────────────────
+    const resetThemeInput = document.getElementById('ppfResetTheme');
+
     document.querySelectorAll('.ppf-theme-input').forEach((radio) => {
         radio.addEventListener('change', () => {
+            if (!radio.checked) return;
+
+            // «Restablecer» debe devolver la paleta del tema marcado ahora, no la
+            // que estaba guardada al cargar la página.
+            if (resetThemeInput) {
+                resetThemeInput.value = radio.dataset.preset ? radio.value : 'oscuro';
+            }
+
             const raw = radio.dataset.preset;
-            if (!radio.checked || !raw) return; // «Personalizado» no toca nada
+            if (!raw) return; // «Personalizado» no toca nada
 
             let colors = {};
             try {
@@ -204,6 +221,9 @@
         ['@import', '@import enlaza hojas externas y no está permitido.'],
         ['expression(', 'expression() no está permitido.'],
         ['javascript:', 'Las URL javascript: no están permitidas.'],
+        ['vbscript:', 'Las URL vbscript: no están permitidas.'],
+        ['behavior:', 'behavior: no está permitido.'],
+        ['-moz-binding', '-moz-binding no está permitido.'],
     ];
 
     const validateCss = (value) => {
@@ -277,18 +297,25 @@
     // ──────────────────────────────────────────────────────────────
     const publicForm = document.getElementById('publicSettingsForm');
     if (publicForm) {
-        let snapshot = JSON.stringify(Array.from(new FormData(publicForm).entries()));
+        // `return_tab` cambia al cambiar de pestaña y no es un dato del usuario:
+        // si entrara en la instantánea, navegar entre pestañas dispararía un
+        // aviso de «cambios sin guardar» que no existe.
+        const snapshot = () => JSON.stringify(
+            Array.from(new FormData(publicForm).entries())
+                .filter(([name]) => name !== 'return_tab')
+        );
+
+        let saved = snapshot();
         let submitting = false;
 
         publicForm.addEventListener('submit', () => { submitting = true; });
+        // Volver a la página con el formulario ya guardado no debe avisar.
+        window.addEventListener('pageshow', () => { saved = snapshot(); });
 
         window.addEventListener('beforeunload', (event) => {
-            if (submitting) return;
-            const current = JSON.stringify(Array.from(new FormData(publicForm).entries()));
-            if (current !== snapshot) {
-                event.preventDefault();
-                event.returnValue = '';
-            }
+            if (submitting || snapshot() === saved) return;
+            event.preventDefault();
+            event.returnValue = '';
         });
     }
 })();

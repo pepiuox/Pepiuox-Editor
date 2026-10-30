@@ -171,6 +171,24 @@ etiqueta `style`), `@import`, `expression(`, `javascript:`, `vbscript:`,
 | A-09 | Rate limit en la subida | **Pendiente**: recomendado con `RateLimitMiddleware` |
 | A-10 | CSP del sitio público | **Pendiente**: requiere decidir política (`unsafe-inline` para el `<style>` actual) |
 
+### Hallazgos de la revisión de calidad y su estado
+
+| ID | Hallazgo | Estado |
+| --- | --- | --- |
+| D1 | `<source>` de `prefers-color-scheme` antes que los de ancho: un móvil en modo oscuro recibía el logo de escritorio | **Corregido**: orden móvil → tablet → esquema; verificado leyendo el HTML servido |
+| D2 | `--public-primary` y `--public-secondary` se generaban sin consumidor | **Corregido**: `.btn-primary` y `.text-muted`/`.form-text` del sitio público |
+| D3 | `logo_menu`, `logo_multinivel`, `logo_sidebar` y `--public-sidebar-bg` sin elemento en el layout | **Mitigado**: la interfaz avisa en esos tres huecos de que hoy no se muestran |
+| D4 | El contraste del color de fondo se medía contra sí mismo (siempre 1.0:1) | **Corregido**: esa fila se mide contra el texto |
+| D5 | Cambiar de pestaña marcaba el formulario como «modificado» | **Corregido**: `return_tab` excluido de la instantánea |
+| D6 | El campo HEX no se enviaba sin JavaScript | **Corregido**: lleva `name`, y el servidor valida igual |
+| D7 | «Restablecer» usaba el tema guardado, no el marcado | **Corregido**: el radio de tema actualiza el destino del restablecimiento |
+| D8 | El cliente validaba 4 reglas y el servidor 7 | **Corregido**: mismas 7 reglas en ambos lados |
+| D9 | `<style>` dentro del SVG | **Corregido**: el elemento se elimina por completo |
+| D10 | Si fallaba la hoja dinámica, el logo salía a tamaño natural | **Corregido**: `max-height` duplicado en el `<style>` base del layout |
+| D11 | Dos lecturas de `settings` al abrir la página de configuración | **Aceptado**: son dos consultas indexadas en una pantalla de administración |
+| D12 | Docblock citaba un documento inexistente | **Corregido**: este archivo existe |
+| D13 | Pestañas sin `id`, paneles sin `aria-labelledby`, badge sin `role` | **Corregido**: añadidos los tres |
+
 ---
 
 ## 7. Limitaciones conocidas (honestas)

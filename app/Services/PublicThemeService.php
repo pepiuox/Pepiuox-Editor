@@ -50,10 +50,10 @@ final class PublicThemeService
         'logo_desktop'    => ['label' => 'Logo para escritorio',          'hint' => 'Ancho 320 px a 2x (640 px)'],
         'logo_tablet'     => ['label' => 'Logo para tablet',              'hint' => 'Ancho 220 px a 2x (440 px)'],
         'logo_mobile'     => ['label' => 'Logo para móvil',               'hint' => 'Ancho 160 px a 2x (320 px)'],
-        'logo_menu'       => ['label' => 'Logo del menú principal',       'hint' => 'Cuadrado 64×64 px'],
-        'logo_multinivel' => ['label' => 'Logo de menús multinivel',      'hint' => 'Cuadrado 40×40 px'],
+        'logo_menu'       => ['label' => 'Logo del menú principal',       'hint' => 'Cuadrado 64×64 px', 'note' => 'Se guarda, pero el menú actual no tiene hueco de marca propio: hoy no se muestra en ninguna página.'],
+        'logo_multinivel' => ['label' => 'Logo de menús multinivel',      'hint' => 'Cuadrado 40×40 px', 'note' => 'Se guarda, pero los submenús actuales no admiten imagen: hoy no se muestra.'],
         'logo_footer'     => ['label' => 'Logo del pie de página',        'hint' => 'Ancho 200 px, alto libre'],
-        'logo_sidebar'    => ['label' => 'Logo de la barra lateral',      'hint' => 'Ancho 180 px, alto libre'],
+        'logo_sidebar'    => ['label' => 'Logo de la barra lateral',      'hint' => 'Ancho 180 px, alto libre', 'note' => 'Se guarda, pero el sitio público no tiene barra lateral: hoy no se muestra.'],
         'logo_dark'       => ['label' => 'Logo alternativo para fondos oscuros', 'hint' => 'Versión clara de la marca'],
         'logo_light'      => ['label' => 'Logo alternativo para fondos claros',  'hint' => 'Versión oscura de la marca'],
     ];
@@ -437,6 +437,14 @@ body.public-site .public-sidebar { background-color: var(--public-sidebar-bg); }
 body.public-site .btn-accent { background-color: var(--public-button); border-color: var(--public-button); }
 body.public-site .btn-accent:hover,
 body.public-site .btn-accent:focus-visible { background-color: var(--accent-hover); border-color: var(--accent-hover); }
+/* Primario y secundario necesitan consumidor propio: si no, son dos colores
+   configurables que no cambian nada en pantalla. */
+body.public-site .btn-primary { background-color: var(--public-primary); border-color: var(--public-primary); }
+body.public-site .btn-primary:hover,
+body.public-site .btn-primary:focus-visible { background-color: var(--public-secondary); border-color: var(--public-secondary); }
+body.public-site .text-muted,
+body.public-site .form-text,
+body.public-site small.text-muted { color: var(--public-secondary) !important; }
 body.public-site .brand-logo { max-height: 44px; width: auto; }
 body.public-site .brand-logo--footer { max-height: 36px; }
 body.public-site .brand-logo--sidebar { max-height: 32px; }

@@ -73,6 +73,7 @@ $tabs = [
         <li role="presentation">
           <button type="button"
                   class="nav-link <?= $id === $activeTab ? 'active' : '' ?>"
+                  id="tabbtn-<?= e($id) ?>"
                   data-tab="<?= e($id) ?>"
                   role="tab"
                   aria-selected="<?= $id === $activeTab ? 'true' : 'false' ?>"
@@ -91,7 +92,7 @@ $tabs = [
       <input type="hidden" name="return_tab" value="general" data-return-tab>
 
       <!-- 1. GENERAL -->
-      <div class="tab-content <?= $activeTab === 'general' ? 'active' : '' ?>" data-tab="general" id="tab-general" role="tabpanel">
+      <div class="tab-content <?= $activeTab === 'general' ? 'active' : '' ?>" data-tab="general" id="tab-general" role="tabpanel" aria-labelledby="tabbtn-general">
         <div class="form-grid">
           <div class="form-group">
             <label class="form-label">Nombre del Sitio</label>
@@ -120,7 +121,7 @@ $tabs = [
       </div>
 
       <!-- 2. SEO -->
-      <div class="tab-content <?= $activeTab === 'seo' ? 'active' : '' ?>" data-tab="seo" id="tab-seo" role="tabpanel">
+      <div class="tab-content <?= $activeTab === 'seo' ? 'active' : '' ?>" data-tab="seo" id="tab-seo" role="tabpanel" aria-labelledby="tabbtn-seo">
         <div class="form-grid">
           <div class="form-group full-width">
             <label class="form-label">Meta Title por defecto</label>
@@ -142,7 +143,7 @@ $tabs = [
       </div>
 
       <!-- 3. CACHE -->
-      <div class="tab-content <?= $activeTab === 'cache' ? 'active' : '' ?>" data-tab="cache" id="tab-cache" role="tabpanel">
+      <div class="tab-content <?= $activeTab === 'cache' ? 'active' : '' ?>" data-tab="cache" id="tab-cache" role="tabpanel" aria-labelledby="tabbtn-cache">
         <div class="form-grid">
           <div class="form-group">
             <label class="form-label">Estado del Cache</label>
@@ -163,7 +164,7 @@ $tabs = [
       </div>
 
       <!-- 4. CORREO -->
-      <div class="tab-content <?= $activeTab === 'mail' ? 'active' : '' ?>" data-tab="mail" id="tab-mail" role="tabpanel">
+      <div class="tab-content <?= $activeTab === 'mail' ? 'active' : '' ?>" data-tab="mail" id="tab-mail" role="tabpanel" aria-labelledby="tabbtn-mail">
         <div class="form-grid">
           <div class="form-group">
             <label class="form-label">Servidor SMTP (Host)</label>
@@ -203,7 +204,7 @@ $tabs = [
     <!-- ══════════════════════════════════════════════════════════
          B · LOGOTIPOS (un formulario por hueco: multipart)
          ══════════════════════════════════════════════════════════ -->
-    <div class="tab-content <?= $activeTab === 'logos' ? 'active' : '' ?>" data-tab="logos" id="tab-logos" role="tabpanel">
+    <div class="tab-content <?= $activeTab === 'logos' ? 'active' : '' ?>" data-tab="logos" id="tab-logos" role="tabpanel" aria-labelledby="tabbtn-logos">
       <p class="form-text">
         PNG, JPG, WEBP o SVG · máximo 2 MB · se conservan las proporciones originales.
         El logo de escritorio, tablet y móvil se sirve con <code>&lt;picture&gt;</code>, así que el navegador
@@ -216,6 +217,9 @@ $tabs = [
             <header class="ppf-asset-head">
               <span class="ppf-asset-title"><?= e($meta['label']) ?></span>
               <span class="ppf-asset-hint"><?= e($meta['hint']) ?></span>
+              <?php if (!empty($meta['note'])): ?>
+                <span class="ppf-asset-note"><i class="bi bi-exclamation-circle"></i> <?= e($meta['note']) ?></span>
+              <?php endif; ?>
             </header>
 
             <div class="ppf-asset-preview <?= $currentUrl === null ? 'is-empty' : '' ?>">
@@ -256,7 +260,7 @@ $tabs = [
     <!-- ══════════════════════════════════════════════════════════
          C · FAVICON
          ══════════════════════════════════════════════════════════ -->
-    <div class="tab-content <?= $activeTab === 'favicon' ? 'active' : '' ?>" data-tab="favicon" id="tab-favicon" role="tabpanel">
+    <div class="tab-content <?= $activeTab === 'favicon' ? 'active' : '' ?>" data-tab="favicon" id="tab-favicon" role="tabpanel" aria-labelledby="tabbtn-favicon">
       <p class="form-text">
         ICO, PNG o SVG · máximo 512 KB. Solo se emiten en el <code>&lt;head&gt;</code> público las
         etiquetas de los archivos que existan, así que no quedan referencias rotas.
@@ -269,6 +273,9 @@ $tabs = [
             <header class="ppf-asset-head">
               <span class="ppf-asset-title"><?= e($meta['label']) ?></span>
               <span class="ppf-asset-hint"><?= e($meta['hint']) ?></span>
+              <?php if (!empty($meta['note'])): ?>
+                <span class="ppf-asset-note"><i class="bi bi-exclamation-circle"></i> <?= e($meta['note']) ?></span>
+              <?php endif; ?>
             </header>
 
             <div class="ppf-asset-preview ppf-asset-preview--icon <?= $currentUrl === null ? 'is-empty' : '' ?>">
@@ -314,7 +321,7 @@ $tabs = [
       <input type="hidden" name="return_tab" value="identity" data-return-tab>
 
       <!-- 5. IDENTIDAD -->
-      <div class="tab-content <?= $activeTab === 'identity' ? 'active' : '' ?>" data-tab="identity" id="tab-identity" role="tabpanel">
+      <div class="tab-content <?= $activeTab === 'identity' ? 'active' : '' ?>" data-tab="identity" id="tab-identity" role="tabpanel" aria-labelledby="tabbtn-identity">
         <div class="form-grid">
           <div class="form-group full-width">
             <label class="form-label" for="logo_alt">Texto alternativo de los logotipos</label>
@@ -333,7 +340,7 @@ $tabs = [
       </div>
 
       <!-- 6. TEMAS -->
-      <div class="tab-content <?= $activeTab === 'themes' ? 'active' : '' ?>" data-tab="themes" id="tab-themes" role="tabpanel">
+      <div class="tab-content <?= $activeTab === 'themes' ? 'active' : '' ?>" data-tab="themes" id="tab-themes" role="tabpanel" aria-labelledby="tabbtn-themes">
         <p class="form-text">
           Elegir un tema rellena los 16 colores de la pestaña <strong>Colores</strong>. Puedes ajustarlos
           después: lo que se guarda son los colores, no el nombre del tema.
@@ -373,7 +380,7 @@ $tabs = [
       </div>
 
       <!-- 7. COLORES -->
-      <div class="tab-content <?= $activeTab === 'colors' ? 'active' : '' ?>" data-tab="colors" id="tab-colors" role="tabpanel">
+      <div class="tab-content <?= $activeTab === 'colors' ? 'active' : '' ?>" data-tab="colors" id="tab-colors" role="tabpanel" aria-labelledby="tabbtn-colors">
         <p class="form-text">
           Escribe el HEX o usa el selector. Cada fila indica el contraste sobre el fondo principal
           (WCAG 2.1 AA pide 4.5:1 para texto normal).
@@ -387,11 +394,12 @@ $tabs = [
                      value="<?= e($hex) ?>" data-hex-target="hex_<?= e($key) ?>"
                      aria-label="Selector de <?= e($label) ?>">
               <input type="text" class="form-control ppf-hex" id="hex_<?= e($key) ?>"
+                     name="colors[<?= e($key) ?>]"
                      value="<?= e($hex) ?>" maxlength="7" spellcheck="false"
                      pattern="#?[0-9a-fA-F]{3}([0-9a-fA-F]{3})?"
                      data-picker-target="picker_<?= e($key) ?>"
                      aria-label="Código HEX de <?= e($label) ?>">
-              <span class="ppf-contrast" data-contrast="<?= e($key) ?>" title="Contraste sobre el fondo principal"></span>
+              <span class="ppf-contrast" data-contrast="<?= e($key) ?>" role="status" title="Contraste sobre el fondo principal"></span>
             </div>
           <?php endforeach; ?>
         </div>
@@ -404,7 +412,7 @@ $tabs = [
       </div>
 
       <!-- 8. CSS PERSONALIZADO -->
-      <div class="tab-content <?= $activeTab === 'css' ? 'active' : '' ?>" data-tab="css" id="tab-css" role="tabpanel">
+      <div class="tab-content <?= $activeTab === 'css' ? 'active' : '' ?>" data-tab="css" id="tab-css" role="tabpanel" aria-labelledby="tabbtn-css">
         <div class="d-flex justify-between align-center mb-3">
           <label class="form-switch mb-0">
             <input type="hidden" name="custom_css_enabled" value="0">
@@ -448,7 +456,7 @@ $tabs = [
     <!-- ══════════════════════════════════════════════════════════
          E · VISTA PREVIA
          ══════════════════════════════════════════════════════════ -->
-    <div class="tab-content <?= $activeTab === 'preview' ? 'active' : '' ?>" data-tab="preview" id="tab-preview" role="tabpanel">
+    <div class="tab-content <?= $activeTab === 'preview' ? 'active' : '' ?>" data-tab="preview" id="tab-preview" role="tabpanel" aria-labelledby="tabbtn-preview">
       <div class="ppf-preview-layout">
         <section class="ppf-preview-pane">
           <h4 class="ppf-pane-title">Muestra en vivo</h4>
@@ -494,6 +502,7 @@ $tabs = [
 .ppf-asset-head{display:flex;flex-direction:column;gap:.15rem}
 .ppf-asset-title{font-weight:600;font-size:.9rem}
 .ppf-asset-hint{font-size:.75rem;opacity:.7}
+.ppf-asset-note{font-size:.72rem;line-height:1.35;display:flex;gap:.35rem;align-items:flex-start;margin-top:.15rem;padding:.3rem .45rem;border-radius:6px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);color:#f59e0b}
 .ppf-asset-preview{display:flex;align-items:center;justify-content:center;min-height:88px;padding:.5rem;border-radius:8px;background:repeating-conic-gradient(rgba(139,148,158,.18) 0% 25%,transparent 0% 50%) 50%/14px 14px}
 .ppf-asset-preview img{max-width:100%;max-height:80px;object-fit:contain}
 .ppf-asset-preview--icon img{max-height:48px;max-width:48px}

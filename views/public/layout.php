@@ -87,6 +87,14 @@ $userInitial = strtoupper($userInitial !== '' ? $userInitial : 'U');
             -webkit-font-smoothing: antialiased;
         }
 
+        /* Tamaño del logotipo configurable. Vive también aquí, y no sólo en la
+           hoja dinámica, para que un fallo de /public-theme.css no dibuje el
+           logo a tamaño natural. */
+        .brand-logo {
+            max-height: 44px;
+            width: auto;
+        }
+
         ::selection {
             background: var(--accent);
             color: var(--bg-main);
@@ -676,17 +684,24 @@ $userInitial = strtoupper($userInitial !== '' ? $userInitial : 'U');
                 ?>
                 <?php if ($logoDesktop !== null): ?>
                 <picture class="brand-picture">
-                    <?php if ($logoDark !== null): ?>
-                    <source media="(prefers-color-scheme: dark)" srcset="<?= e($logoDark) ?>">
-                    <?php endif; ?>
-                    <?php if ($logoLight !== null): ?>
-                    <source media="(prefers-color-scheme: light)" srcset="<?= e($logoLight) ?>">
-                    <?php endif; ?>
+                    <?php
+                    // Orden deliberado: primero los tamaños y después la
+                    // preferencia de color. `<picture>` se queda con la PRIMERA
+                    // <source> que coincide, así que si las de esquema fueran
+                    // antes, un móvil en modo oscuro recibiría siempre el logo
+                    // de escritorio oscuro en vez de su variante de tamaño.
+                    ?>
                     <?php if ($logoMobile !== null): ?>
                     <source media="(max-width: 575.98px)" srcset="<?= e($logoMobile) ?>">
                     <?php endif; ?>
                     <?php if ($logoTablet !== null): ?>
                     <source media="(max-width: 991.98px)" srcset="<?= e($logoTablet) ?>">
+                    <?php endif; ?>
+                    <?php if ($logoDark !== null): ?>
+                    <source media="(prefers-color-scheme: dark)" srcset="<?= e($logoDark) ?>">
+                    <?php endif; ?>
+                    <?php if ($logoLight !== null): ?>
+                    <source media="(prefers-color-scheme: light)" srcset="<?= e($logoLight) ?>">
                     <?php endif; ?>
                     <img class="brand-logo" src="<?= e($logoDesktop) ?>" alt="<?= e($logoAlt) ?>">
                 </picture>
