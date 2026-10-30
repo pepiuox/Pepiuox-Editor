@@ -33,6 +33,9 @@ $editorIncludeBootstrap = $editorIncludeBootstrap ?? true;
 <!-- GrapesJS -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/grapesjs@0.21.10/dist/css/grapes.min.css">
 
+<!-- Biblioteca visual de bloques (tarjetas, buscador, categorías) -->
+<link rel="stylesheet" href="<?= e(asset('css/blocks-library.css')) ?>">
+
 <!-- CodeMirror -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/theme/dracula.min.css">

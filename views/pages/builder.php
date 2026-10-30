@@ -364,6 +364,19 @@ body.builder-body {
     display: block;
 }
 
+/* Pestaña de bloques: sin relleno y con scroll propio, para que la biblioteca
+   ocupe todo el alto disponible del panel. */
+.left-pane[data-left-pane="blocks"] {
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+.left-pane[data-left-pane="blocks"].active {
+    display: flex;
+    flex-direction: column;
+}
+
 /* ═══ Componentes del sidebar izquierdo ═══ */
 .left-section {
     margin-bottom: 1rem;
@@ -1318,7 +1331,10 @@ LAYOUT PRINCIPAL
 
         <!-- Pestañas del sidebar izquierdo -->
         <div class="left-tabs">
-            <button class="left-tab active" data-left-tab="actions" onclick="switchLeftTab('actions')">
+            <button class="left-tab active" data-left-tab="blocks" onclick="switchLeftTab('blocks')">
+                <i class="bi bi-grid-3x3-gap"></i> Bloques
+            </button>
+            <button class="left-tab" data-left-tab="actions" onclick="switchLeftTab('actions')">
                 <i class="bi bi-lightning"></i> Acciones
             </button>
             <button class="left-tab" data-left-tab="layers" onclick="switchLeftTab('layers')">
@@ -1330,8 +1346,14 @@ LAYOUT PRINCIPAL
         </div>
 
         <div class="left-content">
+            <!-- Pestaña: biblioteca de bloques del BlockManager (la pinta GrapesJS
+                 dentro de #gjsBlocks y la decora public/assets/js/blocks-library.js) -->
+            <div class="left-pane active" data-left-pane="blocks">
+                <div id="gjsBlocks" class="gjs-blocks-host"></div>
+            </div>
+
             <!-- Pestaña: Acciones rápidas -->
-            <div class="left-pane active" data-left-pane="actions">
+            <div class="left-pane" data-left-pane="actions">
                 <div class="left-section">
                     <div class="left-section-title">Atajos de teclado</div>
                     <button class="quick-action" onclick="savePage()">
@@ -1951,7 +1973,13 @@ function initGrapesJS() {
         },
         layerManager: { scrollLayers: true },
         traitManager: { scrollTraits: true },
-        colorPicker: { appendTo: 'parent' }
+        colorPicker: { appendTo: 'parent' },
+        // La biblioteca de bloques vive en la pestaña «Bloques» del panel
+        // izquierdo. GrapesJS sigue gestionando el arrastre y las categorías;
+        // blocks-library.js solo normaliza y decora.
+        blockManager: {
+            appendTo: '#gjsBlocks'
+        }
     });
 
     // Restaurar el proyecto guardado: conserva ids, estilos y componentes que

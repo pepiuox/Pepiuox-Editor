@@ -45,3 +45,8 @@
 <!-- Utilidades compartidas: lista de plugins, filtro contra el registro real,
      carga de ficheros de bloques y estilos/scripts del lienzo. -->
 <script src="<?= e(asset('js/grapesjs-shared.js')) ?>"></script>
+
+<!-- Biblioteca visual de bloques: normaliza categorías, retira duplicados y
+     decora cada tarjeta con una miniatura real. Se engancha sola al terminar
+     de cargar los bloques (ver EditorKit.loadBlockScripts). -->
+<script src="<?= e(asset('js/blocks-library.js')) ?>"></script>
