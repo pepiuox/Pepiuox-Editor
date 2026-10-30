@@ -31,12 +31,14 @@ $seo     = $s['seo'] ?? [];
 $cache   = $s['cache'] ?? [];
 $mail    = $s['mail'] ?? [];
 
-$pub          = $public ?? [];
-$logoSlots    = $logoSlots ?? [];
-$faviconSlots = $faviconSlots ?? [];
-$colorLabels  = $colorLabels ?? [];
-$presets      = $presets ?? [];
-$assetUrls    = $assetUrls ?? [];
+$pub               = $public ?? [];
+$logoSlots         = $logoSlots ?? [];
+$faviconSlots      = $faviconSlots ?? [];
+$colorLabels       = $colorLabels ?? [];
+$surfaceTextLabels = $surfaceTextLabels ?? [];
+$surfaceTextValues = $surfaceTextValues ?? [];
+$presets           = $presets ?? [];
+$assetUrls         = $assetUrls ?? [];
 
 $activeTab   = $activeTab ?? 'general';
 $currentTheme = (string) ($pub['theme'] ?? 'personalizado');
@@ -432,6 +434,42 @@ $tabs = [
             <i class="bi bi-arrow-counterclockwise"></i> Restablecer configuración de colores
           </button>
         </div>
+
+        <!-- Texto sobre cada superficie: el color del texto de la cabecera, el
+             menú, los desplegables, el pie y los botones es editable. Vacío =
+             automático (se calcula para cumplir AA sobre su fondo). -->
+        <h4 class="ppf-subtitle">Texto sobre cada superficie</h4>
+        <p class="form-text">
+          Elige el color del texto que se pinta encima de cada fondo. Si lo dejas
+          vacío se calcula automáticamente el que cumple AA sobre ese fondo; el
+          indicador muestra el contraste real de lo que hay ahora.
+        </p>
+        <div class="ppf-color-grid">
+          <?php foreach ($surfaceTextLabels as $key => $meta): ?>
+            <?php
+            $raw      = (string) ($pub[$key] ?? '');
+            $effective = (string) ($surfaceTextValues[$key] ?? $raw);
+            ?>
+            <div class="ppf-color-row">
+              <label for="hex_<?= e($key) ?>">
+                <?= e($meta['label']) ?>
+                <small class="ppf-row-hint"><?= e($meta['hint']) ?></small>
+              </label>
+              <input type="color" name="colors[<?= e($key) ?>]" id="picker_<?= e($key) ?>"
+                     value="<?= e($effective !== '' ? $effective : '#ffffff') ?>"
+                     data-hex-target="hex_<?= e($key) ?>"
+                     aria-label="Selector de <?= e($meta['label']) ?>">
+              <input type="text" class="form-control ppf-hex" id="hex_<?= e($key) ?>"
+                     name="colors[<?= e($key) ?>]"
+                     value="<?= e($raw) ?>" placeholder="auto" maxlength="7" spellcheck="false"
+                     pattern="#?[0-9a-fA-F]{3}([0-9a-fA-F]{3})?"
+                     data-picker-target="picker_<?= e($key) ?>"
+                     aria-label="Código HEX de <?= e($meta['label']) ?> (vacío = automático)">
+              <span class="ppf-contrast" data-contrast="<?= e($key) ?>"
+                    data-contrast-against="<?= e($meta['surface']) ?>" role="status"></span>
+            </div>
+          <?php endforeach; ?>
+        </div>
       </div>
 
       <!-- 8. CSS PERSONALIZADO -->
@@ -489,8 +527,7 @@ $tabs = [
             <div class="ppf-mock-header">
               <span class="ppf-mock-logo">Marca</span>
               <span class="ppf-mock-nav">Inicio · Servicios · Contacto</span>
-            </div>
-            <div class="ppf-mock-body">
+            </div>            <div class="ppf-mock-body">
               <strong>Título de ejemplo</strong>
               <p>Texto secundario de ejemplo sobre el fondo de sección.</p>
               <span class="ppf-mock-btn">Botón</span>
@@ -558,6 +595,8 @@ $tabs = [
 .ppf-color-grid{display:grid;gap:.55rem 1.2rem;grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
 .ppf-color-row{display:grid;grid-template-columns:1fr 44px 104px 56px;gap:.5rem;align-items:center}
 .ppf-color-row label{font-size:.86rem;margin:0}
+.ppf-row-hint{display:block;font-size:.7rem;opacity:.65;font-weight:400}
+.ppf-subtitle{margin:1.6rem 0 .3rem;font-size:.95rem;padding-top:1rem;border-top:1px solid var(--border-color,#30363d)}
 .ppf-color-row input[type=color]{width:44px;height:34px;padding:0;border:1px solid var(--border-color,#30363d);border-radius:6px;background:none;cursor:pointer}
 .ppf-hex{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.85rem;text-transform:lowercase}
 .ppf-contrast{font-size:.72rem;text-align:center;padding:.15rem 0;border-radius:5px;opacity:.9}
@@ -571,11 +610,11 @@ $tabs = [
 @media (max-width:900px){.ppf-preview-layout{grid-template-columns:1fr}}
 .ppf-pane-title{font-size:.95rem;margin:0 0 .35rem}
 .ppf-mock{border-radius:10px;overflow:hidden;border:1px solid var(--border-color,#30363d);font-size:.8rem}
-.ppf-mock-header{display:flex;justify-content:space-between;gap:.5rem;padding:.55rem .7rem;background:var(--ppf-bg-header,#0d1117);color:var(--ppf-text,#e6edf3);font-weight:600}
-.ppf-mock-nav{font-weight:400;opacity:.85}
+.ppf-mock-header{display:flex;justify-content:space-between;gap:.5rem;padding:.55rem .7rem;background:var(--ppf-bg-header,#0d1117);color:var(--ppf-header-text,#e6edf3);font-weight:600}
+.ppf-mock-nav{font-weight:400;opacity:.95;color:var(--ppf-menu-text,#e6edf3)}
 .ppf-mock-body{padding:.9rem .7rem;background:var(--ppf-bg-section,#161b22);color:var(--ppf-text,#e6edf3)}
 .ppf-mock-body p{opacity:.8;margin:.2rem 0 .6rem;color:var(--ppf-text-muted,#8b949e)}
-.ppf-mock-btn{display:inline-block;padding:.25rem .7rem;border-radius:6px;background:var(--ppf-button,#00d4aa);color:#0d1117;font-weight:600}
+.ppf-mock-btn{display:inline-block;padding:.25rem .7rem;border-radius:6px;background:var(--ppf-button,#00d4aa);color:var(--ppf-button-text,#0d1117);font-weight:600}
 .ppf-mock-footer{padding:.5rem .7rem;background:var(--ppf-bg-footer,#161b22);color:var(--ppf-text-muted,#8b949e)}
 .ppf-preview-frame{width:100%;height:420px;border:1px solid var(--border-color,#30363d);border-radius:10px;background:#fff}
 </style>

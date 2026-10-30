@@ -71,6 +71,11 @@ class SettingsController
             'logoSlots'    => PublicThemeService::visibleLogoSlots(),
             'faviconSlots' => PublicThemeService::FAVICON_SLOTS,
             'colorLabels'  => PublicThemeService::COLOR_LABELS,
+            // Texto sobre cada superficie: el valor guardado puede estar vacío
+            // («automático»); `surfaceTextValues` trae el color efectivo para
+            // que el selector muestre lo que de verdad se pinta.
+            'surfaceTextLabels' => PublicThemeService::SURFACE_TEXT_LABELS,
+            'surfaceTextValues' => PublicThemeService::resolvedSurfaceTexts(),
             'presets'      => PublicThemeService::THEME_PRESETS,
             'assetUrls'    => $assetUrls,
             'activeTab'    => $this->requestedTab($req),

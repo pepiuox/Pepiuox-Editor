@@ -112,6 +112,31 @@ final class PublicThemeService
     ];
 
     /**
+     * Colores de texto **sobre cada superficie**, editables.
+     *
+     * Los 16 colores de `COLOR_LABELS` son fondos y textos base; estos son el
+     * texto de los elementos que se pintan encima de un fondo propio (header,
+     * menú, desplegables, pie, barra lateral) y el de los botones. Sin ellos, el
+     * color del texto lo decidía el layout base y un tema con fondo oscuro en el
+     * header dejaba el menú ilegible.
+     *
+     * `surface` dice contra qué fondo se mide el contraste.
+     * Vacío significa **automático**: se calcula el color que cumple AA sobre esa
+     * superficie. Con un valor, manda el administrador.
+     *
+     * @var array<string, array{label: string, surface: string, hint: string}>
+     */
+    public const SURFACE_TEXT_LABELS = [
+        'color_header_text'     => ['label' => 'Texto del header',            'surface' => 'color_header_bg',     'hint' => 'Marca y contenido sobre la cabecera'],
+        'color_menu_text'       => ['label' => 'Texto del menú principal',    'surface' => 'color_menu_bg',       'hint' => 'Enlaces del menú, en reposo'],
+        'color_menu_hover_text' => ['label' => 'Texto del menú al pasar',     'surface' => 'color_menu_hover',    'hint' => 'Hover, foco y elemento activo'],
+        'color_multinivel_text' => ['label' => 'Texto de los desplegables',   'surface' => 'color_multinivel_bg', 'hint' => 'Items de menús multinivel'],
+        'color_footer_text'     => ['label' => 'Texto del pie',               'surface' => 'color_footer_bg',     'hint' => 'Contenido del pie de página'],
+        'color_sidebar_text'    => ['label' => 'Texto de la barra lateral',   'surface' => 'color_sidebar_bg',    'hint' => 'Cuando exista barra lateral'],
+        'color_button_text'     => ['label' => 'Texto de los botones',        'surface' => 'color_button',        'hint' => 'Botones de acción del menú y del contenido'],
+    ];
+
+    /**
      * Temas predefinidos: paleta completa de las 16 claves.
      *
      * «Personalizado» no es un preset: significa «usa los colores guardados».
@@ -126,15 +151,17 @@ final class PublicThemeService
             'label'       => 'Claro',
             'description' => 'Fondo blanco, texto oscuro. Máxima legibilidad con luz ambiental.',
             'colors'      => [
-                'color_primary'       => '#0d6efd',
-                'color_secondary'     => '#6c757d',
+                // Azules más oscuros que el estándar de Bootstrap: #0d6efd sobre
+                // blanco se queda en 4.0:1 y no llega a AA para texto normal.
+                'color_primary'       => '#0a58ca',
+                'color_secondary'     => '#565e64',
                 'color_accent'        => '#ffc107',
                 'color_background'    => '#ffffff',
                 'color_section_bg'    => '#f8f9fa',
-                'color_text'          => '#212529',
-                'color_text_muted'    => '#6c757d',
-                'color_link'          => '#0d6efd',
-                'color_button'        => '#0d6efd',
+                'color_text'          => '#1a1d21',
+                'color_text_muted'    => '#565e64',
+                'color_link'          => '#0a58ca',
+                'color_button'        => '#0a58ca',
                 'color_border'        => '#dee2e6',
                 'color_header_bg'     => '#ffffff',
                 'color_footer_bg'     => '#f8f9fa',
@@ -235,6 +262,10 @@ final class PublicThemeService
         foreach (self::THEME_PRESETS['oscuro']['colors'] as $key => $value) {
             $defaults[$key] = $value;
         }
+        // Texto sobre superficies: vacío = automático (contraste calculado).
+        foreach (array_keys(self::SURFACE_TEXT_LABELS) as $key) {
+            $defaults[$key] = '';
+        }
 
         return $defaults;
     }
@@ -275,10 +306,17 @@ final class PublicThemeService
         }
 
         // Una fila vacía no puede dejar el sitio sin color ni sin tema: cae al
-        // defecto. `custom_css` y `logo_alt` sí admiten vacío a propósito.
+        // defecto. Estas claves sí admiten vacío a propósito, porque vacío
+        // significa «automático»:
+        //   - custom_css y logo_alt: texto opcional
+        //   - los textos sobre superficies: contraste calculado
+        $admitenVacio = array_merge(
+            ['custom_css', 'logo_alt'],
+            array_keys(self::SURFACE_TEXT_LABELS)
+        );
         $defaults = self::defaults();
         foreach ($values as $key => $value) {
-            if ($value === '' && $key !== 'custom_css' && $key !== 'logo_alt') {
+            if ($value === '' && !in_array($key, $admitenVacio, true)) {
                 $values[$key] = $defaults[$key] ?? '';
             }
         }
@@ -397,6 +435,32 @@ final class PublicThemeService
     }
 
     /**
+     * Color de texto efectivo de cada superficie.
+     *
+     * Automático (vacío) → se calcula el que cumple AA sobre su fondo. Con valor
+     * → manda el administrador, que ve el ratio medido en la interfaz.
+     *
+     * @return array<string, string>
+     */
+    public static function resolvedSurfaceTexts(): array
+    {
+        $values     = self::all();
+        $background = self::normalizeHex($values['color_background'] ?? '') ?? '#0d1117';
+        $resolved   = [];
+
+        foreach (self::SURFACE_TEXT_LABELS as $key => $meta) {
+            $explicit  = self::normalizeHex($values[$key] ?? '');
+            $surfaceBg = self::normalizeHex($values[$meta['surface']] ?? '') ?? $background;
+
+            $resolved[$key] = $explicit ?? ($key === 'color_button_text'
+                ? self::contrastColor($surfaceBg)
+                : self::ensureContrast($values['color_text'] ?? '', $surfaceBg, 4.5));
+        }
+
+        return $resolved;
+    }
+
+    /**
      * CSS generado para la web pública.
      *
      * Contiene: las 16 variables `--public-*`, el puente hacia los tokens que
@@ -422,8 +486,23 @@ final class PublicThemeService
         $primaryBg  = self::normalizeHex($values['color_primary'] ?? '') ?? '#00d4aa';
         $buttonText  = self::contrastColor($buttonBg);
         $primaryText = self::contrastColor($primaryBg);
-        $footerText  = self::ensureContrast($values['color_text'] ?? '', $values['color_footer_bg'] ?? $background, 4.5);
-        $headerText  = self::ensureContrast($values['color_text'] ?? '', $values['color_header_bg'] ?? $background, 4.5);
+
+        // ── Texto sobre cada superficie ─────────────────────────────
+        $surfaceText = self::resolvedSurfaceTexts();
+
+        $headerText     = $surfaceText['color_header_text'];
+        $menuText       = $surfaceText['color_menu_text'];
+        $menuHoverText  = $surfaceText['color_menu_hover_text'];
+        $multinivelText = $surfaceText['color_multinivel_text'];
+        $footerText     = $surfaceText['color_footer_text'];
+        $sidebarText    = $surfaceText['color_sidebar_text'];
+        $buttonText     = $surfaceText['color_button_text'];
+
+        // Atenuado sobre cada superficie, recalculado: el del documento no
+        // vale sobre un pie oscuro ni sobre un header claro.
+        $footerMuted  = self::ensureContrast($values['color_text_muted'] ?? '', $values['color_footer_bg'] ?? $background, 4.5);
+        $headerMuted  = self::ensureContrast($values['color_text_muted'] ?? '', $values['color_header_bg'] ?? $background, 4.5);
+        $menuMuted    = self::ensureContrast($values['color_text_muted'] ?? '', $values['color_menu_bg'] ?? $background, 4.5);
 
         $declarations = '';
         foreach (self::COLOR_LABELS as $key => $label) {
@@ -439,6 +518,10 @@ final class PublicThemeService
             $var = str_replace('color_', '', $key);
             $var = str_replace('_bg', '-bg', $var);
             $declarations .= '    --public-' . str_replace('_', '-', $var) . ': ' . $hex . ";\n";
+        }
+        foreach ($surfaceText as $key => $hex) {
+            $var = str_replace(['color_', '_'], ['', '-'], $key);
+            $declarations .= '    --public-' . $var . ': ' . $hex . ";\n";
         }
 
         $accent      = self::normalizeHex($values['color_accent']) ?? '#00d4aa';
@@ -461,34 +544,76 @@ final class PublicThemeService
         $css .= "    --accent-hover: {$accentHover};\n";
         $css .= "    --border-color: var(--public-border);\n";
         $css .= "    --border-soft: rgba({$br}, {$bg}, {$bb}, .18);\n";
+        // Los componentes de Bootstrap que se usen dentro de las páginas
+        // heredan los tokens del tema en lugar de su propia paleta: así tablas,
+        // formularios, alertas y tarjetas se ven coherentes con el resto.
+        $css .= "    --bs-body-color: var(--public-text);\n";
+        $css .= "    --bs-body-bg: var(--public-background);\n";
+        $css .= "    --bs-secondary-color: var(--public-text-muted);\n";
+        $css .= "    --bs-border-color: var(--public-border);\n";
+        $css .= "    --bs-link-color: var(--public-link);\n";
+        $css .= "    --bs-link-hover-color: var(--accent-hover);\n";
         $css .= "    background-color: var(--public-background);\n";
         $css .= "    color: var(--public-text);\n";
         $css .= "}\n";
 
+        // ── Cada superficie con su texto ─────────────────────────────
         $css .= <<<CSS
 body.public-site a { color: var(--public-link); }
 body.public-site a:hover,
 body.public-site a:focus-visible { color: var(--accent-hover); }
-body.public-site .navbar-main { background-color: var(--public-header-bg); border-bottom-color: var(--public-border); color: {$headerText}; }
-body.public-site .navbar-collapse { background-color: var(--public-menu-bg); }
+
+/* Cabecera */
+body.public-site .navbar-main { background-color: var(--public-header-bg); border-bottom-color: var(--public-border); color: var(--public-header-text); }
+body.public-site .navbar-main .text-muted,
+body.public-site .navbar-main small { color: {$headerMuted}; }
+
+/* Menú principal: el texto es configurable, no heredado */
+body.public-site .navbar .nav-link,
+body.public-site .navbar .nav-link .split-link,
+body.public-site .navbar .nav-link-parent { color: var(--public-menu-text); }
+body.public-site .navbar .nav-link:hover,
+body.public-site .navbar .nav-link:focus-visible,
+body.public-site .navbar .nav-link.active,
+body.public-site .navbar .nav-link:hover .split-link,
+body.public-site .navbar .nav-link-parent:hover .split-link { color: var(--public-menu-hover-text); }
 body.public-site .navbar .nav-link:hover,
 body.public-site .navbar .nav-link:focus-visible,
 body.public-site .navbar .nav-link.active { background-color: var(--public-menu-hover); }
+body.public-site .navbar .nav-link .menu-caret { color: inherit; }
+body.public-site .navbar-collapse { background-color: var(--public-menu-bg); }
+body.public-site .navbar-collapse .text-muted,
+body.public-site .navbar-collapse small { color: {$menuMuted}; }
+
+/* Desplegables y multinivel */
 body.public-site .navbar .dropdown-menu,
-body.public-site .navbar .dropdown-submenu > .dropdown-menu { background-color: var(--public-multinivel-bg); border-color: var(--public-border); }
-body.public-site .footer { background-color: var(--public-footer-bg); border-top-color: var(--public-border); color: {$footerText}; }
+body.public-site .navbar .dropdown-submenu > .dropdown-menu { background-color: var(--public-multinivel-bg); border-color: var(--public-border); color: var(--public-multinivel-text); }
+body.public-site .navbar .dropdown-menu .dropdown-item,
+body.public-site .navbar .dropdown-menu a,
+body.public-site .navbar .dropdown-item-parent { color: var(--public-multinivel-text); }
+body.public-site .navbar .dropdown-menu .dropdown-item:hover,
+body.public-site .navbar .dropdown-menu a:hover,
+body.public-site .navbar .dropdown-item-parent:hover { background-color: var(--public-menu-hover); color: var(--public-menu-hover-text); }
+
+/* Pie y barra lateral */
+body.public-site .footer { background-color: var(--public-footer-bg); border-top-color: var(--public-border); color: var(--public-footer-text); }
+body.public-site .footer h5,
+body.public-site .footer h6,
+body.public-site .footer a { color: var(--public-footer-text); }
+body.public-site .footer .text-muted,
+body.public-site .footer small { color: {$footerMuted} !important; }
 body.public-site .sidebar,
-body.public-site .public-sidebar { background-color: var(--public-sidebar-bg); }
+body.public-site .public-sidebar { background-color: var(--public-sidebar-bg); color: var(--public-sidebar-text); }
 CSS;
 
-        // ── Botones: el texto se calcula, nunca se hereda ───────────
+        // ── Botones: el texto es configurable y nunca se hereda ─────
         // El fallo reportado («no se ve el texto del botón de ir al admin»)
         // venía de que el color del texto estaba fijado en el layout base
         // (#04120f) mientras el fondo lo ponía el tema: con un tema de botón
         // azul, quedaba texto casi negro sobre azul.
         $css .= "body.public-site .btn-accent,\n"
             . "body.public-site .btn-accent i,\n"
-            . "body.public-site .btn-accent span { color: {$buttonText}; }\n"
+            . "body.public-site .btn-accent span { color: var(--public-button-text); }\n"
             . "body.public-site .btn-accent { background-color: var(--public-button); border-color: var(--public-button); }\n"
             . "body.public-site .btn-accent:hover,\n"
             . "body.public-site .btn-accent:focus-visible { background-color: {$buttonHover}; border-color: {$buttonHover}; color: " . self::contrastColor($buttonHover) . "; }\n"
@@ -498,12 +623,12 @@ CSS;
             . "body.public-site .btn-primary { background-color: var(--public-primary); border-color: var(--public-primary); }\n"
             . "body.public-site .btn-primary:hover,\n"
             . "body.public-site .btn-primary:focus-visible { background-color: {$primaryHover}; border-color: {$primaryHover}; color: " . self::contrastColor($primaryHover) . "; }\n"
-            . "body.public-site .btn-nav-ghost { color: var(--public-text); border-color: var(--public-border); }\n"
+            . "body.public-site .btn-nav-ghost { color: var(--public-menu-text); border-color: var(--public-border); }\n"
             . "body.public-site .btn-nav-ghost:hover,\n"
-            . "body.public-site .btn-nav-ghost:focus-visible { color: var(--public-accent); border-color: var(--public-accent); }\n"
-            . "body.public-site .btn-nav-icon { color: var(--public-text-muted); border-color: var(--public-border); }\n"
-            . "body.public-site .user-chip { color: var(--public-text); }\n"
-            . "body.public-site .user-chip .user-role { color: var(--public-text-muted); }\n";
+            . "body.public-site .btn-nav-ghost:focus-visible { color: var(--public-menu-hover-text); border-color: var(--public-accent); }\n"
+            . "body.public-site .btn-nav-icon { color: var(--public-menu-text); border-color: var(--public-border); }\n"
+            . "body.public-site .user-chip { color: var(--public-header-text); }\n"
+            . "body.public-site .user-chip .user-role { color: {$headerMuted}; }\n";
 
         $css .= <<<CSS
 /* El atenuado usa el color secundario, pero sólo si es legible: si no, manda
@@ -881,6 +1006,27 @@ CSS;
             $rows[$key] = ['value' => $hex, 'type' => 'string'];
         }
 
+        // ── Texto sobre superficies ─────────────────────────────────
+        // Vacío es un valor legítimo: significa «calcúlalo tú para que cumpla
+        // contraste». Sólo se escribe si la clave llega en la petición, así un
+        // guardado parcial no borra lo que el administrador ya eligió.
+        foreach (self::SURFACE_TEXT_LABELS as $key => $meta) {
+            if (!array_key_exists($key, $colors)) {
+                continue;
+            }
+            $raw = trim((string) $colors[$key]);
+            if ($raw === '') {
+                $rows[$key] = ['value' => '', 'type' => 'string'];
+                continue;
+            }
+            $hex = self::normalizeHex($raw);
+            if ($hex === null) {
+                $errors[] = sprintf('%s: «%s» no es un color HEX válido.', $meta['label'], mb_substr($raw, 0, 20));
+                continue;
+            }
+            $rows[$key] = ['value' => $hex, 'type' => 'string'];
+        }
+
         // ── Texto alternativo ───────────────────────────────────────
         if (array_key_exists('logo_alt', $input)) {
             $alt = trim(strip_tags((string) $input['logo_alt']));
@@ -939,6 +1085,12 @@ CSS;
             $rows[$key] = ['value' => $hex, 'type' => 'string'];
         }
         $rows['theme'] = ['value' => $theme, 'type' => 'string'];
+
+        // Los textos sobre superficies vuelven a «automático»: el preset ya
+        // trae fondos pensados para que el cálculo dé un contraste holgado.
+        foreach (array_keys(self::SURFACE_TEXT_LABELS) as $key) {
+            $rows[$key] = ['value' => '', 'type' => 'string'];
+        }
 
         Setting::updateBatch([self::GROUP => $rows]);
         self::flush();

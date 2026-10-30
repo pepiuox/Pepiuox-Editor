@@ -4,7 +4,7 @@ Módulo que permite al administrador cambiar la identidad visual del **sitio
 público** (logos, favicon, tema, colores y CSS adicional) sin tocar código, y
 sin que el **panel de administración** cambie un píxel.
 
-Estado: **implementado y verificado** (2026-10-26). 106 comprobaciones de servicio
+Estado: **implementado y verificado** (2026-10-26). 118 comprobaciones de servicio
 y 73 de extremo a extremo en verde. Ver [tests/public-theme/README.md](../tests/public-theme/README.md).
 
 ---
@@ -242,6 +242,36 @@ el HEX que ve el administrador sigue siendo el que eligió. Los cinco temas
 predefinidos cumplen AA en texto, atenuado, enlace y botón (comprobado en
 `service-test.php` bloque 14).
 
+### Texto sobre cada superficie (editable)
+
+Los 16 colores base son fondos y textos del documento. Encima de un fondo propio
+—cabecera, menú, desplegables, pie, barra lateral, botones— hace falta su propio
+color de texto, y ahora son siete claves más del grupo `public`:
+
+| Clave | Qué pinta | Se mide contra |
+| --- | --- | --- |
+| `color_header_text` | Marca y contenido de la cabecera | `color_header_bg` |
+| `color_menu_text` | Enlaces del menú principal, en reposo | `color_menu_bg` |
+| `color_menu_hover_text` | Hover, foco y elemento activo del menú | `color_menu_hover` |
+| `color_multinivel_text` | Items de los desplegables | `color_multinivel_bg` |
+| `color_footer_text` | Contenido del pie | `color_footer_bg` |
+| `color_sidebar_text` | Barra lateral | `color_sidebar_bg` |
+| `color_button_text` | Texto de los botones de acción | `color_button` |
+
+**Vacío = automático**: se calcula el color que cumple 4.5:1 sobre su fondo. Con
+un HEX manda el administrador, y la interfaz muestra el ratio medido de lo que
+hay en ese momento. «Restablecer configuración de colores» devuelve las siete a
+automático junto con la paleta del tema.
+
+Migración: `2026_10_30_public_surface_texts.up.sql` (siembra las siete claves
+vacías; idempotente; `down` no-op porque borrar colores elegidos a mano sería
+destructivo).
+
+Además, dentro de `body.public-site` se reescriben los tokens de Bootstrap
+(`--bs-body-color`, `--bs-body-bg`, `--bs-border-color`, `--bs-link-color`,
+`--bs-secondary-color`), de modo que tablas, formularios, alertas y tarjetas que
+aparezcan en las páginas heredan el tema en lugar de su paleta por defecto.
+
 ### Dos barras de guardado
 
 La pantalla tiene dos formularios (sistema y personalización) y cada uno tiene su
@@ -335,7 +365,7 @@ php -l app/Services/PublicThemeService.php   # y el resto de archivos tocados
 # 2. Migración (idempotente: se puede relanzar)
 php db/migrations/apply.php 2026_10_26_public_visual_settings.up.sql
 
-# 3. Prueba de servicio (106 comprobaciones)
+# 3. Prueba de servicio (118 comprobaciones)
 php tests/public-theme/service-test.php
 
 # 4. Prueba HTTP (73 comprobaciones) — ver tests/public-theme/README.md

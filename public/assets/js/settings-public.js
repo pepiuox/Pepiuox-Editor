@@ -134,19 +134,27 @@
             const picker = document.querySelector(`#picker_${key}`);
             if (!picker) return;
 
-            // El propio fondo contra sí mismo siempre da 1.0:1 y no informa de
-            // nada. Para esa fila se mide el texto, que es lo que se lee encima.
-            const reference = key === 'color_background'
-                ? (document.querySelector('#picker_color_text')?.value || '#000000')
-                : background;
+            // `data-contrast-against` dice contra qué fondo se mide: el texto de
+            // la cabecera se mide sobre la cabecera, no sobre el fondo del
+            // documento. Sin ese atributo se usa el fondo principal.
+            let reference;
+            if (badge.dataset.contrastAgainst) {
+                const surface = document.querySelector(`#picker_${badge.dataset.contrastAgainst}`);
+                reference = surface ? surface.value : background;
+            } else {
+                // El propio fondo contra sí mismo siempre da 1.0:1 y no informa
+                // de nada: esa fila se mide contra el texto.
+                reference = key === 'color_background'
+                    ? (document.querySelector('#picker_color_text')?.value || '#000000')
+                    : background;
+            }
+
             const ratio = contrastRatio(picker.value, reference);
             const label = ratio >= 7 ? 'AAA' : (ratio >= 4.5 ? 'AA' : 'Bajo');
             badge.textContent = `${ratio.toFixed(1)}:1 ${label}`;
             badge.classList.toggle('is-pass', ratio >= 4.5);
             badge.classList.toggle('is-fail', ratio < 4.5);
-            badge.title = key === 'color_background'
-                ? `Contraste del texto principal sobre este fondo: ${ratio.toFixed(2)}:1`
-                : `Contraste ${ratio.toFixed(2)}:1 sobre el fondo principal`;
+            badge.title = `Contraste ${ratio.toFixed(2)}:1 sobre su fondo`;
         });
     };
 
@@ -165,6 +173,11 @@
         mock.style.setProperty('--ppf-text', read('color_text', '#e6edf3'));
         mock.style.setProperty('--ppf-text-muted', read('color_text_muted', '#8b949e'));
         mock.style.setProperty('--ppf-button', read('color_button', '#00d4aa'));
+        // Textos de superficie: si el campo está vacío (automático) se usa el
+        // color que el servidor calculó y que ya viene pintado en el selector.
+        mock.style.setProperty('--ppf-header-text', read('color_header_text', read('color_text', '#e6edf3')));
+        mock.style.setProperty('--ppf-menu-text', read('color_menu_text', read('color_text', '#e6edf3')));
+        mock.style.setProperty('--ppf-button-text', read('color_button_text', '#06110e'));
     };
 
     pickers.forEach((picker) => {
@@ -226,6 +239,14 @@
                 const normalized = NORMALIZE(hex);
                 if (picker && normalized) picker.value = normalized;
                 if (input && normalized) input.value = normalized;
+            });
+
+            // Los textos sobre superficies vuelven a «automático»: el preset no
+            // los define y el servidor calculará el contraste sobre los fondos
+            // nuevos. Dejar el valor anterior los ataría al tema viejo.
+            document.querySelectorAll('[data-contrast-against]').forEach((badge) => {
+                const input = document.getElementById(`hex_${badge.dataset.contrast}`);
+                if (input) input.value = '';
             });
 
             refreshContrast();

@@ -15,7 +15,7 @@ manifiesto y los helpers.
 php tests/public-theme/service-test.php
 ```
 
-Salida esperada: `Resultado: 106 pasan, 0 fallan` y código de salida 0.
+Salida esperada: `Resultado: 118 pasan, 0 fallan` y código de salida 0.
 Escribe en la tabla `settings` (grupo `public`) y deja el tema en `oscuro` al
 terminar, que es el valor por defecto.
 

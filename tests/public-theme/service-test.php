@@ -68,7 +68,7 @@ $baselineLocale   = (string) SettingService::get('general', 'site_locale', 'es')
 
 echo "\n== 1. Lectura de configuración ==\n";
 $all = PublicThemeService::all();
-check('34 claves gestionadas', count($all) === 34, 'count=' . count($all));
+check('41 claves gestionadas', count($all) === 41, 'count=' . count($all));
 check('tema por defecto = oscuro', ($all['theme'] ?? '') === 'oscuro', $all['theme'] ?? 'null');
 check('color primario por defecto', ($all['color_primary'] ?? '') === '#00d4aa', $all['color_primary'] ?? '');
 
@@ -213,7 +213,7 @@ check('SettingService::clearCache() existe', method_exists(SettingService::class
 
 echo "\n== 11. Helpers ==\n";
 check('getPublicSettings() disponible', function_exists('getPublicSettings'));
-check('getPublicSettings() devuelve 34 claves', count(getPublicSettings()) === 34);
+check('getPublicSettings() devuelve 41 claves', count(getPublicSettings()) === 41);
 check('public_theme_css_url() incluye versión', str_contains(public_theme_css_url(), 'public-theme.css?v='));
 check('public_logo() devuelve null sin configuración', public_logo('logo_header') === null);
 
@@ -277,11 +277,43 @@ check('un color que ya cumple no se toca', PublicThemeService::ensureContrast('#
 check('una pareja ilegible se corrige', PublicThemeService::contrastRatio(PublicThemeService::ensureContrast('#777777', '#888888'), '#888888') >= 4.5, PublicThemeService::ensureContrast('#777777', '#888888'));
 check('mix a la mitad', PublicThemeService::mix('#000000', '#ffffff', 0.5) === '#808080', PublicThemeService::mix('#000000', '#ffffff', 0.5));
 
+echo "\n== 14.b. Texto sobre cada superficie: automático y editable ==\n";
+check('hay 7 superficies configurables', count(PublicThemeService::SURFACE_TEXT_LABELS) === 7, 'count=' . count(PublicThemeService::SURFACE_TEXT_LABELS));
+$resueltos = PublicThemeService::resolvedSurfaceTexts();
+check('todas las superficies tienen color efectivo', count($resueltos) === 7 && !in_array('', $resueltos, true), implode(',', $resueltos));
+
+// Automático: el texto del menú debe cumplir AA sobre el fondo del menú.
+$malos = [];
+foreach (PublicThemeService::SURFACE_TEXT_LABELS as $key => $meta) {
+    $fondo = (string) PublicThemeService::get($meta['surface']);
+    $ratio = PublicThemeService::contrastRatio($resueltos[$key], $fondo);
+    if ($ratio < 4.5) {
+        $malos[] = $key . '=' . round($ratio, 2);
+    }
+}
+check('el automático cumple AA en las 7 superficies', $malos === [], implode(', ', $malos));
+
+// Editable: un valor explícito manda sobre el cálculo…
+$antes = $resueltos['color_menu_text'];
+$editado = PublicThemeService::save(['colors' => ['color_menu_text' => '#FF00aa']]);
+check('guardar el texto del menú', $editado['ok'], implode(' ', $editado['errors']));
+check('el valor elegido manda', PublicThemeService::resolvedSurfaceTexts()['color_menu_text'] === '#ff00aa', PublicThemeService::resolvedSurfaceTexts()['color_menu_text']);
+check('el CSS publica ese color', str_contains(PublicThemeService::css(), '--public-menu-text: #ff00aa'), 'no aparece en el CSS');
+
+// …y vaciarlo lo devuelve a automático.
+$vaciado = PublicThemeService::save(['colors' => ['color_menu_text' => '']]);
+check('vaciar lo devuelve a automático', $vaciado['ok'] && PublicThemeService::resolvedSurfaceTexts()['color_menu_text'] === $antes, PublicThemeService::resolvedSurfaceTexts()['color_menu_text']);
+
 // El fallo reportado fue «el texto del botón de ir al admin no se ve»: el CSS
 // publicado debe fijar el color del texto de los botones, no heredarlo.
 $css = PublicThemeService::css();
-check('el CSS fija el color del texto de .btn-accent', (bool) preg_match('/\.btn-accent[^{]*\{[^}]*color:\s*#[0-9a-f]{6}/i', $css), 'sin color explícito en .btn-accent');
-check('el CSS fija el color del texto de .btn-primary', (bool) preg_match('/\.btn-primary[^{]*\{[^}]*color:\s*#[0-9a-f]{6}/i', $css), 'sin color explícito en .btn-primary');
+check('el CSS fija el color del texto de .btn-accent', (bool) preg_match('/\.btn-accent[^{]*\{[^}]*color:\s*var\(--public-button-text\)/i', $css), 'sin color en .btn-accent');
+check('el CSS fija el color del texto de .btn-primary', (bool) preg_match('/\.btn-primary[^{]*\{[^}]*color:\s*#[0-9a-f]{6}/i', $css), 'sin color en .btn-primary');
+check('el CSS pinta el menú con su propio color', str_contains($css, '--public-menu-text'), 'sin variable de menú');
+check('el CSS cubre los enlaces del menú', (bool) preg_match('/\.navbar \.nav-link[^{]*\{[^}]*color:\s*var\(--public-menu-text\)/s', $css), 'sin regla para .nav-link');
+check('el CSS cubre los desplegables', str_contains($css, 'var(--public-multinivel-text)'));
+check('el CSS cubre el pie', str_contains($css, 'var(--public-footer-text)'));
+check('el CSS hereda los tokens de Bootstrap', str_contains($css, '--bs-body-color: var(--public-text)'));
 
 $peores = [];
 foreach (PublicThemeService::THEME_PRESETS as $id => $preset) {

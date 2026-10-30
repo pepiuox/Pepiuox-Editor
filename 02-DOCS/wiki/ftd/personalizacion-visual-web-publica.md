@@ -98,7 +98,7 @@ las 16 variables; `/site.webmanifest` → 200; los cuatro POST de `brand` → 30
 
 | Suite | Comando | Resultado real |
 | --- | --- | --- |
-| Servicio | `php tests/public-theme/service-test.php` | 106 pasan, 0 fallan |
+| Servicio | `php tests/public-theme/service-test.php` | 118 pasan, 0 fallan |
 | Extremo a extremo | `./tests/public-theme/e2e.ps1` con servidor embebido | 73 pasan, 0 fallan |
 
 Ambas suites son idempotentes y limpian lo que escriben: se ejecutaron dos veces
