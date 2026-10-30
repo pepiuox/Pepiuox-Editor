@@ -1,0 +1,205 @@
+<?php
+/**
+ * Prueba funcional de la personalización visual pública (ejecutable por CLI).
+ *
+ * Verifica de verdad, contra la base de datos real y el código real, que:
+ *  - los valores por defecto llegan desde la migración,
+ *  - el CSS contiene las 16 variables y está bajo body.public-site,
+ *  - la validación de colores y CSS rechaza lo que debe rechazar,
+ *  - el sanitizador de SVG elimina código ejecutable,
+ *  - la subida rechaza extensiones fuera de la lista blanca,
+ *  - guardar y restablecer persisten en MySQL,
+ *  - el aislamiento del panel se cumple (el CSS no tiene selectores sueltos).
+ *
+ * Se usa a mano: `php tests/public-theme/service-test.php`. No forma parte de la aplicación.
+ */
+
+declare(strict_types=1);
+
+$_SERVER['SCRIPT_NAME'] = '/index.php';
+$_SERVER['HTTP_HOST']   = 'localhost';
+
+require __DIR__ . '/../../config/paths.php';
+
+spl_autoload_register(static function (string $class): void {
+    if (str_starts_with($class, 'App\\')) {
+        $path = APP_PATH . '/' . str_replace('\\', '/', substr($class, 4)) . '.php';
+        if (is_file($path)) {
+            require_once $path;
+        }
+    }
+});
+require_once APP_PATH . '/Helpers/functions.php';
+
+use App\Services\ImageUploadValidator;
+use App\Services\PublicThemeService;
+use App\Services\SettingService;
+use App\Services\SvgSanitizer;
+
+$passed = 0;
+$failed = 0;
+
+function check(string $name, bool $condition, string $detail = ''): void
+{
+    global $passed, $failed;
+    if ($condition) {
+        $passed++;
+        echo "  PASA  {$name}\n";
+        return;
+    }
+    $failed++;
+    echo "  FALLA {$name}" . ($detail !== '' ? " → {$detail}" : '') . "\n";
+}
+
+echo "== 1. Lectura de configuración ==\n";
+$all = PublicThemeService::all();
+check('34 claves gestionadas', count($all) === 34, 'count=' . count($all));
+check('tema por defecto = oscuro', ($all['theme'] ?? '') === 'oscuro', $all['theme'] ?? 'null');
+check('color primario por defecto', ($all['color_primary'] ?? '') === '#00d4aa', $all['color_primary'] ?? '');
+
+echo "\n== 2. CSS generado ==\n";
+$css = PublicThemeService::css();
+$vars = substr_count($css, '--public-');
+check('16+ variables --public-*', $vars >= 16, "apariciones={$vars}");
+foreach (['--public-primary', '--public-secondary', '--public-accent', '--public-background',
+          '--public-text', '--public-header-bg', '--public-footer-bg', '--public-sidebar-bg',
+          '--public-menu-bg', '--public-menu-hover', '--public-section-bg', '--public-multinivel-bg',
+          '--public-link', '--public-button', '--public-border', '--public-text-muted'] as $var) {
+    check("variable {$var}", str_contains($css, $var . ':'));
+}
+check('ámbito body.public-site', str_contains($css, 'body.public-site {'));
+check('puente con --accent del layout', str_contains($css, '--accent: var(--public-accent)'));
+
+echo "\n== 3. Aislamiento: ningún selector suelto ==\n";
+$loose = [];
+foreach (explode("\n", $css) as $line) {
+    $line = trim($line);
+    if ($line === '' || str_starts_with($line, '/*') || str_starts_with($line, '--')
+        || str_contains($line, ':') && !str_contains($line, '{')) {
+        continue;
+    }
+    if (str_contains($line, '{') && !str_starts_with($line, 'body.public-site')) {
+        $loose[] = $line;
+    }
+}
+check('todo el CSS cuelga de body.public-site', $loose === [], implode(' | ', $loose));
+
+echo "\n== 4. Colores ==\n";
+check('#ABC → #aabbcc', PublicThemeService::normalizeHex('#ABC') === '#aabbcc', (string) PublicThemeService::normalizeHex('#ABC'));
+check('sin almohadilla se acepta', PublicThemeService::normalizeHex('00d4aa') === '#00d4aa');
+check('«rojo» se rechaza', PublicThemeService::normalizeHex('rojo') === null);
+check('#12345 se rechaza', PublicThemeService::normalizeHex('#12345') === null);
+check('shade oscurece', PublicThemeService::shade('#ffffff', -50) === '#808080', PublicThemeService::shade('#ffffff', -50));
+check('luminancia blanco = 1', abs(PublicThemeService::luminance('#ffffff') - 1.0) < 0.001);
+
+echo "\n== 5. Validación del CSS personalizado ==\n";
+[$clean, $errors] = PublicThemeService::validateCustomCss('.public-site .x { color: red; }');
+check('CSS válido se acepta', $errors === [] && str_contains($clean, '.x'));
+[, $errors] = PublicThemeService::validateCustomCss('</style><script>alert(1)</script>');
+check('rechaza «<»', $errors !== [], 'sin errores');
+[, $errors] = PublicThemeService::validateCustomCss('@import url("http://evil.test/x.css");');
+check('rechaza @import', $errors !== []);
+[, $errors] = PublicThemeService::validateCustomCss('a{background:url(javascript:alert(1))}');
+check('rechaza javascript:', $errors !== []);
+
+echo "\n== 5.b. Acotado del CSS personalizado ==\n";
+$scoped = PublicThemeService::scopeCss('.hero { color: red; }');
+check('selector simple se prefija', str_starts_with($scoped, 'body.public-site .hero'), $scoped);
+$scopedMedia = PublicThemeService::scopeCss('@media (max-width: 600px){.hero{color:red}}');
+check('desciende en @media', str_contains($scopedMedia, '@media (max-width: 600px)') && str_contains($scopedMedia, 'body.public-site .hero'), $scopedMedia);
+$scopedRoot = PublicThemeService::scopeCss(':root{--x:1}');
+check(':root se convierte en el ámbito', (bool) preg_match('/body\.public-site\s*\{--x:1\}/', $scopedRoot), $scopedRoot);
+$scopedList = PublicThemeService::scopeCss('h1, h2 { margin: 0 }');
+check('lista de selectores se prefija entera', substr_count($scopedList, 'body.public-site') === 2, $scopedList);
+$scopedKeyframes = PublicThemeService::scopeCss('@keyframes giro{from{opacity:0}to{opacity:1}}');
+check('@keyframes no se prefija', str_starts_with($scopedKeyframes, '@keyframes giro'), $scopedKeyframes);
+check('CSS ya acotado no se duplica', str_starts_with(PublicThemeService::scopeCss('body.public-site .x{a:1}'), 'body.public-site .x'));
+
+echo "\n== 6. Sanitizador de SVG ==\n";
+$malicious = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10">'
+    . '<script>alert(1)</script>'
+    . '<rect width="10" height="10" fill="#fff" onload="alert(2)"/>'
+    . '<foreignObject><div>x</div></foreignObject>'
+    . '<a href="javascript:alert(3)"><text>t</text></a>'
+    . '</svg>';
+$result = (new SvgSanitizer())->sanitize($malicious);
+check('SVG válido tras sanear', $result['ok']);
+check('sin <script>', !str_contains(strtolower($result['svg']), '<script'));
+check('sin onload', !str_contains(strtolower($result['svg']), 'onload'));
+check('sin foreignObject', !str_contains(strtolower($result['svg']), 'foreignobject'));
+check('sin javascript:', !str_contains(strtolower($result['svg']), 'javascript:'));
+check('conserva el <rect> legítimo', str_contains($result['svg'], '<rect'));
+check('informa de lo eliminado', $result['removed'] !== []);
+$withDoctype = (new SvgSanitizer())->sanitize('<!DOCTYPE svg [<!ENTITY x SYSTEM "file:///etc/passwd">]><svg/>');
+check('rechaza DOCTYPE/ENTITY', $withDoctype['ok'] === false);
+
+echo "\n== 7. Validador de subidas ==\n";
+$validator = new ImageUploadValidator(['png', 'jpg', 'jpeg', 'svg', 'webp'], 2097152);
+$bad = $validator->validate(['name' => 'shell.php', 'tmp_name' => '/tmp/x', 'error' => 0, 'size' => 10]);
+check('rechaza .php', $bad['ok'] === false && str_contains((string) $bad['error'], 'Formato no permitido'), (string) $bad['error']);
+$big = $validator->validate(['name' => 'a.png', 'tmp_name' => '/tmp/x', 'error' => 0, 'size' => 99999999]);
+check('rechaza tamaño excesivo', $big['ok'] === false && str_contains((string) $big['error'], 'supera el máximo'), (string) $big['error']);
+$noUpload = $validator->validate(['name' => 'a.png', 'tmp_name' => '/tmp/x', 'error' => 0, 'size' => 10]);
+check('exige subida HTTP real', $noUpload['ok'] === false && str_contains((string) $noUpload['error'], 'subida válida'), (string) $noUpload['error']);
+$noFile = $validator->validate(null);
+check('sin archivo da error claro', $noFile['ok'] === false);
+
+echo "\n== 8. Persistencia y restablecimiento ==\n";
+// Punto de partida conocido: si una ejecución anterior se interrumpió a medias,
+// el estado podría haberse quedado en «claro» y las comparaciones de abajo
+// fallarían sin que nada estuviera roto. Se normaliza antes de medir.
+PublicThemeService::resetColors('oscuro');
+$versionBefore = PublicThemeService::version();
+$rejected = PublicThemeService::save(['theme' => 'claro', 'colors' => ['color_primary' => 'no-es-color']]);
+check('guardado inválido no persiste', $rejected['ok'] === false && $rejected['errors'] !== []);
+check('el tema no cambió tras el rechazo', PublicThemeService::get('theme') === 'oscuro', PublicThemeService::get('theme'));
+
+$ok = PublicThemeService::save([
+    'theme'  => 'claro',
+    'colors' => ['color_primary' => '#0D6EFD', 'color_background' => '#FFFFFF'],
+    'logo_alt' => 'Logotipo de prueba',
+]);
+check('guardado válido', $ok['ok'], implode(' ', $ok['errors']));
+check('HEX normalizado en BD', PublicThemeService::get('color_primary') === '#0d6efd', PublicThemeService::get('color_primary'));
+check('tema persistido', PublicThemeService::get('theme') === 'claro');
+check('isDark() refleja el fondo claro', PublicThemeService::isDark() === false);
+check('la versión cambia al guardar', PublicThemeService::version() !== $versionBefore);
+
+$reset = PublicThemeService::resetColors('oscuro');
+check('restablecer colores', $reset['ok']);
+check('vuelve al primario por defecto', PublicThemeService::get('color_primary') === '#00d4aa', PublicThemeService::get('color_primary'));
+check('isDark() vuelve a true', PublicThemeService::isDark() === true);
+
+echo "\n== 9. Favicon y manifiesto ==\n";
+// Se parte de un estado limpio: si una ejecución anterior (o la prueba E2E)
+// dejó imágenes, estas comprobaciones fallarían sin que nada estuviera roto.
+$assetService = new \App\Services\SettingsAssetService();
+foreach (array_merge(array_keys(PublicThemeService::LOGO_SLOTS), array_keys(PublicThemeService::FAVICON_SLOTS)) as $slot) {
+    $assetService->delete($slot);
+}
+check('sin favicon no hay etiquetas', PublicThemeService::faviconTags() === '', PublicThemeService::faviconTags());
+$manifest = PublicThemeService::manifest();
+check('manifiesto con nombre', isset($manifest['name']) && $manifest['name'] !== '');
+check('manifiesto sin iconos si no hay archivos', $manifest['icons'] === []);
+check('assetUrl de un slot sin configurar es null', PublicThemeService::assetUrl('logo_header') === null);
+check('slot inexistente es null', PublicThemeService::assetUrl('slot_inventado') === null);
+
+echo "\n== 10. Corrección del defecto preexistente ==\n";
+check('SettingService::clearCache() existe', method_exists(SettingService::class, 'clearCache'));
+
+echo "\n== 11. Helpers ==\n";
+check('getPublicSettings() disponible', function_exists('getPublicSettings'));
+check('getPublicSettings() devuelve 34 claves', count(getPublicSettings()) === 34);
+check('public_theme_css_url() incluye versión', str_contains(public_theme_css_url(), 'public-theme.css?v='));
+check('public_logo() devuelve null sin configuración', public_logo('logo_header') === null);
+
+echo "\n== 12. Limpieza (la prueba no debe dejar rastro en el sitio) ==\n";
+$cleanup = PublicThemeService::save(['logo_alt' => '']);
+check('texto alternativo devuelto a vacío', $cleanup['ok'] && PublicThemeService::get('logo_alt') === '', PublicThemeService::get('logo_alt'));
+check('tema final = oscuro', PublicThemeService::get('theme') === 'oscuro', PublicThemeService::get('theme'));
+check('sin CSS personalizado guardado', PublicThemeService::get('custom_css') === '', PublicThemeService::get('custom_css'));
+
+echo "\n─────────────────────────────────────────\n";
+printf("Resultado: %d pasan, %d fallan\n", $passed, $failed);
+exit($failed === 0 ? 0 : 1);
+

@@ -36,12 +36,21 @@ $userInitial = function_exists('mb_substr') ? mb_substr($userName, 0, 1) : subst
 $userInitial = strtoupper($userInitial !== '' ? $userInitial : 'U');
 ?>
 <!DOCTYPE html>
-<html lang="es" data-bs-theme="dark">
+<html lang="es" data-bs-theme="<?= \App\Services\PublicThemeService::isDark() ? 'dark' : 'light' ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= $pageTitle ?></title>
     <meta name="description" content="<?= htmlspecialchars($pageDescription, ENT_QUOTES, 'UTF-8') ?>">
+
+    <?php
+    // Favicon gestionado desde Configuración → Favicon. Sólo se emiten las
+    // etiquetas de los archivos que existen de verdad (más el manifiesto).
+    $faviconTags = \App\Services\PublicThemeService::faviconTags();
+    ?>
+    <?php if ($faviconTags !== ''): ?>
+    <?= $faviconTags ?>
+    <?php endif; ?>
 
     <!-- Bootstrap 5.3 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -640,14 +649,51 @@ $userInitial = strtoupper($userInitial !== '' ? $userInitial : 'U');
             }
         }
     </style>
+
+    <?php
+    // Hoja de estilos de la personalización pública (Configuración → Colores).
+    // Va DESPUÉS del <style> base a propósito: así los tokens configurados
+    // ganan tanto por orden como por especificidad (`body.public-site`).
+    // El layout del panel no incluye esta hoja en ningún caso.
+    ?>
+    <link rel="stylesheet" href="<?= e(public_theme_css_url()) ?>">
 </head>
-<body>
+<body class="public-site">
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-main sticky-top" id="siteNav" aria-label="Navegación principal">
         <div class="container">
             <a class="navbar-brand" href="<?= url('/') ?>" aria-label="<?= e($appName) ?> · Inicio">
+                <?php
+                // Logo del header servido con <picture>: el navegador elige la
+                // variante por tamaño de pantalla (y por preferencia de color)
+                // sin JavaScript ni descargas de más.
+                $logoDesktop = public_logo('logo_desktop', 'logo_header');
+                $logoTablet  = public_logo('logo_tablet');
+                $logoMobile  = public_logo('logo_mobile');
+                $logoDark    = public_logo('logo_dark');
+                $logoLight   = public_logo('logo_light');
+                $logoAlt     = public_logo_alt();
+                ?>
+                <?php if ($logoDesktop !== null): ?>
+                <picture class="brand-picture">
+                    <?php if ($logoDark !== null): ?>
+                    <source media="(prefers-color-scheme: dark)" srcset="<?= e($logoDark) ?>">
+                    <?php endif; ?>
+                    <?php if ($logoLight !== null): ?>
+                    <source media="(prefers-color-scheme: light)" srcset="<?= e($logoLight) ?>">
+                    <?php endif; ?>
+                    <?php if ($logoMobile !== null): ?>
+                    <source media="(max-width: 575.98px)" srcset="<?= e($logoMobile) ?>">
+                    <?php endif; ?>
+                    <?php if ($logoTablet !== null): ?>
+                    <source media="(max-width: 991.98px)" srcset="<?= e($logoTablet) ?>">
+                    <?php endif; ?>
+                    <img class="brand-logo" src="<?= e($logoDesktop) ?>" alt="<?= e($logoAlt) ?>">
+                </picture>
+                <?php else: ?>
                 <span class="brand-mark" aria-hidden="true"><i class="bi bi-layers-fill"></i></span>
                 <span class="brand-word"><?= e($brandFirst) ?><?php if ($brandRest !== ''): ?><span class="brand-accent"> <?= e($brandRest) ?></span><?php endif; ?></span>
+                <?php endif; ?>
             </a>
 
             <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse"
@@ -700,9 +746,14 @@ $userInitial = strtoupper($userInitial !== '' ? $userInitial : 'U');
         <div class="container">
             <div class="row g-4">
                 <div class="col-lg-4">
+                    <?php $logoFooter = public_logo('logo_footer', 'logo_desktop', 'logo_header'); ?>
                     <h5 class="fw-bold mb-3">
-                        <i class="bi bi-layers-fill me-2" style="color: var(--accent);"></i>
-                        <?= e($appName) ?>
+                        <?php if ($logoFooter !== null): ?>
+                            <img class="brand-logo brand-logo--footer" src="<?= e($logoFooter) ?>" alt="<?= e(public_logo_alt()) ?>">
+                        <?php else: ?>
+                            <i class="bi bi-layers-fill me-2" style="color: var(--accent);"></i>
+                            <?= e($appName) ?>
+                        <?php endif; ?>
                     </h5>
                     <p class="text-muted small">
                         Plataforma de creación y gestión de contenido profesional.

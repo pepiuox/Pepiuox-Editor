@@ -1,0 +1,175 @@
+# Verificación HTTP de la personalización visual pública.
+# Autentica con una sesión PHP real creada por storage/_ppf_prep.php.
+# Uso: ./tests/public-theme/e2e.ps1
+
+$ErrorActionPreference = 'Stop'
+$root  = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+$base  = 'http://127.0.0.1:8899'
+$pass  = 0
+$fail  = 0
+
+function Check([string]$name, [bool]$ok, [string]$detail = '') {
+    if ($ok) { $script:pass++; Write-Host "  PASA  $name" }
+    else { $script:fail++; Write-Host "  FALLA $name -> $detail" }
+}
+
+$prep = & php "$PSScriptRoot\support.php" prep | ConvertFrom-Json
+$sid     = $prep.session_id
+$member  = $prep.member_session
+$csrf    = $prep.csrf
+$admin   = @("-b", "PEP_SESSION=$sid")
+$memberC = @("-b", "PEP_SESSION=$member")
+$media   = $prep.media_dir
+$logos   = "$root\uploads\settings\logos"
+
+Write-Host "== A. Subida de logo (PNG valido) =="
+$code = curl.exe -s -o NUL -w "%{http_code}" @admin `
+    -F "slot=logo_header" -F "asset=@$media/logo.png" -F "_csrf_token=$csrf" `
+    "$base/admin/settings/public/asset"
+Check 'responde 302 (redirect con flash)' ($code -eq '302') "http=$code"
+$stored = (& php "$PSScriptRoot\support.php" get public logo_header).Trim()
+Check 'la clave public_logo_header se guarda' ($stored -like 'settings/logos/logo_header-*') "valor=$stored"
+$abs = "$root\uploads\" + ($stored -replace '/', '\')
+Check 'el archivo existe en uploads/settings/logos' (Test-Path $abs) $abs
+Check 'nombre generado por el servidor, no el del usuario' ($abs -notlike '*logo.png') $abs
+
+Write-Host "`n== B. Subida rechazada (PNG falsificado) =="
+$before = $stored
+$code = curl.exe -s -o NUL -w "%{http_code}" @admin `
+    -F "slot=logo_tablet" -F "asset=@$media/fake.png" -F "_csrf_token=$csrf" `
+    "$base/admin/settings/public/asset"
+$after = (& php "$PSScriptRoot\support.php" get public logo_tablet).Trim()
+Check 'no se registra la clave' ($after -eq '') "valor=$after"
+Check 'no queda archivo nuevo' ((Get-ChildItem $logos -Filter 'logo_tablet-*' -ErrorAction SilentlyContinue | Measure-Object).Count -eq 0)
+
+Write-Host "`n== C. Subida de SVG con codigo (saneado) =="
+$code = curl.exe -s -o NUL -w "%{http_code}" @admin `
+    -F "slot=logo_footer" -F "asset=@$media/logo.svg" -F "_csrf_token=$csrf" `
+    "$base/admin/settings/public/asset"
+$svgSetting = (& php "$PSScriptRoot\support.php" get public logo_footer).Trim()
+Check 'el SVG se guarda' ($svgSetting -like 'settings/logos/logo_footer-*.svg') "valor=$svgSetting"
+$svgAbs = "$root\uploads\" + ($svgSetting -replace '/', '\')
+if (Test-Path $svgAbs) {
+    $content = Get-Content $svgAbs -Raw
+    Check 'SVG sin <script>' (-not ($content -match '<script')) 'quedo el script'
+    Check 'SVG sin onmouseover' (-not ($content -match 'onmouseover')) 'quedo el handler'
+    Check 'SVG conserva el rect legible' ($content -match '<rect')
+} else { Check 'archivo SVG presente' $false $svgAbs }
+
+Write-Host "`n== D. Favicon =="
+$code = curl.exe -s -o NUL -w "%{http_code}" @admin `
+    -F "slot=favicon_32" -F "asset=@$media/icon32.png" -F "_csrf_token=$csrf" `
+    "$base/admin/settings/public/asset"
+$fav = (& php "$PSScriptRoot\support.php" get public favicon_32).Trim()
+Check 'favicon_32 guardado' ($fav -like 'settings/favicons/favicon_32-*.png') "valor=$fav"
+$html = (curl.exe -s "$base/") -join "`n"
+Check 'el <head> publico emite favicon 32x32' ($html -match 'rel="icon"[^>]*sizes="32x32"')
+Check 'el <head> publico emite el manifiesto' ($html -match 'rel="manifest"')
+Check 'el body publico lleva la clase public-site' ($html -match '<body class="public-site">')
+$manifest = (curl.exe -s "$base/site.webmanifest") -join "`n"
+Check 'el manifiesto lista el icono' ($manifest -match 'favicon_32-')
+
+Write-Host "`n== E. Logo en el HTML publico =="
+$html = (curl.exe -s "$base/") -join "`n"
+Check 'usa <picture> para el logo del header' ($html -match '<picture class="brand-picture">')
+Check 'el <img> lleva alt' ($html -match 'class="brand-logo" src="[^"]+" alt="')
+Check 'carga la hoja dinamica con version' ($html -match 'public-theme\.css\?v=[0-9a-f]{16}')
+
+Write-Host "`n== F. CSS dinamico refleja la configuracion =="
+$css = (curl.exe -s "$base/public-theme.css") -join "`n"
+Check 'CSS contiene --public-primary' ($css -match '--public-primary:\s*#00d4aa')
+Check 'CSS contiene --public-footer-bg' ($css -match '--public-footer-bg:')
+
+Write-Host "`n== G. Validacion de color invalido =="
+$code = curl.exe -s -o NUL -w "%{http_code}" @admin `
+    -d "theme=personalizado" -d "colors[color_primary]=no-es-un-color" -d "_csrf_token=$csrf" `
+    "$base/admin/settings/public"
+$primary = (& php "$PSScriptRoot\support.php" get public color_primary).Trim()
+Check 'el color invalido no se persiste' ($primary -eq '#00d4aa') "valor=$primary"
+
+Write-Host "`n== H. CSRF y permisos =="
+$code = curl.exe -s -o NUL -w "%{http_code}" @admin `
+    -d "theme=oscuro" `
+    "$base/admin/settings/public"
+Check 'POST sin token CSRF -> 403' ($code -eq '403') "http=$code"
+
+$code = curl.exe -s -o NUL -w "%{http_code}" @memberC `
+    -F "slot=logo_menu" -F "asset=@$media/logo.png" -F "_csrf_token=$csrf" `
+    "$base/admin/settings/public/asset"
+Check 'rol sin settings.manage -> 403' ($code -eq '403') "http=$code"
+$menu = (& php "$PSScriptRoot\support.php" get public logo_menu).Trim()
+Check 'el rol sin permiso no escribe' ($menu -eq '') "valor=$menu"
+
+Write-Host "`n== I. Eliminacion =="
+$code = curl.exe -s -o NUL -w "%{http_code}" @admin `
+    -d "slot=logo_footer" -d "_csrf_token=$csrf" `
+    "$base/admin/settings/public/asset/delete"
+$afterDel = (& php "$PSScriptRoot\support.php" get public logo_footer).Trim()
+Check 'la clave queda vacia' ($afterDel -eq '') "valor=$afterDel"
+Check 'el archivo se borra del disco' (-not (Test-Path $svgAbs)) $svgAbs
+$html = (curl.exe -s "$base/") -join "`n"
+Check 'el logo de footer deja de ser el archivo borrado' (-not ($html -match 'logo_footer-'))
+
+Write-Host "`n== J. Restablecer colores =="
+$code = curl.exe -s -o NUL -w "%{http_code}" @admin `
+    -d "theme=claro" -d "_csrf_token=$csrf" `
+    "$base/admin/settings/public/reset"
+$bg = (& php "$PSScriptRoot\support.php" get public color_background).Trim()
+Check 'reset aplica la paleta del tema claro' ($bg -eq '#ffffff') "valor=$bg"
+$html = (curl.exe -s "$base/") -join "`n"
+Check 'data-bs-theme pasa a light' ($html -match 'data-bs-theme="light"')
+$code = curl.exe -s -o NUL -w "%{http_code}" @admin `
+    -d "theme=oscuro" -d "_csrf_token=$csrf" `
+    "$base/admin/settings/public/reset"
+$bg = (& php "$PSScriptRoot\support.php" get public color_background).Trim()
+Check 'vuelve a oscuro' ($bg -eq '#0d1117') "valor=$bg"
+
+Write-Host "`n== L. CSS personalizado: se aplica y queda acotado =="
+curl.exe -s -o NUL @admin `
+    -d "theme=oscuro" -d "custom_css_enabled=1" `
+    -d "custom_css=.ppf-prueba { outline: 3px solid red; }" -d "_csrf_token=$csrf" `
+    "$base/admin/settings/public" | Out-Null
+$css = (curl.exe -s "$base/public-theme.css") -join "`n"
+Check 'el CSS personalizado llega al sitio publico' ($css -match 'ppf-prueba')
+Check 'queda prefijado con body.public-site' ($css -match 'body\.public-site \.ppf-prueba')
+Check 'el panel no incluye el CSS publico' (-not ($css -match 'maker\.css'))
+# Desactivado: desaparece
+curl.exe -s -o NUL @admin `
+    -d "theme=oscuro" -d "custom_css_enabled=0" `
+    -d "custom_css=.ppf-prueba { outline: 3px solid red; }" -d "_csrf_token=$csrf" `
+    "$base/admin/settings/public" | Out-Null
+$css = (curl.exe -s "$base/public-theme.css") -join "`n"
+Check 'desactivado no se emite' (-not ($css -match 'ppf-prueba'))
+
+Write-Host "`n== M. Aislamiento del panel (requisito 9) =="
+$panelCode = curl.exe -s -o "$env:TEMP\ppf_panel.html" -w "%{http_code}" @admin "$base/admin/settings"
+$panel = (Get-Content "$env:TEMP\ppf_panel.html" -Raw) -join "`n"
+Check 'el panel responde 200 con sesion' ($panelCode -eq '200') "http=$panelCode"
+Check 'el panel NO carga public-theme.css' (-not ($panel -match 'public-theme\.css'))
+Check 'el panel NO define variables --public-*' (-not ($panel -match '--public-[a-z]+:'))
+Check 'el panel conserva su propia hoja maker.css' ($panel -match 'maker\.css')
+Check 'el panel no lleva la clase public-site en <body>' (-not ($panel -match '<body class="public-site"'))
+Check 'el panel muestra las 11 pestanas' (([regex]::Matches($panel, 'data-tab="')).Count -ge 22) 'cuenta inesperada'
+Remove-Item "$env:TEMP\ppf_panel.html" -ErrorAction SilentlyContinue
+
+Write-Host "`n== K. Limpieza (la prueba no debe dejar rastro en el sitio) =="
+foreach ($slot in 'logo_header', 'favicon_32', 'logo_tablet') {
+    curl.exe -s -o NUL @admin -d "slot=$slot" -d "_csrf_token=$csrf" `
+        "$base/admin/settings/public/asset/delete" | Out-Null
+    $left = (& php "$PSScriptRoot\support.php" get public $slot).Trim()
+    Check "clave $slot vacía al terminar" ($left -eq '') "valor=$left"
+}
+$orphans = @(Get-ChildItem "$root\uploads\settings" -Recurse -File -ErrorAction SilentlyContinue)
+Check 'no quedan archivos de prueba en uploads/settings' ($orphans.Count -eq 0) ($orphans.Name -join ', ')
+# El CSS de prueba no puede quedarse guardado en el sitio del usuario.
+curl.exe -s -o NUL @admin -d "theme=oscuro" -d "custom_css=" -d "custom_css_enabled=0" `
+    -d "_csrf_token=$csrf" "$base/admin/settings/public" | Out-Null
+$leftCss = (& php "$PSScriptRoot\support.php" get public custom_css).Trim()
+Check 'CSS personalizado vacío al terminar' ($leftCss -eq '') "valor=$leftCss"
+
+Write-Host "`n─────────────────────────────"
+Write-Host "Resultado E2E: $pass pasan, $fail fallan"
+if ($fail -ne 0) { exit 1 }
+
+
+

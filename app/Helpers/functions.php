@@ -435,3 +435,13 @@ if (!function_exists('_fileIsDocument')) {
         return ($file['category'] ?? '') === 'document';
     }
 }
+
+// ============================================
+// HELPERS DE LA WEB PÚBLICA
+// ============================================
+// getPublicSettings(), public_logo(), public_favicon_tags()… Viven aparte para
+// no engordar este archivo y para que sea evidente que son del frontend público
+// y no del panel. Se cargan siempre: son envoltorios sin coste hasta que se usan.
+if (is_file(__DIR__ . '/public_settings.php')) {
+    require_once __DIR__ . '/public_settings.php';
+}

@@ -30,6 +30,20 @@ class SettingService
         self::$cache["$group.$key"] = self::cast($v, $type);
     }
 
+    /**
+     * Vacía la caché de valores de esta petición.
+     *
+     * Necesario después de escribir: sin esto, el resto de la misma petición
+     * seguiría leyendo el valor viejo. Lo llama `SettingsController` tras
+     * guardar, y también `PublicThemeService` cuando cambia el grupo `public`.
+     *
+     * @since 2026-10-26
+     */
+    public static function clearCache(): void
+    {
+        self::$cache = [];
+    }
+
     public static function all(): array
     {
         $rows = Database::fetchAll("SELECT * FROM settings ORDER BY `group`, `key`");

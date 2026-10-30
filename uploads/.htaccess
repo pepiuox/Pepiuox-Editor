@@ -1,0 +1,39 @@
+# Protección del directorio de subidas.
+#
+# Los archivos viven fuera del document root y se sirven por public/uploads.php,
+# pero si alguien despliega con otro servidor o con AllowOverride distinto, este
+# archivo es la segunda barrera: nada de aquí debe ejecutarse como código.
+#
+# Defensa en profundidad, no la única defensa: la lista blanca de extensiones y
+# el nombre generado por el servidor están en ImageUploadValidator y
+# SettingsAssetService.
+
+# Nada de intérpretes.
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php7.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php8.c>
+    php_flag engine off
+</IfModule>
+
+RemoveHandler .php .phtml .php3 .php4 .php5 .php7 .php8 .phps .cgi .pl .py .sh
+RemoveType .php .phtml .phps
+
+# Sólo se sirven imágenes; cualquier otra extensión se deniega.
+<FilesMatch "(?i)\.(php|phtml|phps|php[0-9]|cgi|pl|py|sh|exe|bat|com|js|mjs|html?|xhtml|svgz|htaccess)$">
+    Require all denied
+</FilesMatch>
+
+# Listado de directorios fuera.
+Options -Indexes -ExecCGI
+
+# Un SVG servido directamente no debe poder cargar recursos externos.
+<IfModule mod_headers.c>
+    <FilesMatch "(?i)\.svg$">
+        Header always set Content-Security-Policy "default-src 'none'; style-src 'unsafe-inline'; img-src data:"
+        Header always set X-Content-Type-Options "nosniff"
+    </FilesMatch>
+</IfModule>
