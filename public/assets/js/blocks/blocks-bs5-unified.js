@@ -8,8 +8,8 @@
 // - blocks-bs.js
 //
 // Mejoras:
-// - Sin IDs de bloque repetidos
-// - gjsEditor.BlockManager.add directamente
+// - gjsEditor.BlockManager.add directo (sin funciones auxiliares)
+// - Verificación de duplicados integrada
 // - Bootstrap 5.3.3
 // - Bootstrap Icons
 // - Categorías limpias y consistentes
@@ -28,7 +28,7 @@
 'use strict';
 
 if (typeof gjsEditor === 'undefined' || !gjsEditor) {
-    console.warn('[bs-hero-split] gjsEditor no existe todavía; fichero omitido.');
+    console.warn('[blocks-bs5-unified] gjsEditor no existe todavía; fichero omitido.');
     return;
 }
 
@@ -48,30 +48,8 @@ var CAT = {
 };
 
 // ─────────────────────────────────────────────────────────────
-// Registro seguro sin duplicados
+// Helpers
 // ─────────────────────────────────────────────────────────────
-var registered = new Set();
-
-function addBlock(id, definition) {
-    var blockId = 'b5u-' + id;
-
-    if (registered.has(blockId)) {
-        console.warn('[blocks-bs5-unified] Bloque duplicado omitido:', blockId);
-        return;
-    }
-
-    if (
-        typeof gjsEditor.BlockManager.get === 'function' &&
-        gjsEditor.BlockManager.get(blockId)
-    ) {
-        console.warn('[blocks-bs5-unified] Ya existe en BlockManager:', blockId);
-        return;
-    }
-
-    registered.add(blockId);
-    gjsEditor.BlockManager.add(blockId, definition);
-}
-
 function icon(name) {
     return '<i class="bi bi-' + name + ' fs-3"></i>';
 }
@@ -92,7 +70,7 @@ var colGuide = 'border border-2 border-secondary-subtle rounded-3 p-3 text-cente
 // 📐 LAYOUT
 // ═══════════════════════════════════════════════════════════════════
 
-addBlock('layout-container', {
+gjsEditor.BlockManager.add('b5u-layout-container', {
     category: CAT.layout,
     label: 'Container',
     media: icon('square'),
@@ -102,7 +80,7 @@ addBlock('layout-container', {
         + '</div>'
 });
 
-addBlock('layout-container-fluid', {
+gjsEditor.BlockManager.add('b5u-layout-container-fluid', {
     category: CAT.layout,
     label: 'Container fluido',
     media: icon('arrows-expand'),
@@ -112,7 +90,7 @@ addBlock('layout-container-fluid', {
         + '</div>'
 });
 
-addBlock('layout-grid-2', {
+gjsEditor.BlockManager.add('b5u-layout-grid-2', {
     category: CAT.layout,
     label: 'Grid 2 columnas',
     media: icon('layout-split'),
@@ -123,7 +101,7 @@ addBlock('layout-grid-2', {
         + '</div>'
 });
 
-addBlock('layout-grid-3', {
+gjsEditor.BlockManager.add('b5u-layout-grid-3', {
     category: CAT.layout,
     label: 'Grid 3 columnas',
     media: icon('layout-three-columns'),
@@ -135,7 +113,7 @@ addBlock('layout-grid-3', {
         + '</div>'
 });
 
-addBlock('layout-grid-4', {
+gjsEditor.BlockManager.add('b5u-layout-grid-4', {
     category: CAT.layout,
     label: 'Grid 4 columnas',
     media: icon('grid-3x3-gap'),
@@ -148,7 +126,7 @@ addBlock('layout-grid-4', {
         + '</div>'
 });
 
-addBlock('layout-sidebar-content', {
+gjsEditor.BlockManager.add('b5u-layout-sidebar-content', {
     category: CAT.layout,
     label: 'Sidebar + contenido',
     media: icon('layout-sidebar'),
@@ -177,7 +155,7 @@ addBlock('layout-sidebar-content', {
 // 🧭 NAVEGACIÓN
 // ═══════════════════════════════════════════════════════════════════
 
-addBlock('nav-navbar-light', {
+gjsEditor.BlockManager.add('b5u-nav-navbar-light', {
     category: CAT.nav,
     label: 'Navbar clara',
     media: icon('menu-button-wide'),
@@ -201,7 +179,7 @@ addBlock('nav-navbar-light', {
         + '</nav>'
 });
 
-addBlock('nav-navbar-dark', {
+gjsEditor.BlockManager.add('b5u-nav-navbar-dark', {
     category: CAT.nav,
     label: 'Navbar oscura',
     media: icon('menu-up'),
@@ -223,7 +201,7 @@ addBlock('nav-navbar-dark', {
         + '</nav>'
 });
 
-addBlock('nav-breadcrumb', {
+gjsEditor.BlockManager.add('b5u-nav-breadcrumb', {
     category: CAT.nav,
     label: 'Breadcrumb',
     media: icon('chevron-right'),
@@ -237,7 +215,7 @@ addBlock('nav-breadcrumb', {
         + '</nav>'
 });
 
-addBlock('nav-pagination', {
+gjsEditor.BlockManager.add('b5u-nav-pagination', {
     category: CAT.nav,
     label: 'Paginación',
     media: icon('three-dots'),
@@ -257,7 +235,7 @@ addBlock('nav-pagination', {
 // 🦸 HEROES / PORTADAS
 // ═══════════════════════════════════════════════════════════════════
 
-addBlock('hero-centered', {
+gjsEditor.BlockManager.add('b5u-hero-centered', {
     category: CAT.hero,
     label: 'Hero centrado',
     media: icon('easel'),
@@ -278,7 +256,7 @@ addBlock('hero-centered', {
     )
 });
 
-addBlock('hero-split', {
+gjsEditor.BlockManager.add('b5u-hero-split', {
     category: CAT.hero,
     label: 'Hero imagen + texto',
     media: icon('image-text'),
@@ -303,7 +281,7 @@ addBlock('hero-split', {
     )
 });
 
-addBlock('hero-dark', {
+gjsEditor.BlockManager.add('b5u-hero-dark', {
     category: CAT.hero,
     label: 'Hero oscuro',
     media: icon('moon-stars'),
@@ -327,7 +305,7 @@ addBlock('hero-dark', {
 // 🧩 CONTENIDO
 // ═══════════════════════════════════════════════════════════════════
 
-addBlock('content-features', {
+gjsEditor.BlockManager.add('b5u-content-features', {
     category: CAT.content,
     label: 'Features 3 columnas',
     media: icon('grid-1x2'),
@@ -359,7 +337,7 @@ addBlock('content-features', {
     )
 });
 
-addBlock('content-card-image', {
+gjsEditor.BlockManager.add('b5u-content-card-image', {
     category: CAT.content,
     label: 'Card con imagen',
     media: icon('card-image'),
@@ -374,7 +352,7 @@ addBlock('content-card-image', {
         + '</div>'
 });
 
-addBlock('content-card-horizontal', {
+gjsEditor.BlockManager.add('b5u-content-card-horizontal', {
     category: CAT.content,
     label: 'Card horizontal',
     media: icon('layout-sidebar-inset'),
@@ -395,7 +373,7 @@ addBlock('content-card-horizontal', {
         + '</div>'
 });
 
-addBlock('content-buttons', {
+gjsEditor.BlockManager.add('b5u-content-buttons', {
     category: CAT.content,
     label: 'Botones',
     media: icon('hand-index'),
@@ -408,7 +386,7 @@ addBlock('content-buttons', {
         + '</div>'
 });
 
-addBlock('content-alert-dismissible', {
+gjsEditor.BlockManager.add('b5u-content-alert-dismissible', {
     category: CAT.content,
     label: 'Alerta cerrable',
     media: icon('exclamation-triangle'),
@@ -420,7 +398,7 @@ addBlock('content-alert-dismissible', {
         + '</div>'
 });
 
-addBlock('content-accordion-faq', {
+gjsEditor.BlockManager.add('b5u-content-accordion-faq', {
     category: CAT.content,
     label: 'FAQ Acordeón',
     media: icon('chevron-expand'),
@@ -445,7 +423,7 @@ addBlock('content-accordion-faq', {
         + '</div>'
 });
 
-addBlock('content-tabs', {
+gjsEditor.BlockManager.add('b5u-content-tabs', {
     category: CAT.content,
     label: 'Tabs',
     media: icon('folder2-open'),
@@ -462,7 +440,7 @@ addBlock('content-tabs', {
         + '</div>'
 });
 
-addBlock('content-modal', {
+gjsEditor.BlockManager.add('b5u-content-modal', {
     category: CAT.content,
     label: 'Modal',
     media: icon('window-stack'),
@@ -491,7 +469,7 @@ addBlock('content-modal', {
 // 📝 FORMULARIOS
 // ═══════════════════════════════════════════════════════════════════
 
-addBlock('forms-contact', {
+gjsEditor.BlockManager.add('b5u-forms-contact', {
     category: CAT.forms,
     label: 'Formulario contacto',
     media: icon('envelope-paper'),
@@ -519,7 +497,7 @@ addBlock('forms-contact', {
     )
 });
 
-addBlock('forms-login', {
+gjsEditor.BlockManager.add('b5u-forms-login', {
     category: CAT.forms,
     label: 'Login card',
     media: icon('box-arrow-in-right'),
@@ -541,7 +519,7 @@ addBlock('forms-login', {
         + '</div>'
 });
 
-addBlock('forms-newsletter', {
+gjsEditor.BlockManager.add('b5u-forms-newsletter', {
     category: CAT.forms,
     label: 'Newsletter',
     media: icon('mailbox'),
@@ -564,7 +542,7 @@ addBlock('forms-newsletter', {
         + '</section>'
 });
 
-addBlock('forms-search', {
+gjsEditor.BlockManager.add('b5u-forms-search', {
     category: CAT.forms,
     label: 'Buscador',
     media: icon('search'),
@@ -585,7 +563,7 @@ addBlock('forms-search', {
 // 📊 DATOS / TABLAS
 // ═══════════════════════════════════════════════════════════════════
 
-addBlock('data-table', {
+gjsEditor.BlockManager.add('b5u-data-table', {
     category: CAT.data,
     label: 'Tabla responsive',
     media: icon('table'),
@@ -604,7 +582,7 @@ addBlock('data-table', {
         + '</div>'
 });
 
-addBlock('data-stats', {
+gjsEditor.BlockManager.add('b5u-data-stats', {
     category: CAT.data,
     label: 'Estadísticas',
     media: icon('bar-chart'),
@@ -631,7 +609,7 @@ addBlock('data-stats', {
     )
 });
 
-addBlock('data-progress', {
+gjsEditor.BlockManager.add('b5u-data-progress', {
     category: CAT.data,
     label: 'Barras de progreso',
     media: icon('bar-chart-steps'),
@@ -659,7 +637,7 @@ addBlock('data-progress', {
 // 📣 MARKETING
 // ═══════════════════════════════════════════════════════════════════
 
-addBlock('marketing-pricing', {
+gjsEditor.BlockManager.add('b5u-marketing-pricing', {
     category: CAT.marketing,
     label: 'Pricing 3 planes',
     media: icon('tags'),
@@ -696,7 +674,7 @@ addBlock('marketing-pricing', {
     )
 });
 
-addBlock('marketing-cta', {
+gjsEditor.BlockManager.add('b5u-marketing-cta', {
     category: CAT.marketing,
     label: 'CTA banner',
     media: icon('megaphone'),
@@ -720,7 +698,7 @@ addBlock('marketing-cta', {
 // 🖥️ ADMIN / DASHBOARD
 // ═══════════════════════════════════════════════════════════════════
 
-addBlock('admin-dashboard', {
+gjsEditor.BlockManager.add('b5u-admin-dashboard', {
     category: CAT.admin,
     label: 'Admin Dashboard',
     media: icon('speedometer2'),
@@ -789,7 +767,7 @@ addBlock('admin-dashboard', {
 // 🦶 FOOTER
 // ═══════════════════════════════════════════════════════════════════
 
-addBlock('footer-corporate', {
+gjsEditor.BlockManager.add('b5u-footer-corporate', {
     category: CAT.footer,
     label: 'Footer corporativo',
     media: icon('layout-text-window-reverse'),
@@ -834,6 +812,6 @@ addBlock('footer-corporate', {
         + '</footer>'
 });
 
-console.log('[blocks-bs5-unified] ✓ ' + registered.size + ' bloques únicos Bootstrap 5 registrados');
+console.log('[blocks-bs5-unified] ✓ Bloques unificados Bootstrap 5.3.3 cargados correctamente');
 
 })();

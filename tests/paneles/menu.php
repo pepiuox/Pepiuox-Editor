@@ -305,15 +305,35 @@ foreach ($bloques as $url) {
         $sinGlobal[] = $nombre;
     }
 
-    // Dos formas de registrar: directa y mediante un helper del propio fichero
-    // (blocks-bs5-unified.js usa addBlock('id', …)).
+    // Dos formas de registrar: directa y mediante un helper del propio fichero.
+    // El helper se detecta por su CUERPO, con llaves equilibradas. Mirar solo
+    // «cerca de un BlockManager.add» daba falsos positivos: `icon('table')` es un
+    // nombre de icono, no un id de bloque, y aparecía como colisión inexistente.
     $ids = [];
     preg_match_all('/BlockManager\s*\.\s*add\s*\(\s*[\'"]([^\'"]+)[\'"]/', $codigo, $mDirecta);
     $ids = $mDirecta[1];
 
-    preg_match_all('/function\s+([A-Za-z_$][\w$]*)\s*\([^)]*\)\s*\{[\s\S]{0,4000}?BlockManager\s*\.\s*add\s*\(/', $codigo, $mHelpers);
-    foreach (array_unique($mHelpers[1]) as $helper) {
-        preg_match_all('/' . preg_quote($helper, '/') . '\s*\(\s*[\'"]([^\'"]+)[\'"]/', $codigo, $mUso);
+    preg_match_all('/function\s+([A-Za-z_$][\w$]*)\s*\([^)]*\)\s*\{/', $codigo, $mFns, PREG_OFFSET_CAPTURE);
+    foreach ($mFns[1] as $i => $fn) {
+        $inicio = $mFns[0][$i][1] + strlen($mFns[0][$i][0]);
+        $nivel = 1;
+        $p = $inicio;
+        $len = strlen($codigo);
+        while ($p < $len && $nivel > 0) {
+            if ($codigo[$p] === '{') {
+                $nivel++;
+            } elseif ($codigo[$p] === '}') {
+                $nivel--;
+            }
+            $p++;
+        }
+        $cuerpo = substr($codigo, $inicio, $p - $inicio);
+
+        // Solo cuenta si es el propio helper quien añade bloques.
+        if (!str_contains($cuerpo, 'BlockManager')) {
+            continue;
+        }
+        preg_match_all('/' . preg_quote($fn[0], '/') . '\s*\(\s*[\'"]([^\'"]+)[\'"]/', $codigo, $mUso);
         $ids = array_merge($ids, $mUso[1]);
     }
 

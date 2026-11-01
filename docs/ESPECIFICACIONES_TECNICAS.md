@@ -1436,3 +1436,36 @@ dos declaradas (`hero-split`, `hero-dark` entre `blocks-bs5-unified.js` y `grape
 **Lección:** una lista de exclusión por nombre de fichero es frágil frente a renombrados. O se comprueba su
 existencia, o mejor se excluye por una marca dentro del fichero (por ejemplo, una cabecera que declare
 «este fichero inyecta script y no debe cargarse en el editor»).
+
+### Cuarta pasada: `blocks-bs5-unified.js` mejorado (2026-11-01)
+
+El dueño volvió a reescribir `blocks-bs5-unified.js` (42,0 KB, md5 `4d74cadd7763`). Verificado:
+
+| Comprobación | Resultado |
+|---|---|
+| Sintaxis JS | OK |
+| Registro | **directo**, `gjsEditor.BlockManager.add('b5u-…')`: 32 bloques |
+| Prefijo | todos `b5u-` (espacio de nombres propio) |
+| `gjsEditor` + guardia de arranque | sí |
+| jQuery / CDN externo / etiquetas `<script>` | no / no / no |
+| Bootstrap 5.3.3 y bootstrap-icons | sí |
+| Font Awesome (no disponible en el lienzo) | no usa |
+| Colisiones con los otros 12 ficheros | **ninguna** |
+
+**Total servido: 13 ficheros, 271 bloques distintos.**
+
+Observación para el dueño: la cabecera del fichero dice «Verificación de duplicados integrada», pero en el
+cuerpo ya no hay ninguna comprobación (`BlockManager.get`) — lo que protege de duplicados es el prefijo
+`b5u-`, que es más sólido que una comprobación en tiempo de ejecución. Conviene corregir esa línea del
+comentario para que no confunda.
+
+### Un falso positivo más, y su arreglo
+
+El detector de helpers de la batería consideraba helper de registro a cualquier función que estuviera a menos
+de 4000 caracteres de un `BlockManager.add`. Eso convertía `icon('table')` —nombre de un icono— en un id de
+bloque, y aparecía una colisión con `blocks.js` que **no existe**.
+
+Corregido: el helper se detecta por su **cuerpo**, buscando la llave de cierre con conteo equilibrado, y solo
+cuenta si el `BlockManager.add` está **dentro** de esa función. Es la tercera vez que un detector por
+proximidad inventa un problema; la regla queda escrita: acotar la búsqueda a la estructura real, no a la
+distancia.
