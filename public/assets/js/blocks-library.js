@@ -149,15 +149,57 @@ window.BlocksLibrary = (function () {
      */
     var CATEGORY_OBJECTS = {};
 
-    function categoryObject(key) {
+    /**
+     * Editor activo, para poder pedirle las categorías reales.
+     * @type {Object|null}
+     */
+    var activeEditor = null;
+
+    /**
+     * Devuelve el MODELO de categoría, no un objeto plano.
+     *
+     * ── Por qué un modelo y no un objeto (esto era el fallo de fondo) ───
+     * En GrapesJS, `Block.category` es un getter:
+     *
+     *     get category() { const cat = this.get('category');
+     *                      return cat instanceof Category ? cat : undefined; }
+     *
+     * Es decir: con un **objeto plano** devuelve `undefined`, y entonces
+     * `BlocksView` cae en `initCategory()`, que crea la categoría y **reemplaza**
+     * el valor del bloque por el modelo. Al asignar nosotros un objeto plano en
+     * cada alta, estábamos peleando contra la librería 294 veces: el bloque volvía
+     * a quedarse sin categoría válida y la categoría se recreaba.
+     *
+     * Pidiendo el modelo real a `getCategories()` —la API documentada— el bloque
+     * queda enlazado a la categoría de verdad y su estado `open` sobrevive.
+     */
+    function categoryModel(key) {
+        var meta = CATEGORIES[key] || CATEGORIES['px-other'];
+        var categorias = activeEditor && activeEditor.Blocks && typeof activeEditor.Blocks.getCategories === 'function'
+            ? activeEditor.Blocks.getCategories()
+            : null;
+
+        if (categorias && typeof categorias.get === 'function') {
+            var existente = categorias.get(key);
+            if (existente) {
+                return existente;
+            }
+            if (typeof categorias.add === 'function') {
+                // `open` se fija al CREAR la categoría, no en cada bloque: si se
+                // reenviara en cada alta, el cierre manual se desharía.
+                return categorias.add({
+                    id: key,
+                    label: meta.label,
+                    order: meta.order,
+                    open: key === 'px-quick' || key === 'px-layout'
+                });
+            }
+        }
+
+        // Respaldo: sin API de categorías, se usa un objeto compartido por clave.
+        // Es lo mejor que se puede hacer, aunque GrapesJS lo tratará como nueva.
         if (!CATEGORY_OBJECTS[key]) {
-            var meta = CATEGORIES[key] || CATEGORIES['px-other'];
-            CATEGORY_OBJECTS[key] = {
-                id: key,
-                label: meta.label,
-                order: meta.order,
-                open: key === 'px-quick' || key === 'px-layout'
-            };
+            CATEGORY_OBJECTS[key] = { id: key, label: meta.label, order: meta.order };
         }
         return CATEGORY_OBJECTS[key];
     }
@@ -341,10 +383,9 @@ window.BlocksLibrary = (function () {
 
         normalizeContent(block, silent);
 
-        // Misma instancia para todos los bloques de la categoría: ver
-        // categoryObject(). Con un objeto nuevo por bloque, el panel mostraba
-        // grupos repetidos y el desplegable no se comportaba.
-        block.set('category', categoryObject(key), { silent: silent !== false });
+        // Modelo real de categoría, no un objeto: ver categoryModel(). Así el
+        // bloque queda enlazado a la categoría persistente y su estado se conserva.
+        block.set('category', categoryModel(key), { silent: silent !== false });
 
         var attributes = Object.assign({}, block.get('attributes') || {});
         var description = plainLabel(block.get('description') || '');
@@ -377,6 +418,7 @@ window.BlocksLibrary = (function () {
         }
 
         var manager = editor.BlockManager;
+        activeEditor = editor;
 
         var normalize = function (block) {
             try {

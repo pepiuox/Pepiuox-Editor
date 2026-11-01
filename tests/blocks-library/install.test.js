@@ -89,6 +89,34 @@ const editor = makeEditor();
 const manager = makeManager(editor);
 editor.BlockManager = manager;
 
+// Colección de categorías como la de GrapesJS: `get(id)` y `add(props)` que
+// devuelve el modelo existente si el id ya está (Backbone ignora el duplicado).
+function makeCategorias() {
+    const porId = new Map();
+    return {
+        get(id) { return porId.get(id) || null; },
+        add(props) {
+            if (porId.has(props.id)) {
+                return porId.get(props.id);
+            }
+            const attrs = Object.assign({ open: true }, props);
+            const modelo = {
+                id: attrs.id,
+                get(k) { return attrs[k]; },
+                set(k, v) { attrs[k] = v; return this; },
+                attrs
+            };
+            modelo.id = attrs.id;
+            porId.set(attrs.id, modelo);
+            return modelo;
+        },
+        getAll() { return Array.from(porId.values()); }
+    };
+}
+
+const categorias = makeCategorias();
+editor.Blocks = { getCategories: () => categorias };
+
 check('el BlockManager simulado NO tiene .on (como el real)', typeof manager.on === 'undefined');
 
 // Bloques que ya existirían por los plugins antes de cargar los ficheros.
@@ -117,7 +145,7 @@ check('card → Tarjetas', manager.get('bootstrap-card-basic').get('category').i
 check('plugin "Basic" → Contenido', manager.get('plugin-text').get('category').id === 'px-content', JSON.stringify(manager.get('plugin-text').get('category')));
 check('la categoría lleva label y order', (() => {
     const cat = manager.get('bs-navbar').get('category');
-    return cat.label === 'Navegación' && typeof cat.order === 'number';
+    return cat.get('label') === 'Navegación' && typeof cat.get('order') === 'number';
 })(), JSON.stringify(manager.get('bs-navbar').get('category')));
 
 console.log('\n== Atributos y duplicados ==');
@@ -138,19 +166,19 @@ manager.add('hero-dos', { label: 'Hero dos', category: { id: 'Layout', label: 'L
 check('dos bloques de Encabezados comparten instancia', catHero === manager.get('hero-dos').get('category'));
 
 // Abrir/cerrar a mano no puede revertirse al registrar otro bloque.
-catNav1.open = false;
+catNav1.set('open', false);
 manager.add('nav-tercero', { label: 'Navbar tres', category: 'bootstrap-navigation' });
 check('cerrar una categoría se mantiene al añadir otro bloque',
-    manager.get('nav-tercero').get('category').open === false,
+    manager.get('nav-tercero').get('category').get('open') === false,
     'el bloque nuevo reabrió la categoría: el cierre manual se revertiría');
 
 // Estado inicial: solo «Plantillas rápidas» y «Estructura y layout» abren; el
 // resto arranca cerrado para que el panel no sea un muro de tarjetas.
-check('Plantillas rápidas abre por defecto', manager.get('px-faq').get('category').open === true);
-check('Estructura y layout abre por defecto', manager.get('plugin-columns').get('category').open === true);
-check('Navegación arranca cerrada', catNav1.open === false);
-check('Encabezados arranca cerrada', manager.get('hero').get('category').open === false);
-check('Tarjetas arranca cerrada', manager.get('bootstrap-card-basic').get('category').open === false);
+check('Plantillas rápidas abre por defecto', manager.get('px-faq').get('category').get('open') === true);
+check('Estructura y layout abre por defecto', manager.get('plugin-columns').get('category').get('open') === true);
+check('Navegación arranca cerrada', catNav1.get('open') === false);
+check('Encabezados arranca cerrada', manager.get('hero').get('category').get('open') === false);
+check('Tarjetas arranca cerrada', manager.get('bootstrap-card-basic').get('category').get('open') === false);
 
 // Ninguna categoría se duplica por identidad.
 const instancias = new Set();
@@ -158,7 +186,7 @@ manager.getAll().forEach((b) => {
     const c = b.get('category');
     if (c && typeof c === 'object') instancias.add(c);
 });
-const claves = new Set(Array.from(instancias).map((c) => c.id));
+const claves = new Set(Array.from(instancias).map((c) => c.id || c.get('id')));
 check('hay una sola instancia por clave de categoría', instancias.size === claves.size,
     instancias.size + ' instancias para ' + claves.size + ' claves');
 manager.add('divider', { label: 'Divider', category: 'utils' });
