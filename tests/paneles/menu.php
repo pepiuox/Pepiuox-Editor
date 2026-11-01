@@ -273,6 +273,78 @@ comprobar(
     str_contains($htmlBuilder, 'BLOCK_SCRIPTS') && str_contains($htmlBuilder, 'loadBlockScripts')
 );
 
+// ─────────────────────────────────────────────────────────────────────
+echo "\n== Integración de los ficheros de bloques ==\n";
+
+// Cada fichero debe registrarse contra la global que esperan (gjsEditor) y no
+// puede repetir un id que ya registre otro fichero cargado: GrapesJS se queda
+// con uno y el otro bloque desaparece del panel sin avisar.
+$registrados = [];
+$repetidos = [];
+$sinGlobal = [];
+
+foreach ($bloques as $url) {
+    $nombre = basename($url);
+    $ruta = ROOT_PATH . '/public/assets/js/blocks/' . $nombre;
+    $codigo = (string) file_get_contents($ruta);
+
+    if (!str_contains($codigo, 'gjsEditor')) {
+        $sinGlobal[] = $nombre;
+    }
+
+    preg_match_all('/BlockManager\s*\.\s*add\s*\(\s*[\'"]([^\'"]+)[\'"]/', $codigo, $m);
+    foreach (array_unique($m[1]) as $id) {
+        if (isset($registrados[$id])) {
+            $repetidos[] = $id . ' (' . $registrados[$id] . ' + ' . $nombre . ')';
+        }
+        $registrados[$id] = $nombre;
+    }
+}
+
+comprobar(
+    'todos los ficheros cargados registran contra gjsEditor',
+    $sinGlobal === [],
+    implode(', ', $sinGlobal) . ' no usan la global: sus bloques no aparecerían'
+);
+
+comprobar(
+    'ningún id de bloque se registra dos veces entre ficheros cargados',
+    $repetidos === [],
+    implode(' · ', array_slice($repetidos, 0, 6))
+);
+
+comprobar(
+    'el catálogo de bloques es amplio',
+    count($registrados) >= 200,
+    'solo se registran ' . count($registrados) . ' bloques'
+);
+
+// Los excluidos lo están por un motivo concreto y comprobable.
+$excluidosRuta = [
+    'bs-blocks.js' => 'duplica ids de blocks-bs.js con contenido distinto',
+    'template.js'  => 'su contenido lleva código ejecutable',
+    'blocks-bs.js' => 'es idéntico byte a byte a blocks.js: registraría los mismos 23 ids',
+];
+foreach ($excluidosRuta as $f => $motivo) {
+    comprobar(
+        'el motivo de excluir ' . $f . ' sigue siendo cierto',
+        is_file(ROOT_PATH . '/public/assets/js/blocks/' . $f),
+        'el fichero ya no existe: retira la exclusión'
+    );
+}
+
+// La duplicación que motivó excluir blocks-bs.js debe seguirsiendo real: si
+// alguien los separa, la exclusión deja de tener sentido y esta prueba avisa.
+$uno = ROOT_PATH . '/public/assets/js/blocks/blocks.js';
+$dos = ROOT_PATH . '/public/assets/js/blocks/blocks-bs.js';
+if (is_file($uno) && is_file($dos)) {
+    comprobar(
+        'blocks.js y blocks-bs.js siguen siendo iguales (por eso se excluye uno)',
+        md5_file($uno) === md5_file($dos),
+        'han divergido: revisa si blocks-bs.js aporta algo y retira la exclusión'
+    );
+}
+
 echo "\n" . str_repeat('-', 56) . "\n";
 printf("Comprobaciones: %d · Fallos: %d\n", $total, $fallos);
 exit($fallos === 0 ? 0 : 1);

@@ -282,7 +282,7 @@ function is_active_exact(string $path, string $class = 'active'): string {
  * @since 2026-10-31
  */
 function editor_block_urls(): array {
-    $excluidos = ['bs-blocks.js', 'template.js'];
+    $excluidos = ['bs-blocks.js', 'template.js', 'blocks-bs.js'];
     $nombres = [];
 
     foreach (glob(ASSETS_PATH . '/js/blocks/*.js') ?: [] as $archivo) {

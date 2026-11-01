@@ -1303,3 +1303,80 @@ La ruta anterior `GET /admin/settings/footer/builder` sigue respondiendo: lleva 
 
 `tests/footer/designs.php` — **26 comprobaciones** contra una base aislada. Se niega a ejecutarse si
 `DB_NAME` no termina en `_test` ni empieza por `zz_`, porque escribe de verdad.
+
+---
+
+## 14. Auditoría de los bloques (`public/assets/js/blocks/`)
+
+Medido el 2026-11-01 con un extractor propio: 15 ficheros, **249 bloques distintos**, de los que
+**239 se cargan** en los tres editores.
+
+### Cómo se integra un fichero
+
+`editor_block_urls()` (`app/Helpers/functions.php`) recorre la carpeta y sirve **todo** lo que haya. Añadir un
+`.js` nuevo no exige tocar ni la vista ni las rutas: se carga solo. Las tres pantallas consumen esa lista.
+
+Cada fichero debe cumplir un contrato que **no está en ningún tipo**, sino en el código:
+
+1. Registrar contra la **global `gjsEditor`**: `gjsEditor.BlockManager.add('id', {…})`.
+2. Empezar con el guardia `if (typeof gjsEditor === 'undefined' || !gjsEditor) { …omitido }`.
+3. Declarar la categoría como **objeto** de la biblioteca: `var ABOUT = { id: 'px-about', label: '👥 …', open: false }`.
+   `blocks-library.js` los usa para agrupar y decorar las tarjetas.
+
+### Resultado fichero a fichero
+
+| Fichero | Bloques | Estado |
+|---|---:|---|
+| `blocks-bootstrap.js` | 49 | Cargado |
+| `grapesjs-bootstrap5-blocks.js` | 42 | Cargado — **nuevo** |
+| `blocks.js` | 23 | Cargado |
+| `grapesjs-presentations.js` | 23 | Cargado — **nuevo** |
+| `advance.js` | 18 | Cargado |
+| `blocks-advanced.js` | 17 | Cargado |
+| `pro-templates.js` | 13 | Cargado |
+| `second-blocks.js` | 13 | Cargado |
+| `blocks-bs-advanced.js` | 12 | Cargado |
+| `grapesjs-cards-components.js` | 12 | Cargado — **nuevo** |
+| `uiblocks.js` | 11 | Cargado |
+| `bs-block-advanced.js` | 6 | Cargado |
+| `blocks-bs.js` | 23 | **Excluido**: idéntico byte a byte a `blocks.js` |
+| `bs-blocks.js` | 10 | **Excluido**: duplica 5 ids con contenido distinto |
+| `template.js` | 1 | **Excluido**: su contenido lleva código ejecutable |
+
+Los tres ficheros nuevos **ya estaban integrados** sin tocar nada, porque la lista se descubre del disco.
+
+### Lo que se comprobó de los 15 ficheros
+
+| Comprobación | Resultado |
+|---|---|
+| Sintaxis JS válida (`node --check`) | 15 de 15 |
+| Registran contra `gjsEditor` | 15 de 15 |
+| Traen el guardia de arranque | 15 de 15 |
+| Usan jQuery | ninguno |
+| Cargan algo de un CDN externo | ninguno |
+| Inyectan etiquetas de script | solo `template.js` (excluido por eso) |
+| Categorías como objeto de biblioteca | sí |
+
+### El defecto encontrado
+
+`blocks.js` y `blocks-bs.js` son **el mismo archivo**: 15 803 bytes, md5 idéntico, los mismos 23 ids. Con los
+dos cargados, cada uno de esos 23 bloques se registraba dos veces: GrapesJS se queda con el último y el panel
+puede mostrar duplicados o perder el estilo de uno. Se excluyó `blocks-bs.js` en `editor_block_urls()`.
+
+**Decisión pendiente del dueño:** borrar el fichero duplicado. No se ha borrado porque es suyo.
+
+### Guardas añadidas a la batería
+
+`tests/paneles/menu.php` comprueba ahora, entre los ficheros **cargados**:
+
+- que todos registran contra `gjsEditor` (si uno no lo hace, sus bloques no aparecen);
+- que **ningún id se registra dos veces** (el fallo de `blocks-bs.js`);
+- que el catálogo pasa de 200 bloques;
+- que la razón escrita para cada exclusión sigue siendo cierta, y que `blocks.js` y `blocks-bs.js`
+  siguen siendo idénticos: si alguien los separa, la prueba avisa de que la exclusión ya no hace falta.
+
+### Un falso negativo que vale la pena recordar
+
+El primer extractor marcó **los 15 ficheros con error de sintaxis**. No era cierto: `execFileSync` con
+`stdio: 'pipe'` falla con EPERM en este entorno (el sandbox no permite capturar la salida de otro proceso por
+tubería). Con `stdio: 'ignore'` los 15 pasan.

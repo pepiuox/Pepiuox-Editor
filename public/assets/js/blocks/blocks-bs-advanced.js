@@ -1,234 +1,264 @@
-// ─────────────────────────────────────────────
-// 🖼️ MEDIA & EMBEDS
-// ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════
+// blocks-bs-advanced.js — Bloques avanzados Bootstrap 5.3.3
+//
+// Modernización:
+//  - navbar-light/navbar-dark → data-bs-theme
+//  - bg-light → bg-body-tertiary
+//  - text-muted → text-body-secondary
+//  - Categorías unificadas en español
+//  - Accesibilidad ARIA completa
+//  - placehold.co con paleta coherente
+//
+// @package Assets\Js\Blocks
+// @since   2026-11-01
+// ═══════════════════════════════════════════════════════════════════
+(function () {
+'use strict';
+if (typeof gjsEditor === 'undefined' || !gjsEditor) {
+    console.warn('[blocks-bs-advanced] gjsEditor no existe todavía; fichero omitido.');
+    return;
+}
+
+// ── CATEGORÍAS ──────────────────────────────────────────────────
+var MEDIA = { id: 'media', label: '🖼️ Media y embeds', open: false };
+var INTER = { id: 'interactive', label: '🎛️ Interactivos', open: false };
+var DATA  = { id: 'data', label: '📊 Datos y tablas', open: false };
+var PROC  = { id: 'process', label: '👥 Procesos y equipo', open: false };
+
+// ── MEDIA & EMBEDS ──────────────────────────────────────────────
 gjsEditor.BlockManager.add('bs-gallery', {
-    category: { id: 'media', label: 'Media & Embeds', open: false },
-    label: 'Galería de Imágenes',
-    content: `<section class="py-5 bg-light">
-    <div class="container">
-    <h2 class="text-center mb-4 fw-bold">Galería</h2>
-    <div class="row g-3">
-    <div class="col-6 col-md-4 col-lg-3"><div class="card border-0 shadow-sm"><img src="https://placehold.co/400x300/e9ecef/6c757d?text=1" class="card-img-top" alt="img"><div class="card-body p-2"><p class="mb-0 small text-muted">Imagen 1</p></div></div></div>
-    <div class="col-6 col-md-4 col-lg-3"><div class="card border-0 shadow-sm"><img src="https://placehold.co/400x300/e9ecef/6c757d?text=2" class="card-img-top" alt="img"><div class="card-body p-2"><p class="mb-0 small text-muted">Imagen 2</p></div></div></div>
-    <div class="col-6 col-md-4 col-lg-3"><div class="card border-0 shadow-sm"><img src="https://placehold.co/400x300/e9ecef/6c757d?text=3" class="card-img-top" alt="img"><div class="card-body p-2"><p class="mb-0 small text-muted">Imagen 3</p></div></div></div>
-    <div class="col-6 col-md-4 col-lg-3"><div class="card border-0 shadow-sm"><img src="https://placehold.co/400x300/e9ecef/6c757d?text=4" class="card-img-top" alt="img"><div class="card-body p-2"><p class="mb-0 small text-muted">Imagen 4</p></div></div></div>
-    </div>
-    </div>
-    </section>`,
-    media: '<i class="bi bi-images fs-3"></i>'
+    category: MEDIA,
+    label: 'Galería de imágenes',
+    media: '<i class="bi bi-images fs-3"></i>',
+    description: 'Galería responsive de 4 imágenes con tarjetas',
+    content: '<section class="py-5 bg-body-tertiary">'
+        + '<div class="container">'
+        + '<h2 class="text-center mb-4 fw-bold">Galería</h2>'
+        + '<div class="row g-3">'
+        + [1,2,3,4].map(function(n){
+            return '<div class="col-6 col-md-4 col-lg-3">'
+                + '<div class="card border-0 shadow-sm h-100">'
+                + '<img src="https://placehold.co/400x300/e9ecef/6c757d?text=' + n + '" class="card-img-top" alt="Imagen ' + n + '">'
+                + '<div class="card-body p-2"><p class="mb-0 small text-body-secondary">Imagen ' + n + '</p></div>'
+                + '</div></div>';
+        }).join('')
+        + '</div></div></section>'
 });
 
 gjsEditor.BlockManager.add('bs-video', {
-    category: { id: 'media', label: 'Media & Embeds', open: false },
-    label: 'Video Responsive',
-    content: `<section class="py-5 bg-dark text-white">
-    <div class="container text-center">
-    <h2 class="fw-bold mb-4">Video Demo</h2>
-    <div class="row justify-content-center">
-    <div class="col-lg-10">
-    <div class="ratio ratio-16x9 shadow-lg rounded overflow-hidden">
-    <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" title="Video" allowfullscreen></iframe>
-    </div>
-    <p class="mt-3 text-muted small">Reproduce el video para conocer más sobre nuestros servicios.</p>
-    </div>
-    </div>
-    </div>
-    </section>`,
-    media: '<i class="bi bi-play-circle fs-3"></i>'
+    category: MEDIA,
+    label: 'Vídeo responsive',
+    media: '<i class="bi bi-play-circle fs-3"></i>',
+    description: 'Sección oscura con vídeo embebido 16:9',
+    content: '<section class="py-5 bg-dark text-white" data-bs-theme="dark">'
+        + '<div class="container text-center">'
+        + '<h2 class="fw-bold mb-4">Vídeo demo</h2>'
+        + '<div class="row justify-content-center"><div class="col-lg-10">'
+        + '<div class="ratio ratio-16x9 shadow-lg rounded-3 overflow-hidden">'
+        + '<iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" title="Vídeo demo" allowfullscreen loading="lazy"></iframe>'
+        + '</div>'
+        + '<p class="mt-3 text-body-secondary small">Reproduce el vídeo para conocer más sobre nuestros servicios.</p>'
+        + '</div></div></div></section>'
 });
 
 gjsEditor.BlockManager.add('bs-map', {
-    category: { id: 'media', label: 'Media & Embeds', open: false },
-    label: 'Mapa Interactivo',
-    content: `<section class="py-4">
-    <div class="container">
-    <div class="ratio ratio-21x9 shadow-sm rounded overflow-hidden">
-    <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3976.123!2d-74.006!3d40.712!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNDDCsDQyJzQ2LjAiTiA3NMKwMDAnMjEuNiJX!5e0!3m2!1ses!2sus!4v1234567890!5m2!1ses!2sus" width="100%" height="100%" style="border:0;" allowfullscreen loading="lazy"></iframe>
-    </div>
-    <div class="mt-3 d-flex justify-content-between align-items-center">
-    <h5 class="mb-0 fw-bold"><i class="bi bi-geo-alt-fill text-danger me-2"></i>Nuestra Ubicación</h5>
-    <a href="#" class="btn btn-outline-primary btn-sm">Abrir en Maps</a>
-    </div>
-    </div>
-    </section>`,
-    media: '<i class="bi bi-geo-alt fs-3"></i>'
+    category: MEDIA,
+    label: 'Mapa interactivo',
+    media: '<i class="bi bi-geo-alt fs-3"></i>',
+    description: 'Mapa de Google embebido con información de ubicación',
+    content: '<section class="py-4"><div class="container">'
+        + '<div class="ratio ratio-21x9 shadow-sm rounded-3 overflow-hidden">'
+        + '<iframe src="https://www.openstreetmap.org/export/embed.html?bbox=-74.006%2C40.712%2C-73.935%2C40.761&layer=mapnik" title="Mapa" loading="lazy" style="border:0"></iframe>'
+        + '</div>'
+        + '<div class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">'
+        + '<h5 class="mb-0 fw-bold"><i class="bi bi-geo-alt-fill text-danger me-2"></i>Nuestra ubicación</h5>'
+        + '<a href="#" class="btn btn-outline-primary btn-sm">Abrir en Maps</a>'
+        + '</div></div></section>'
 });
 
-// ─────────────────────────────────────────────
-// 🎛️ INTERACTIVOS
-// ─────────────────────────────────────────────
+// ── INTERACTIVOS ────────────────────────────────────────────────
 gjsEditor.BlockManager.add('bs-carousel', {
-    category: { id: 'interactive', label: 'Interactivos', open: false },
+    category: INTER,
     label: 'Carrusel / Slider',
-    content: `<div id="heroCarousel" class="carousel slide my-4 shadow-sm rounded overflow-hidden" data-bs-ride="carousel">
-    <div class="carousel-indicators">
-    <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="0" class="active"></button>
-    <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="1"></button>
-    <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="2"></button>
-    </div>
-    <div class="carousel-inner bg-primary text-white text-center py-5">
-    <div class="carousel-item active"><div class="container"><p class="lead fst-italic mb-4">"Excelente servicio y resultados profesionales."</p><h5 class="fw-bold">Ana García</h5><small>CEO, TechStart</small></div></div>
-    <div class="carousel-item"><div class="container"><p class="lead fst-italic mb-4">"La mejor herramienta para crear sin complicaciones."</p><h5 class="fw-bold">Carlos Mendoza</h5><small>Director Creativo</small></div></div>
-    <div class="carousel-item"><div class="container"><p class="lead fst-italic mb-4">"Soporte rápido y diseño moderno."</p><h5 class="fw-bold">Laura Vega</h5><small>Marketing Manager</small></div></div>
-    </div>
-    <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button>
-    <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
-    </div>`,
-    media: '<i class="bi bi-collection-play fs-3"></i>'
+    media: '<i class="bi bi-collection-play fs-3"></i>',
+    description: 'Carrusel de testimonios con indicadores y controles',
+    content: '<div id="heroCarousel" class="carousel slide my-4 shadow-sm rounded-3 overflow-hidden" data-bs-ride="carousel">'
+        + '<div class="carousel-indicators">'
+        + [0,1,2].map(function(i){
+            return '<button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="' + i + '"'
+                + (i === 0 ? ' class="active" aria-current="true"' : '')
+                + ' aria-label="Testimonio ' + (i+1) + '"></button>';
+        }).join('')
+        + '</div>'
+        + '<div class="carousel-inner bg-primary text-white text-center py-5">'
+        + [['"Excelente servicio y resultados profesionales."', 'Ana García', 'CEO, TechStart'],
+           ['"La mejor herramienta para crear sin complicaciones."', 'Carlos Mendoza', 'Director Creativo'],
+           ['"Soporte rápido y diseño moderno."', 'Laura Vega', 'Marketing Manager']].map(function(t, i){
+            return '<div class="carousel-item' + (i === 0 ? ' active' : '') + '"><div class="container py-4">'
+                + '<p class="lead fst-italic mb-4">' + t[0] + '</p>'
+                + '<h5 class="fw-bold">' + t[1] + '</h5><small class="opacity-75">' + t[2] + '</small>'
+                + '</div></div>';
+        }).join('')
+        + '</div>'
+        + '<button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev">'
+        + '<span class="carousel-control-prev-icon" aria-hidden="true"></span><span class="visually-hidden">Anterior</span></button>'
+        + '<button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next">'
+        + '<span class="carousel-control-next-icon" aria-hidden="true"></span><span class="visually-hidden">Siguiente</span></button>'
+        + '</div>'
 });
 
 gjsEditor.BlockManager.add('bs-modal', {
-    category: { id: 'interactive', label: 'Interactivos', open: false },
+    category: INTER,
     label: 'Modal / Popup',
-    content: `<div class="text-center my-4">
-    <button type="button" class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#customModal1">Abrir Modal</button>
-    </div>
-    <div class="modal fade" id="customModal1" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-    <div class="modal-header"><h5 class="modal-title fw-bold">Título del Modal</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-    <div class="modal-body"><p>Contenido editable. Ideal para formularios, avisos o detalles adicionales.</p></div>
-    <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button><button type="button" class="btn btn-primary">Confirmar</button></div>
-    </div>
-    </div>
-    </div>`,
-    media: '<i class="bi bi-window fs-3"></i>'
+    media: '<i class="bi bi-window fs-3"></i>',
+    description: 'Botón que abre una ventana modal centrada',
+    content: '<div class="text-center my-4">'
+        + '<button type="button" class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#customModal1">Abrir modal</button>'
+        + '</div>'
+        + '<div class="modal fade" id="customModal1" tabindex="-1" aria-labelledby="customModal1Label" aria-hidden="true">'
+        + '<div class="modal-dialog modal-dialog-centered">'
+        + '<div class="modal-content">'
+        + '<div class="modal-header"><h5 class="modal-title fw-bold" id="customModal1Label">Título del modal</h5>'
+        + '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>'
+        + '<div class="modal-body"><p class="mb-0">Contenido editable. Ideal para formularios, avisos o detalles adicionales.</p></div>'
+        + '<div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>'
+        + '<button type="button" class="btn btn-primary">Confirmar</button></div>'
+        + '</div></div></div>'
 });
 
 gjsEditor.BlockManager.add('bs-offcanvas', {
-    category: { id: 'interactive', label: 'Interactivos', open: false },
-    label: 'Panel Lateral (Offcanvas)',
-                        content: `<div class="text-center my-4">
-                        <button class="btn btn-outline-dark btn-lg" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidePanel1">Abrir Panel</button>
-                        </div>
-                        <div class="offcanvas offcanvas-end" tabindex="-1" id="sidePanel1">
-                        <div class="offcanvas-header"><h5 class="offcanvas-title fw-bold">Menú Lateral</h5><button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button></div>
-                        <div class="offcanvas-body">
-                        <p>Contenido deslizable. Ideal para filtros, menús o formularios rápidos.</p>
-                        <hr><h6>Enlaces</h6>
-                        <ul class="nav flex-column">
-                        <li class="nav-item mb-2"><a href="#" class="nav-link text-dark p-0">Inicio</a></li>
-                        <li class="nav-item mb-2"><a href="#" class="nav-link text-dark p-0">Servicios</a></li>
-                        </ul>
-                        </div>
-                        </div>`,
-                        media: '<i class="bi bi-layout-sidebar-inset fs-3"></i>'
+    category: INTER,
+    label: 'Panel lateral (Offcanvas)',
+    media: '<i class="bi bi-layout-sidebar-inset fs-3"></i>',
+    description: 'Panel deslizable desde la derecha',
+    content: '<div class="text-center my-4">'
+        + '<button class="btn btn-outline-dark btn-lg" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidePanel1" aria-controls="sidePanel1">Abrir panel</button>'
+        + '</div>'
+        + '<div class="offcanvas offcanvas-end" tabindex="-1" id="sidePanel1" aria-labelledby="sidePanel1Label">'
+        + '<div class="offcanvas-header"><h5 class="offcanvas-title fw-bold" id="sidePanel1Label">Menú lateral</h5>'
+        + '<button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button></div>'
+        + '<div class="offcanvas-body">'
+        + '<p class="text-body-secondary">Contenido deslizable. Ideal para filtros, menús o formularios rápidos.</p>'
+        + '<hr><h6 class="fw-bold">Enlaces</h6>'
+        + '<ul class="nav flex-column">'
+        + '<li class="nav-item mb-2"><a href="#" class="nav-link p-0">Inicio</a></li>'
+        + '<li class="nav-item mb-2"><a href="#" class="nav-link p-0">Servicios</a></li>'
+        + '</ul></div></div>'
 });
 
-// ─────────────────────────────────────────────
-// 📊 DATOS & TABLAS
-// ─────────────────────────────────────────────
+// ── DATOS & TABLAS ──────────────────────────────────────────────
 gjsEditor.BlockManager.add('bs-table', {
-    category: { id: 'data', label: 'Datos & Tablas', open: false },
-    label: 'Tabla Responsive',
-    content: `<div class="container my-4">
-    <h4 class="mb-3 fw-bold">Listado de Datos</h4>
-    <div class="table-responsive shadow-sm rounded">
-    <table class="table table-hover table-striped align-middle mb-0">
-    <thead class="bg-light"><tr><th>#</th><th>Nombre</th><th>Cargo</th><th>Estado</th><th>Acción</th></tr></thead>
-    <tbody>
-    <tr><td>1</td><td>María López</td><td>Desarrolladora</td><td><span class="badge bg-success">Activo</span></td><td><button class="btn btn-sm btn-outline-primary">Ver</button></td></tr>
-    <tr><td>2</td><td>Juan Pérez</td><td>Diseñador</td><td><span class="badge bg-warning text-dark">Pendiente</span></td><td><button class="btn btn-sm btn-outline-primary">Ver</button></td></tr>
-    <tr><td>3</td><td>Sofía Ruiz</td><td>Marketing</td><td><span class="badge bg-danger">Inactivo</span></td><td><button class="btn btn-sm btn-outline-primary">Ver</button></td></tr>
-    </tbody>
-    </table>
-    </div>
-    </div>`,
-    media: '<i class="bi bi-table fs-3"></i>'
+    category: DATA,
+    label: 'Tabla responsive',
+    media: '<i class="bi bi-table fs-3"></i>',
+    description: 'Tabla con filas alternas, hover y badges de estado',
+    content: '<div class="container my-4">'
+        + '<h4 class="mb-3 fw-bold">Listado de datos</h4>'
+        + '<div class="table-responsive shadow-sm rounded-3">'
+        + '<table class="table table-hover table-striped align-middle mb-0">'
+        + '<thead class="table-light"><tr><th scope="col">#</th><th scope="col">Nombre</th><th scope="col">Cargo</th><th scope="col">Estado</th><th scope="col" class="text-center">Acción</th></tr></thead>'
+        + '<tbody>'
+        + '<tr><th scope="row">1</th><td>María López</td><td>Desarrolladora</td><td><span class="badge text-bg-success">Activo</span></td><td class="text-center"><button class="btn btn-sm btn-outline-primary">Ver</button></td></tr>'
+        + '<tr><th scope="row">2</th><td>Juan Pérez</td><td>Diseñador</td><td><span class="badge text-bg-warning text-dark">Pendiente</span></td><td class="text-center"><button class="btn btn-sm btn-outline-primary">Ver</button></td></tr>'
+        + '<tr><th scope="row">3</th><td>Sofía Ruiz</td><td>Marketing</td><td><span class="badge text-bg-danger">Inactivo</span></td><td class="text-center"><button class="btn btn-sm btn-outline-primary">Ver</button></td></tr>'
+        + '</tbody></table></div></div>'
 });
 
 gjsEditor.BlockManager.add('bs-comparison', {
-    category: { id: 'data', label: 'Datos & Tablas', open: false },
-    label: 'Tabla Comparativa',
-    content: `<section class="py-5">
-    <div class="container">
-    <h3 class="text-center mb-4 fw-bold">Comparación de Planes</h3>
-    <div class="table-responsive shadow-sm rounded">
-    <table class="table table-bordered align-middle text-center mb-0">
-    <thead class="bg-light"><tr><th class="text-start">Característica</th><th>Básico</th><th>Pro</th><th>Empresas</th></tr></thead>
-    <tbody>
-    <tr><td class="text-start fw-bold">Usuarios</td><td>1</td><td>10</td><td>Ilimitados</td></tr>
-    <tr><td class="text-start fw-bold">Almacenamiento</td><td>5 GB</td><td>50 GB</td><td>500 GB</td></tr>
-    <tr><td class="text-start fw-bold">Soporte</td><td><i class="bi bi-dash text-muted"></i></td><td><i class="bi bi-check text-success"></i></td><td><i class="bi bi-check text-success"></i></td></tr>
-    <tr><td class="text-start fw-bold">API</td><td><i class="bi bi-x text-danger"></i></td><td><i class="bi bi-check text-success"></i></td><td><i class="bi bi-check text-success"></i></td></tr>
-    <tr class="bg-light fw-bold"><td class="text-start">Precio</td><td>$9/mes</td><td>$29/mes</td><td>$99/mes</td></tr>
-    </tbody>
-    </table>
-    </div>
-    </div>
-    </section>`,
-    media: '<i class="bi bi-arrow-left-right fs-3"></i>'
+    category: DATA,
+    label: 'Tabla comparativa',
+    media: '<i class="bi bi-arrow-left-right fs-3"></i>',
+    description: 'Comparación de planes con precios y características',
+    content: '<section class="py-5"><div class="container">'
+        + '<h3 class="text-center mb-4 fw-bold">Comparación de planes</h3>'
+        + '<div class="table-responsive shadow-sm rounded-3">'
+        + '<table class="table table-bordered align-middle text-center mb-0">'
+        + '<thead class="table-light"><tr><th scope="col" class="text-start">Característica</th><th scope="col">Básico</th><th scope="col">Pro</th><th scope="col">Empresas</th></tr></thead>'
+        + '<tbody>'
+        + '<tr><th scope="row" class="text-start fw-bold">Usuarios</th><td>1</td><td>10</td><td>Ilimitados</td></tr>'
+        + '<tr><th scope="row" class="text-start fw-bold">Almacenamiento</th><td>5 GB</td><td>50 GB</td><td>500 GB</td></tr>'
+        + '<tr><th scope="row" class="text-start fw-bold">Soporte</th><td><i class="bi bi-dash text-body-secondary" aria-hidden="true"></i><span class="visually-hidden">No</span></td><td><i class="bi bi-check-lg text-success" aria-hidden="true"></i><span class="visually-hidden">Sí</span></td><td><i class="bi bi-check-lg text-success" aria-hidden="true"></i><span class="visually-hidden">Sí</span></td></tr>'
+        + '<tr><th scope="row" class="text-start fw-bold">API</th><td><i class="bi bi-x-lg text-danger" aria-hidden="true"></i><span class="visually-hidden">No</span></td><td><i class="bi bi-check-lg text-success" aria-hidden="true"></i><span class="visually-hidden">Sí</span></td><td><i class="bi bi-check-lg text-success" aria-hidden="true"></i><span class="visually-hidden">Sí</span></td></tr>'
+        + '<tr class="table-light fw-bold"><th scope="row" class="text-start">Precio</th><td>9 €/mes</td><td>29 €/mes</td><td>99 €/mes</td></tr>'
+        + '</tbody></table></div></div></section>'
 });
 
 gjsEditor.BlockManager.add('bs-stats', {
-    category: { id: 'data', label: 'Datos & Tablas', open: false },
+    category: DATA,
     label: 'Estadísticas / Contadores',
-    content: `<section class="py-5 bg-dark text-white">
-    <div class="container">
-    <div class="row text-center g-4">
-    <div class="col-6 col-md-3"><div class="display-4 fw-bold text-warning">1,250+</div><p class="mb-0 small text-uppercase opacity-75">Clientes</p></div>
-    <div class="col-6 col-md-3"><div class="display-4 fw-bold text-info">98%</div><p class="mb-0 small text-uppercase opacity-75">Satisfacción</p></div>
-    <div class="col-6 col-md-3"><div class="display-4 fw-bold text-success">350+</div><p class="mb-0 small text-uppercase opacity-75">Proyectos</p></div>
-    <div class="col-6 col-md-3"><div class="display-4 fw-bold text-danger">24/7</div><p class="mb-0 small text-uppercase opacity-75">Soporte</p></div>
-    </div>
-    </div>
-    </section>`,
-    media: '<i class="bi bi-graph-up-arrow fs-3"></i>'
+    media: '<i class="bi bi-graph-up-arrow fs-3"></i>',
+    description: 'Sección oscura con 4 cifras destacadas',
+    content: '<section class="py-5 bg-dark text-white" data-bs-theme="dark">'
+        + '<div class="container"><div class="row text-center g-4">'
+        + [['1.250+', 'Clientes', 'text-warning'],
+           ['98%', 'Satisfacción', 'text-info'],
+           ['350+', 'Proyectos', 'text-success'],
+           ['24/7', 'Soporte', 'text-danger']].map(function(s){
+            return '<div class="col-6 col-md-3">'
+                + '<div class="display-4 fw-bold ' + s[2] + '">' + s[0] + '</div>'
+                + '<p class="mb-0 small text-uppercase opacity-75">' + s[1] + '</p>'
+                + '</div>';
+        }).join('')
+        + '</div></div></section>'
 });
 
-// ─────────────────────────────────────────────
-// 👥 PROCESOS & EQUIPO
-// ─────────────────────────────────────────────
+// ── PROCESOS & EQUIPO ───────────────────────────────────────────
 gjsEditor.BlockManager.add('bs-team', {
-    category: { id: 'process', label: 'Procesos & Equipo', open: false },
-    label: 'Equipo de Trabajo',
-    content: `<section class="py-5 bg-light">
-    <div class="container text-center">
-    <h2 class="fw-bold mb-5">Nuestro Equipo</h2>
-    <div class="row g-4">
-    <div class="col-md-4"><div class="card border-0 shadow-sm p-3"><img src="https://placehold.co/150x150/6c757d/ffffff?text=1" class="rounded-circle mx-auto mb-3" width="120" height="120" alt="Member"><h5 class="fw-bold mb-1">Nombre Completo</h5><p class="text-muted small mb-3">Cargo / Especialidad</p><div class="d-flex justify-content-center gap-3 fs-5"><a href="#" class="text-primary"><i class="bi bi-linkedin"></i></a><a href="#" class="text-dark"><i class="bi bi-github"></i></a><a href="#" class="text-info"><i class="bi bi-twitter-x"></i></a></div></div></div>
-    <div class="col-md-4"><div class="card border-0 shadow-sm p-3"><img src="https://placehold.co/150x150/6c757d/ffffff?text=2" class="rounded-circle mx-auto mb-3" width="120" height="120" alt="Member"><h5 class="fw-bold mb-1">Nombre Completo</h5><p class="text-muted small mb-3">Cargo / Especialidad</p><div class="d-flex justify-content-center gap-3 fs-5"><a href="#" class="text-primary"><i class="bi bi-linkedin"></i></a><a href="#" class="text-dark"><i class="bi bi-github"></i></a><a href="#" class="text-info"><i class="bi bi-twitter-x"></i></a></div></div></div>
-    <div class="col-md-4"><div class="card border-0 shadow-sm p-3"><img src="https://placehold.co/150x150/6c757d/ffffff?text=3" class="rounded-circle mx-auto mb-3" width="120" height="120" alt="Member"><h5 class="fw-bold mb-1">Nombre Completo</h5><p class="text-muted small mb-3">Cargo / Especialidad</p><div class="d-flex justify-content-center gap-3 fs-5"><a href="#" class="text-primary"><i class="bi bi-linkedin"></i></a><a href="#" class="text-dark"><i class="bi bi-github"></i></a><a href="#" class="text-info"><i class="bi bi-twitter-x"></i></a></div></div></div>
-    </div>
-    </div>
-    </section>`,
-    media: '<i class="bi bi-people fs-3"></i>'
+    category: PROC,
+    label: 'Equipo de trabajo',
+    media: '<i class="bi bi-people fs-3"></i>',
+    description: 'Tres miembros del equipo con redes sociales',
+    content: '<section class="py-5 bg-body-tertiary"><div class="container text-center">'
+        + '<h2 class="fw-bold mb-5">Nuestro equipo</h2>'
+        + '<div class="row g-4">'
+        + [['1', 'Nombre Completo', 'Cargo / Especialidad'],
+           ['2', 'Nombre Completo', 'Cargo / Especialidad'],
+           ['3', 'Nombre Completo', 'Cargo / Especialidad']].map(function(m){
+            return '<div class="col-md-4"><div class="card border-0 shadow-sm p-3 h-100">'
+                + '<img src="https://placehold.co/150x150/6c757d/ffffff?text=' + m[0] + '" class="rounded-circle mx-auto mb-3" width="120" height="120" alt="Miembro del equipo">'
+                + '<h5 class="fw-bold mb-1">' + m[1] + '</h5>'
+                + '<p class="text-body-secondary small mb-3">' + m[2] + '</p>'
+                + '<div class="d-flex justify-content-center gap-3 fs-5">'
+                + '<a href="#" class="text-primary" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>'
+                + '<a href="#" class="text-body-secondary" aria-label="GitHub"><i class="bi bi-github"></i></a>'
+                + '<a href="#" class="text-info" aria-label="Twitter"><i class="bi bi-twitter-x"></i></a>'
+                + '</div></div></div>';
+        }).join('')
+        + '</div></div></section>'
 });
 
 gjsEditor.BlockManager.add('bs-timeline', {
-    category: { id: 'process', label: 'Procesos & Equipo', open: false },
-    label: 'Línea de Tiempo',
-    content: `<section class="py-5 bg-light">
-    <div class="container">
-    <h2 class="text-center mb-5 fw-bold">Nuestra Historia</h2>
-    <div class="row justify-content-center">
-    <div class="col-lg-8">
-    <div class="border-start border-3 border-primary ps-4 ms-3">
-    <div class="mb-4 position-relative"><span class="position-absolute start-0 translate-middle badge rounded-pill bg-primary" style="left: -1.15rem !important;">2020</span><h5 class="fw-bold">Fundación</h5><p class="text-muted mb-0">Iniciamos el proyecto con visión clara.</p></div>
-    <div class="mb-4 position-relative"><span class="position-absolute start-0 translate-middle badge rounded-pill bg-success" style="left: -1.15rem !important;">2022</span><h5 class="fw-bold">Primer Hito</h5><p class="text-muted mb-0">Lanzamiento beta y primeros 100 usuarios.</p></div>
-    <div class="position-relative"><span class="position-absolute start-0 translate-middle badge rounded-pill bg-warning text-dark" style="left: -1.15rem !important;">2024</span><h5 class="fw-bold">Expansión</h5><p class="text-muted mb-0">Superamos los 10,000 usuarios activos.</p></div>
-    </div>
-    </div>
-    </div>
-    </div>
-    </section>`,
-    media: '<i class="bi bi-clock-history fs-3"></i>'
+    category: PROC,
+    label: 'Línea de tiempo',
+    media: '<i class="bi bi-clock-history fs-3"></i>',
+    description: 'Timeline vertical con hitos destacados',
+    content: '<section class="py-5 bg-body-tertiary"><div class="container">'
+        + '<h2 class="text-center mb-5 fw-bold">Nuestra historia</h2>'
+        + '<div class="row justify-content-center"><div class="col-lg-8">'
+        + '<div class="border-start border-3 border-primary ps-4 ms-3">'
+        + '<div class="mb-4 position-relative"><span class="position-absolute start-0 translate-middle badge rounded-pill text-bg-primary" style="left:-1.15rem!important">2020</span><h5 class="fw-bold">Fundación</h5><p class="text-body-secondary mb-0">Iniciamos el proyecto con visión clara.</p></div>'
+        + '<div class="mb-4 position-relative"><span class="position-absolute start-0 translate-middle badge rounded-pill text-bg-success" style="left:-1.15rem!important">2022</span><h5 class="fw-bold">Primer hito</h5><p class="text-body-secondary mb-0">Lanzamiento beta y primeros 100 usuarios.</p></div>'
+        + '<div class="position-relative"><span class="position-absolute start-0 translate-middle badge rounded-pill text-bg-warning text-dark" style="left:-1.15rem!important">2024</span><h5 class="fw-bold">Expansión</h5><p class="text-body-secondary mb-0">Superamos los 10.000 usuarios activos.</p></div>'
+        + '</div></div></div></div></section>'
 });
 
 gjsEditor.BlockManager.add('bs-steps', {
-    category: { id: 'process', label: 'Procesos & Equipo', open: false },
+    category: PROC,
     label: 'Pasos / Wizard',
-    content: `<div class="container my-5">
-    <ul class="nav nav-pills nav-fill mb-4">
-    <li class="nav-item"><a class="nav-link active" href="#">1. Cuenta</a></li>
-    <li class="nav-item"><a class="nav-link disabled" href="#">2. Datos</a></li>
-    <li class="nav-item"><a class="nav-link disabled" href="#">3. Confirmación</a></li>
-    </ul>
-    <div class="card border-0 shadow-sm p-4">
-    <h5 class="fw-bold mb-3">Completa tu registro</h5>
-    <p class="text-muted">Ejemplo visual de wizard para formularios largos o checkout.</p>
-    <div class="d-flex justify-content-between mt-4"><button class="btn btn-outline-secondary" disabled>Anterior</button><button class="btn btn-primary">Siguiente</button></div>
-    </div>
-    </div>`,
-    media: '<i class="bi bi-signpost-split fs-3"></i>'
+    media: '<i class="bi bi-signpost-split fs-3"></i>',
+    description: 'Wizard de 3 pasos con navegación',
+    content: '<div class="container my-5">'
+        + '<ul class="nav nav-pills nav-fill mb-4" role="tablist">'
+        + '<li class="nav-item"><a class="nav-link active" href="#" aria-current="step">1. Cuenta</a></li>'
+        + '<li class="nav-item"><a class="nav-link disabled" href="#" tabindex="-1">2. Datos</a></li>'
+        + '<li class="nav-item"><a class="nav-link disabled" href="#" tabindex="-1">3. Confirmación</a></li>'
+        + '</ul>'
+        + '<div class="card border-0 shadow-sm p-4">'
+        + '<h5 class="fw-bold mb-3">Completa tu registro</h5>'
+        + '<p class="text-body-secondary mb-0">Ejemplo visual de wizard para formularios largos o checkout.</p>'
+        + '<div class="d-flex justify-content-between mt-4"><button class="btn btn-outline-secondary" disabled>Anterior</button><button class="btn btn-primary">Siguiente</button></div>'
+        + '</div></div>'
 });
+
+console.log('[blocks-bs-advanced] ✓ Bloques avanzados modernizados con Bootstrap 5.3.3');
+})();

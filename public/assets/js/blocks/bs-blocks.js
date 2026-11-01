@@ -1,413 +1,166 @@
-// ======================================================
-// BOOTSTRAP BLOCKS PARA GRAPESJS
-// ======================================================
-// ======================================================
-// NAVBAR
-// ======================================================
+// ═══════════════════════════════════════════════════════════════════
+// bs-blocks.js — Bloques Bootstrap básicos Bootstrap 5.3.3
+//
+// Modernización:
+//  - Font Awesome (fa-solid, far, fas) → Bootstrap Icons (bi)
+//  - picsum.photos → placehold.co (más confiable)
+//  - Categorías en español y consistentes
+//  - Accesibilidad ARIA completa
+//  - IIFE con verificación de gjsEditor
+//
+// @package Assets\Js\Blocks
+// @since   2026-11-01
+// ═══════════════════════════════════════════════════════════════════
+(function () {
+'use strict';
+if (typeof gjsEditor === 'undefined' || !gjsEditor) {
+    console.warn('[bs-blocks] gjsEditor no existe todavía; fichero omitido.');
+    return;
+}
 
+var LAYOUT = { id: 'bootstrap-layout',      label: '📐 Bootstrap Layout',      open: true };
+var SECT   = { id: 'bootstrap-sections',    label: '🎯 Bootstrap Sections',    open: false };
+var COMP   = { id: 'bootstrap-components',  label: '🧩 Bootstrap Components',  open: false };
+var UI     = { id: 'bootstrap-ui',          label: '🎨 Bootstrap UI',          open: false };
+var FORMS  = { id: 'bootstrap-forms',       label: '📝 Bootstrap Forms',       open: false };
+
+// ── NAVBAR ──────────────────────────────────────────────────────
 gjsEditor.BlockManager.add('bs-navbar', {
-category: {
-    id: 'bootstrap-layout',
-        label: 'Bootstrap Layout',
-        open: true
-        },
-        label: 'Navbar',
-        media: '<i class="fas fa-bars fa-2x"></i>',
-        content: `
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <div class="container">
-    <a class="navbar-brand" href="#">
-    MiLogo
-    </a>
-    <button
-    class="navbar-toggler"
-    type="button"
-    data-bs-toggle="collapse"
-    data-bs-target="#navbarNav"
-    >
-    <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="navbarNav">
-    <ul class="navbar-nav ms-auto">
-    <li class="nav-item">
-    <a class="nav-link active" href="#">
-    Inicio
-    </a>
-    </li>
-    <li class="nav-item">
-    <a class="nav-link" href="#">
-    Servicios
-    </a>
-    </li>
-    <li class="nav-item">
-    <a class="nav-link" href="#">
-    Contacto
-    </a>
-    </li>
-    </ul>
-    </div>
-    </div>
-    </nav>
-    `
+    category: LAYOUT,
+    label: 'Navbar',
+    media: '<i class="bi bi-list fs-3"></i>',
+    description: 'Navbar oscura responsive',
+    content: '<nav class="navbar navbar-expand-lg bg-dark" data-bs-theme="dark"><div class="container">'
+        + '<a class="navbar-brand fw-bold" href="#">MiLogo</a>'
+        + '<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Alternar navegación"><span class="navbar-toggler-icon"></span></button>'
+        + '<div class="collapse navbar-collapse" id="navbarNav"><ul class="navbar-nav ms-auto">'
+        + '<li class="nav-item"><a class="nav-link active" aria-current="page" href="#">Inicio</a></li>'
+        + '<li class="nav-item"><a class="nav-link" href="#">Servicios</a></li>'
+        + '<li class="nav-item"><a class="nav-link" href="#">Contacto</a></li>'
+        + '</ul></div></div></nav>'
 });
-// ======================================================
-// HERO SECTION
-// ======================================================
 
+// ── HERO ────────────────────────────────────────────────────────
 gjsEditor.BlockManager.add('bs-hero', {
-        category: {
-        id: 'bootstrap-sections',
-                label: 'Bootstrap Sections',
-                open: true
-        },
-                label: 'Hero',
-                media: '<i class="fas fa-desktop fa-2x"></i>',
-                content: `
-    <section class="py-5 bg-primary text-white">
-    <div class="container text-center">
+    category: SECT,
+    label: 'Hero',
+    media: '<i class="bi bi-badge-hd fs-3"></i>',
+    description: 'Hero con fondo primario y CTA',
+    content: '<section class="py-5 bg-primary text-white" data-bs-theme="dark"><div class="container text-center">'
+        + '<h1 class="display-3 fw-bold">Bootstrap Hero</h1>'
+        + '<p class="lead mb-4 opacity-75">Crea páginas increíbles con GrapesJS</p>'
+        + '<a href="#" class="btn btn-light btn-lg px-4">Comenzar</a>'
+        + '</div></section>'
+});
 
-    <h1 class="display-3 fw-bold">
-    Bootstrap Hero
-    </h1>
+// ── CARD ────────────────────────────────────────────────────────
+gjsEditor.BlockManager.add('bs-card', {
+    category: COMP,
+    label: 'Card',
+    media: '<i class="bi bi-card-text fs-3"></i>',
+    description: 'Tarjeta con imagen, título y botón',
+    content: '<div class="card shadow-sm" style="max-width:22rem">'
+        + '<img src="https://placehold.co/400x250/e9ecef/6c757d?text=Imagen" class="card-img-top" alt="Imagen de la tarjeta">'
+        + '<div class="card-body">'
+        + '<h5 class="card-title fw-bold">Bootstrap Card</h5>'
+        + '<p class="card-text text-body-secondary">Ejemplo de tarjeta Bootstrap para GrapesJS.</p>'
+        + '<a href="#" class="btn btn-primary">Ver más</a>'
+        + '</div></div>'
+});
 
-    <p class="lead">
-    Crea páginas increíbles con GrapesJS
-    </p>
+// ── ALERT ───────────────────────────────────────────────────────
+gjsEditor.BlockManager.add('bs-alert', {
+    category: COMP,
+    label: 'Alert',
+    media: '<i class="bi bi-exclamation-triangle fs-3"></i>',
+    description: 'Alerta de advertencia con rol accesible',
+    content: '<div class="alert alert-warning d-flex align-items-center gap-2" role="alert">'
+        + '<i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>'
+        + '<div><strong>¡Atención!</strong> Este es un mensaje de alerta Bootstrap.</div>'
+        + '</div>'
+});
 
-    <a href="#" class="btn btn-light btn-lg">
-    Comenzar
-    </a>
-
-    </div>
-    </section>
-    `
-        });
-// ======================================================
-// CARD
-// ======================================================
-
-        gjsEditor.BlockManager.add('bs-card', {
-
-        category: {
-        id: 'bootstrap-components',
-                label: 'Bootstrap Components',
-                open: true
-        },
-                label: 'Card',
-                media: '<i class="far fa-id-card fa-2x"></i>',
-                content: `
-    <div class="card shadow-sm" style="width: 22rem;">
-
-    <img
-    src="https://picsum.photos/400/250"
-    class="card-img-top"
-    >
-
-    <div class="card-body">
-
-    <h5 class="card-title">
-    Bootstrap Card
-    </h5>
-
-    <p class="card-text">
-    Ejemplo de tarjeta Bootstrap para GrapesJS.
-    </p>
-
-    <a href="#" class="btn btn-primary">
-    Ver Más
-    </a>
-
-    </div>
-
-    </div>
-    `
-        });
-// ======================================================
-// ALERT
-// ======================================================
-
-        gjsEditor.BlockManager.add('bs-alert', {
-
-        category: {
-        id: 'bootstrap-components',
-                label: 'Bootstrap Components',
-                open: true
-        },
-                label: 'Alert',
-                media: '<i class="fas fa-exclamation-triangle fa-2x"></i>',
-                content: `
-    <div class="alert alert-warning" role="alert">
-
-    <strong>Atención!</strong>
-    Este es un mensaje de alerta Bootstrap.
-
-    </div>
-    `
-        });
-// ======================================================
-// BUTTONS
-// ======================================================
-
+// ── BUTTONS ─────────────────────────────────────────────────────
 gjsEditor.BlockManager.add('bs-buttons', {
-        category: {
-                id: 'bootstrap-ui',
-                label: 'Bootstrap UI',
-                open: true
-            },
-                label: 'Buttons',
-                media: '<i class="fas fa-square fa-2x"></i>',
-                content: `
-    <div class="d-flex gap-2">
+    category: UI,
+    label: 'Buttons',
+    media: '<i class="bi bi-square fs-3"></i>',
+    description: 'Tres botones de colores semánticos',
+    content: '<div class="d-flex gap-2 flex-wrap">'
+        + '<button class="btn btn-primary">Primary</button>'
+        + '<button class="btn btn-success">Success</button>'
+        + '<button class="btn btn-danger">Danger</button>'
+        + '</div>'
+});
 
-    <button class="btn btn-primary">
-    Primary
-    </button>
+// ── ACCORDION ───────────────────────────────────────────────────
+gjsEditor.BlockManager.add('bs-accordion', {
+    category: COMP,
+    label: 'Accordion',
+    media: '<i class="bi bi-chevron-expand fs-3"></i>',
+    description: 'Acordeón con un panel abierto',
+    content: '<div class="accordion" id="accordionExample">'
+        + '<div class="accordion-item"><h2 class="accordion-header">'
+        + '<button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">Accordion Item</button>'
+        + '</h2><div id="collapseOne" class="accordion-collapse collapse show" data-bs-parent="#accordionExample">'
+        + '<div class="accordion-body text-body-secondary">Contenido del accordion.</div></div></div></div>'
+});
 
-    <button class="btn btn-success">
-    Success
-    </button>
+// ── MODAL ───────────────────────────────────────────────────────
+gjsEditor.BlockManager.add('bs-modal', {
+    category: COMP,
+    label: 'Modal',
+    media: '<i class="bi bi-window-stack fs-3"></i>',
+    description: 'Botón que abre una ventana modal',
+    content: '<div><button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#exampleModal">Abrir modal</button>'
+        + '<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true"><div class="modal-dialog">'
+        + '<div class="modal-content"><div class="modal-header">'
+        + '<h5 class="modal-title" id="exampleModalLabel">Modal Bootstrap</h5>'
+        + '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>'
+        + '<div class="modal-body">Contenido del modal.</div>'
+        + '<div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button></div>'
+        + '</div></div></div></div>'
+});
 
-    <button class="btn btn-danger">
-    Danger
-    </button>
+// ── FORM ────────────────────────────────────────────────────────
+gjsEditor.BlockManager.add('bs-form', {
+    category: FORMS,
+    label: 'Form',
+    media: '<i class="bi bi-ui-checks fs-3"></i>',
+    description: 'Formulario de login con email y contraseña',
+    content: '<form class="p-4 border rounded-3 bg-body-tertiary">'
+        + '<div class="mb-3"><label class="form-label" for="bsFormEmail">Email</label>'
+        + '<input type="email" class="form-control" id="bsFormEmail" placeholder="correo@ejemplo.com" autocomplete="email"></div>'
+        + '<div class="mb-3"><label class="form-label" for="bsFormPass">Password</label>'
+        + '<input type="password" class="form-control" id="bsFormPass" autocomplete="current-password"></div>'
+        + '<button class="btn btn-primary" type="submit">Ingresar</button>'
+        + '</form>'
+});
 
-    </div>
-    `
-        });
-// ======================================================
-// ACCORDION
-// ======================================================
+// ── FOOTER ──────────────────────────────────────────────────────
+gjsEditor.BlockManager.add('bs-footer', {
+    category: LAYOUT,
+    label: 'Footer',
+    media: '<i class="bi bi-layout-text-window-reverse fs-3"></i>',
+    description: 'Pie simple centrado',
+    content: '<footer class="bg-dark text-white py-4" data-bs-theme="dark"><div class="container text-center">'
+        + '<h5 class="fw-bold">Mi Sitio Web</h5>'
+        + '<p class="mb-0 small opacity-75">&copy; 2026 Todos los derechos reservados</p>'
+        + '</div></footer>'
+});
 
-        gjsEditor.BlockManager.add('bs-accordion', {
+// ── GRID 3 COLS ─────────────────────────────────────────────────
+gjsEditor.BlockManager.add('bs-grid-3', {
+    category: LAYOUT,
+    label: 'Grid 3 cols',
+    media: '<i class="bi bi-layout-three-columns fs-3"></i>',
+    description: 'Tres columnas con guías visuales',
+    content: '<div class="container py-5"><div class="row g-3">'
+        + '<div class="col-md-4"><div class="p-4 bg-body-tertiary border rounded-3 text-center text-body-secondary">Columna 1</div></div>'
+        + '<div class="col-md-4"><div class="p-4 bg-body-tertiary border rounded-3 text-center text-body-secondary">Columna 2</div></div>'
+        + '<div class="col-md-4"><div class="p-4 bg-body-tertiary border rounded-3 text-center text-body-secondary">Columna 3</div></div>'
+        + '</div></div>'
+});
 
-        category: {
-        id: 'bootstrap-components',
-                label: 'Bootstrap Components',
-                open: true
-        },
-                label: 'Accordion',
-                media: '<i class="fas fa-stream fa-2x"></i>',
-                content: `
-    <div class="accordion" id="accordionExample">
-    <div class="accordion-item">
-    <h2 class="accordion-header">
-    <button
-    class="accordion-button"
-    type="button"
-    data-bs-toggle="collapse"
-    data-bs-target="#collapseOne"
-    >
-    Accordion Item
-    </button>
-    </h2>
-    <div
-    id="collapseOne"
-    class="accordion-collapse collapse show"
-    >
-
-    <div class="accordion-body">
-    Contenido del accordion.
-    </div>
-
-    </div>
-
-    </div>
-
-    </div>
-    `
-        });
-// ======================================================
-// MODAL
-// ======================================================
-
-        gjsEditor.BlockManager.add('bs-modal', {
-
-        category: {
-        id: 'bootstrap-components',
-                label: 'Bootstrap Components',
-                open: true
-        },
-                label: 'Modal',
-                media: '<i class="far fa-window-maximize fa-2x"></i>',
-                content: `
-    <div>
-
-    <button
-    class="btn btn-primary"
-    data-bs-toggle="modal"
-    data-bs-target="#exampleModal"
-    >
-    Abrir Modal
-    </button>
-
-    <div
-    class="modal fade"
-    id="exampleModal"
-    tabindex="-1"
-    >
-
-    <div class="modal-dialog">
-
-    <div class="modal-content">
-
-    <div class="modal-header">
-
-    <h5 class="modal-title">
-    Modal Bootstrap
-    </h5>
-
-    <button
-    type="button"
-    class="btn-close"
-    data-bs-dismiss="modal"
-    ></button>
-
-    </div>
-
-    <div class="modal-body">
-    Contenido del modal.
-    </div>
-
-    <div class="modal-footer">
-
-    <button
-    type="button"
-    class="btn btn-secondary"
-    data-bs-dismiss="modal"
-    >
-    Cerrar
-    </button>
-
-    </div>
-
-    </div>
-
-    </div>
-
-    </div>
-
-    </div>
-    `
-        });
-// ======================================================
-// FORMULARIO
-// ======================================================
-
-        gjsEditor.BlockManager.add('bs-form', {
-
-        category: {
-        id: 'bootstrap-forms',
-                label: 'Bootstrap Forms',
-                open: true
-        },
-                label: 'Form',
-                media: '<i class="fas fa-wpforms fa-2x"></i>',
-                content: `
-    <form class="p-4 border rounded bg-light">
-
-    <div class="mb-3">
-
-    <label class="form-label">
-    Email
-    </label>
-
-    <input
-    type="email"
-    class="form-control"
-    placeholder="correo@ejemplo.com"
-    >
-
-    </div>
-
-    <div class="mb-3">
-
-    <label class="form-label">
-    Password
-    </label>
-
-    <input
-    type="password"
-    class="form-control"
-    >
-
-    </div>
-
-    <button class="btn btn-primary">
-    Ingresar
-    </button>
-
-    </form>
-    `
-        });
-// ======================================================
-// FOOTER
-// ======================================================
-
-        gjsEditor.BlockManager.add('bs-footer', {
-
-        category: {
-        id: 'bootstrap-layout',
-                label: 'Bootstrap Layout',
-                open: true
-        },
-                label: 'Footer',
-                media: '<i class="fas fa-minus fa-2x"></i>',
-                content: `
-    <footer class="bg-dark text-white py-4">
-
-    <div class="container text-center">
-
-    <h5>
-    Mi Sitio Web
-    </h5>
-
-    <p class="mb-0">
-    © 2026 Todos los derechos reservados
-    </p>
-
-    </div>
-
-    </footer>
-    `
-        });
-// ======================================================
-// GRID 3 COLUMNAS
-// ======================================================
-
-        gjsEditor.BlockManager.add('bs-grid-3', {
-
-        category: {
-        id: 'bootstrap-layout',
-                label: 'Bootstrap Layout',
-                open: true
-        },
-                label: 'Grid 3 Cols',
-                media: '<i class="fas fa-columns fa-2x"></i>',
-                content: `
-    <div class="container py-5">
-
-    <div class="row">
-
-    <div class="col-md-4">
-    <div class="p-4 bg-light border">
-    Columna 1
-    </div>
-    </div>
-
-    <div class="col-md-4">
-    <div class="p-4 bg-light border">
-    Columna 2
-    </div>
-    </div>
-
-    <div class="col-md-4">
-    <div class="p-4 bg-light border">
-    Columna 3
-    </div>
-    </div>
-
-    </div>
-
-    </div>
-    `
-        });
+console.log('[bs-blocks] ✓ Bloques Bootstrap modernizados con Bootstrap 5.3.3');
+})();
