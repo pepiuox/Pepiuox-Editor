@@ -386,9 +386,27 @@ $router->post('/admin/settings/landing', [App\Controllers\SettingsController::cl
 $router->get('/admin/settings/footer', [App\Controllers\SettingsController::class, 'footer'], $auth);
 $router->post('/admin/settings/footer', [App\Controllers\SettingsController::class, 'saveFooter'], $auth);
 
-// El pie con el constructor visual: el mismo GrapesJS que las páginas.
-$router->get('/admin/settings/footer/builder', [App\Controllers\SettingsController::class, 'footerBuilder'], $auth);
-$router->post('/admin/settings/footer/builder', [App\Controllers\SettingsController::class, 'saveFooterBuilder'], $auth);
+// Catálogo de diseños del pie (`footer_designs`).
+//
+// ORDEN IMPORTANTE: las rutas con literal (`deactivate`) van ANTES que las
+// parametrizadas (`{id}/...`), porque el router devuelve la PRIMERA coincidencia:
+// si `{id}` se registrara antes, `/designs/deactivate` entraría por ahí y
+// `deactivate` se leería como un id.
+$router->get('/admin/settings/footer/designs', [App\Controllers\SettingsController::class, 'footerDesigns'], $auth);
+$router->post('/admin/settings/footer/designs', [App\Controllers\SettingsController::class, 'createFooterDesign'], $auth);
+$router->post('/admin/settings/footer/designs/deactivate', [App\Controllers\SettingsController::class, 'deactivateFooterDesign'], $auth);
+$router->post('/admin/settings/footer/designs/{id}/activate', [App\Controllers\SettingsController::class, 'activateFooterDesign'], $auth);
+$router->post('/admin/settings/footer/designs/{id}/duplicate', [App\Controllers\SettingsController::class, 'duplicateFooterDesign'], $auth);
+$router->post('/admin/settings/footer/designs/{id}/delete', [App\Controllers\SettingsController::class, 'deleteFooterDesign'], $auth);
+
+// El pie con el constructor visual: el mismo GrapesJS que las páginas, un lienzo
+// por diseño del catálogo.
+$router->get('/admin/settings/footer/designs/{id}/builder', [App\Controllers\SettingsController::class, 'footerBuilder'], $auth);
+$router->post('/admin/settings/footer/designs/{id}/builder', [App\Controllers\SettingsController::class, 'saveFooterBuilder'], $auth);
+
+// Compatibilidad: la ruta anterior no tenía id. Lleva al catálogo, que es donde
+// ahora se elige qué diseño editar.
+$router->get('/admin/settings/footer/builder', [App\Controllers\SettingsController::class, 'footerDesigns'], $auth);
 
 // Subida de imágenes del pie. El LISTADO de lo ya subido no se duplica aquí:
 // se reutiliza /admin/pages/assets, que ya existe y devuelve lo mismo.

@@ -464,50 +464,184 @@ class SettingsController
     }
 
     /**
-     * `GET /admin/settings/footer/builder` — pie con el constructor visual.
+     * `GET /admin/settings/footer/designs` — catálogo de diseños del pie.
      *
-     * El mismo GrapesJS de las páginas y las plantillas, cargado a través de
-     * `views/partials/editor-assets-*` y `EditorKit`. Se edita un lienzo que
-     * representa el pie; lo que se compone se guarda como HTML y el layout lo
-     * pinta tal cual (saneado por `PageRenderer`).
+     * Lista los diseños guardados con el constructor, marca cuál está activo y
+     * permite crear, duplicar, activar y borrar.
      *
-     * @since 2026-10-31
+     * @since 2026-11-01
      */
-    public function footerBuilder(Request $req): void
+    public function footerDesigns(Request $req): void
     {
         $this->guardManage();
 
+        Response::render(View::render('settings.footer-designs', [
+            'designs'  => \App\Services\FooterContentService::designs(),
+            'max'      => \App\Services\FooterContentService::MAX_DESIGNS,
+            'usaCampos' => !\App\Services\FooterContentService::usesBuilder(),
+        ]));
+    }
+
+    /**
+     * `POST /admin/settings/footer/designs` — crea un diseño vacío.
+     */
+    public function createFooterDesign(Request $req): void
+    {
+        $this->guardManage();
+        CSRF::guard();
+
+        $resultado = \App\Services\FooterContentService::createDesign(
+            (string) $req->post('name', ''),
+            Auth::id()
+        );
+
+        if (!$resultado['ok']) {
+            Session::flash('flash.error', $resultado['error']);
+            Response::redirect(url('admin/settings/footer/designs'));
+        }
+
+        AuditService::log(Auth::id(), 'footer_design_created', 'Diseño de pie creado: ' . $req->post('name'), 'settings');
+        Session::flash('flash.success', 'Diseño creado. Ya puedes componerlo con el constructor.');
+        Response::redirect(url('admin/settings/footer/designs/' . $resultado['id'] . '/builder'));
+    }
+
+    /**
+     * `POST /admin/settings/footer/designs/{id}/activate` — lo pone en el sitio.
+     */
+    public function activateFooterDesign(Request $req, array $params): void
+    {
+        $this->guardManage();
+        CSRF::guard();
+
+        $id = (int) ($params['id'] ?? 0);
+        $ok = \App\Services\FooterContentService::activateDesign($id);
+
+        AuditService::log(Auth::id(), 'footer_design_activated', 'Diseño de pie activado #' . $id, 'settings');
+        Session::flash($ok ? 'flash.success' : 'flash.error', $ok
+            ? 'Ese diseño es ahora el pie del sitio.'
+            : 'No se pudo activar el diseño.');
+
+        Response::redirect(url('admin/settings/footer/designs'));
+    }
+
+    /**
+     * `POST /admin/settings/footer/designs/deactivate` — vuelve al pie por campos.
+     */
+    public function deactivateFooterDesign(Request $req): void
+    {
+        $this->guardManage();
+        CSRF::guard();
+
+        $ok = \App\Services\FooterContentService::deactivate();
+
+        AuditService::log(Auth::id(), 'footer_design_deactivated', 'Pie vuelve a la versión por campos', 'settings');
+        Session::flash($ok ? 'flash.success' : 'flash.error', $ok
+            ? 'El sitio vuelve a mostrar el pie por campos.'
+            : 'No se pudo desactivar.');
+
+        Response::redirect(url('admin/settings/footer/designs'));
+    }
+
+    /**
+     * `POST /admin/settings/footer/designs/{id}/duplicate` — copia con otro nombre.
+     */
+    public function duplicateFooterDesign(Request $req, array $params): void
+    {
+        $this->guardManage();
+        CSRF::guard();
+
+        $id = (int) ($params['id'] ?? 0);
+        $resultado = \App\Services\FooterContentService::duplicateDesign($id, Auth::id());
+
+        Session::flash($resultado['ok'] ? 'flash.success' : 'flash.error', $resultado['ok']
+            ? 'Diseño duplicado.'
+            : $resultado['error']);
+
+        Response::redirect(url('admin/settings/footer/designs'));
+    }
+
+    /**
+     * `POST /admin/settings/footer/designs/{id}/delete` — borra un diseño inactivo.
+     */
+    public function deleteFooterDesign(Request $req, array $params): void
+    {
+        $this->guardManage();
+        CSRF::guard();
+
+        $id = (int) ($params['id'] ?? 0);
+        $resultado = \App\Services\FooterContentService::deleteDesign($id);
+
+        if ($resultado['ok']) {
+            AuditService::log(Auth::id(), 'footer_design_deleted', 'Diseño de pie borrado #' . $id, 'settings');
+        }
+
+        Session::flash($resultado['ok'] ? 'flash.success' : 'flash.error', $resultado['ok']
+            ? 'Diseño borrado.'
+            : $resultado['error']);
+
+        Response::redirect(url('admin/settings/footer/designs'));
+    }
+
+    /**
+     * `GET /admin/settings/footer/designs/{id}/builder` — compone un diseño.
+     *
+     * El mismo GrapesJS de las páginas y las plantillas, cargado a través de
+     * `views/partials/editor-assets-*` y `EditorKit`. Lo que se compone se guarda
+     * en la fila del diseño (`footer_designs`).
+     *
+     * @since 2026-10-31 · adaptado al catálogo el 2026-11-01
+     */
+    public function footerBuilder(Request $req, array $params = []): void
+    {
+        $this->guardManage();
+
+        $id = (int) ($params['id'] ?? 0);
+        $diseno = \App\Services\FooterContentService::findDesign($id);
+
+        // Sin id, o con uno que no existe: al catálogo, que es donde se elige.
+        if ($diseno === null) {
+            Session::flash('flash.error', 'Ese diseño no existe. Elige uno del catálogo.');
+            Response::redirect(url('admin/settings/footer/designs'));
+        }
+
         Response::render(View::render('settings.footer-builder', [
-            'builder'  => \App\Services\FooterContentService::builder(),
-            'assets'   => (new \App\Services\AssetUploadService())->existing(),
+            'design'    => $diseno,
+            'assets'    => (new \App\Services\AssetUploadService())->existing(),
             'uploadUrl' => url('admin/settings/footer/builder/upload'),
         ]));
     }
 
     /**
-     * `POST /admin/settings/footer/builder` — guarda lo compuesto.
+     * `POST /admin/settings/footer/designs/{id}/builder` — guarda lo compuesto.
      */
-    public function saveFooterBuilder(Request $req): void
+    public function saveFooterBuilder(Request $req, array $params = []): void
     {
         $this->guardManage();
         CSRF::guard();
 
-        $resultado = \App\Services\FooterContentService::saveBuilder([
-            'builder_html'    => (string) $req->post('content_html'),
-            'builder_css'     => (string) $req->post('content_css'),
-            'builder_js'      => (string) $req->post('content_js'),
-            'builder_data'    => (string) $req->post('grapesjs_data'),
-            'builder_enabled' => $req->post('builder_enabled'),
+        $id = (int) ($params['id'] ?? 0);
+
+        $resultado = \App\Services\FooterContentService::saveDesign($id, [
+            'content_html'  => (string) $req->post('content_html'),
+            'content_css'   => (string) $req->post('content_css'),
+            'content_js'    => (string) $req->post('content_js'),
+            'grapesjs_data' => (string) $req->post('grapesjs_data'),
         ]);
 
-        AuditService::log(Auth::id(), 'footer_builder_saved', 'Pie guardado con el constructor', 'settings');
+        // El interruptor de la pantalla activa el diseño al guardar: así se ve el
+        // cambio en el sitio con un solo paso, sin ir al catálogo a activarlo.
+        if ($resultado['ok'] && $req->post('builder_enabled')) {
+            \App\Services\FooterContentService::activateDesign($id);
+        }
+
+        AuditService::log(Auth::id(), 'footer_builder_saved', 'Diseño de pie guardado #' . $id, 'settings');
 
         Session::flash(
             $resultado['ok'] ? 'flash.success' : 'flash.error',
-            $resultado['ok'] ? 'Pie guardado desde el constructor.' : implode(' ', $resultado['errores'])
+            $resultado['ok'] ? 'Diseño guardado.' : implode(' ', $resultado['errores'])
         );
 
-        Response::redirect(url('admin/settings/footer/builder'));
+        Response::redirect(url('admin/settings/footer/designs/' . $id . '/builder'));
     }
 
     /**

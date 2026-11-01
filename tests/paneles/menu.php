@@ -133,7 +133,10 @@ $_SERVER['REQUEST_URI'] = '/admin/settings/footer/builder';
 
 try {
     $htmlBuilder = App\Core\View::render('settings.footer-builder', [
-        'builder'   => App\Services\FooterContentService::builder(),
+        'design'    => [
+            'id' => 1, 'name' => 'Prueba', 'content_html' => '<p>x</p>', 'content_css' => '',
+            'content_js' => '', 'grapesjs_data' => '', 'is_active' => 0,
+        ],
         'assets'    => (new App\Services\AssetUploadService())->existing(),
         'uploadUrl' => url('admin/settings/footer/builder/upload'),
     ]);

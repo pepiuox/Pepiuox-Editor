@@ -1,30 +1,30 @@
 <?php
 /**
- * Pie de página con el constructor visual.
+ * Constructor visual del pie de página, sobre un diseño del catálogo.
  *
  * Usa el **mismo** GrapesJS que el constructor de páginas y de plantillas:
  * los activos vienen de `views/partials/editor-assets-head|body.php` y la
  * configuración del lienzo de `public/assets/js/grapesjs-shared.js`
- * (`window.EditorKit`). No hay un segundo editor distinto: es el mismo, con otro
- * contenido.
+ * (`window.EditorKit`). No hay un segundo editor distinto.
  *
- * Qué se guarda: `content_html`, `content_css`, `content_js` y `grapesjs_data`,
- * exactamente las mismas cuatro piezas que una página, para que el proyecto tenga
- * una sola forma de guardar contenido visual.
+ * Qué se guarda: `content_html`, `content_css`, `content_js` y `grapesjs_data` en
+ * la fila de `footer_designs`, las mismas cuatro piezas que guarda una página.
  *
- * Cómo convive con el editor estructurado: si el interruptor «Usar este pie»
- * está activo y hay HTML, el layout pinta esto. Si no, sigue pintando las
- * columnas de la pantalla anterior. Nada se pierde al probar.
+ * El interruptor «usar en el sitio» activa el diseño al guardar: así el cambio se
+ * ve con un solo paso, sin volver al catálogo.
  *
  * @package PePiuoX\Editor\Views
  * @since   2026-10-31
  */
 
-$htmlInicial = (string) ($builder['html'] ?? '');
-$cssInicial  = (string) ($builder['css'] ?? '');
-$jsInicial   = (string) ($builder['js'] ?? '');
-$dataInicial = (string) ($builder['data'] ?? '');
-$activo      = !empty($builder['enabled']);
+$htmlInicial = (string) ($design['content_html'] ?? '');
+$cssInicial  = (string) ($design['content_css'] ?? '');
+$jsInicial   = (string) ($design['content_js'] ?? '');
+$dataInicial = (string) ($design['grapesjs_data'] ?? '');
+$activo      = (int) ($design['is_active'] ?? 0) === 1;
+$designId    = (int) ($design['id'] ?? 0);
+
+$accionGuardar = url('admin/settings/footer/designs/' . $designId . '/builder');
 ?>
 
 <?php
@@ -43,33 +43,33 @@ require VIEWS_PATH . '/partials/editor-assets-head.php';
 
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <div>
-        <h1 class="h3 mb-1"><i class="bi bi-magic me-2"></i>Pie de página · constructor</h1>
+        <h1 class="h3 mb-1"><i class="bi bi-magic me-2"></i><?= e($design['name'] ?? 'Diseño del pie') ?></h1>
         <p class="text-secondary mb-0">
             El mismo editor que las páginas. Se compone el pie con bloques y se guarda.
             <a href="<?= url('/') ?>" target="_blank" rel="noopener">Ver el sitio</a>
         </p>
     </div>
     <div class="d-flex gap-2">
-        <a class="btn btn-outline-secondary btn-sm" href="<?= url('admin/settings/footer') ?>">
-            <i class="bi bi-list-ul"></i> Versión con campos
+        <a class="btn btn-outline-secondary btn-sm" href="<?= url('admin/settings/footer/designs') ?>">
+            <i class="bi bi-collection"></i> Catálogo
         </a>
-        <a class="btn btn-outline-secondary btn-sm" href="<?= url('admin/settings') ?>">
-            <i class="bi bi-arrow-left"></i> Configuración
+        <a class="btn btn-outline-secondary btn-sm" href="<?= url('admin/settings/footer') ?>">
+            <i class="bi bi-list-ul"></i> Pie por campos
         </a>
     </div>
 </div>
 
 <div class="alert alert-info d-flex flex-wrap justify-content-between align-items-center gap-3" role="alert">
     <div>
-        <strong>¿Qué pie se está mostrando en el sitio?</strong>
+        <strong>¿Se verá este diseño en el sitio?</strong>
         <?= $activo
-            ? 'Ahora mismo manda <strong>este</strong> pie del constructor.'
-            : 'Ahora mismo manda el <strong>pie por campos</strong>. Al marcar la casilla y guardar, el sitio pasará a mostrar este.' ?>
+            ? 'Sí: este diseño está activo y es el que se muestra ahora.'
+            : 'Ahora mismo el sitio muestra otro pie. Marca la casilla y guarda para usar este diseño.' ?>
     </div>
     <div class="form-check form-switch mb-0">
         <input class="form-check-input" type="checkbox" role="switch" id="builder_enabled"
                form="saveForm" name="builder_enabled" value="1" <?= $activo ? 'checked' : '' ?>>
-        <label class="form-check-label" for="builder_enabled">Usar este pie</label>
+        <label class="form-check-label" for="builder_enabled">Usar este diseño en el sitio</label>
     </div>
 </div>
 
@@ -83,7 +83,7 @@ require VIEWS_PATH . '/partials/editor-assets-head.php';
     <div id="gjs"><?= $htmlInicial ?></div>
 </div>
 
-<form id="saveForm" method="post" action="<?= url('admin/settings/footer/builder') ?>" class="mt-3">
+<form id="saveForm" method="post" action="<?= e($accionGuardar) ?>" class="mt-3">
     <?= csrf_field() ?>
     <input type="hidden" name="content_html" id="formHtml">
     <input type="hidden" name="content_css" id="formCss">
@@ -92,23 +92,23 @@ require VIEWS_PATH . '/partials/editor-assets-head.php';
 
     <div class="d-flex gap-2">
         <button type="submit" class="btn btn-primary" id="btnSave">
-            <i class="bi bi-save me-1"></i>Guardar pie
+            <i class="bi bi-save me-1"></i>Guardar diseño
         </button>
-        <a class="btn btn-outline-secondary" href="<?= url('admin/settings/footer') ?>">
-            Volver a los campos
+        <a class="btn btn-outline-secondary" href="<?= url('admin/settings/footer/designs') ?>">
+            Volver al catálogo
         </a>
         <span class="align-self-center text-secondary small" id="estadoGuardado"></span>
     </div>
 </form>
 
 <script>
-    // CSS inicial del pie compuesto, si lo hay.
-    window.__FOOTER_CSS__ = <?= json_encode($cssInicial, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
-    window.__FOOTER_JS__  = <?= json_encode($jsInicial, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
-    window.__FOOTER_DATA__ = <?= json_encode($dataInicial, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+    // CSS y proyecto iniciales del diseño, si los hay.
+    window.__FOOTER_CSS__  = <?= json_encode($cssInicial, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) ?>;
+    window.__FOOTER_JS__   = <?= json_encode($jsInicial, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) ?>;
+    window.__FOOTER_DATA__ = <?= json_encode($dataInicial, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) ?>;
 </script>
 
-<?php include VIEWS_PATH . '/partials/editor-assets-body.php'; ?>
+<?php require VIEWS_PATH . '/partials/editor-assets-body.php'; ?>
 
 <script>
 (() => {
@@ -149,8 +149,6 @@ require VIEWS_PATH . '/partials/editor-assets-head.php';
             uploadName: 'files',
             autoAdd: true,
             multiple: false,
-            // El endpoint responde {success, data:[{src,…}]}, que es justo el
-            // formato que GrapesJS entiende; no hace falta transformarlo.
         },
         canvas: {
             styles: kit.CANVAS_STYLES,
@@ -168,13 +166,8 @@ require VIEWS_PATH . '/partials/editor-assets-head.php';
     // Bloques del constructor: MISMOS ficheros, mismas exclusiones y mismo orden
     // que el editor de páginas y el de plantillas. La regla vive en
     // `editor_block_urls()` (app/Helpers/functions.php) y aquí solo se consume.
-    // Sin ella se cargaban `bs-blocks.js` (duplica cinco ids con contenido
-    // distinto) y `template.js` (mete un bloque con código ejecutable dentro del
-    // lienzo), y los
-    // bloques no se comportaban como en el resto del sistema.
-    // `JSON_HEX_TAG` escapa las etiquetas de cierre dentro de las rutas, para que
-    // ninguna pueda cortar este bloque de script antes de tiempo. (Escribir la
-    // etiqueta de cierre literal aquí fue el fallo que rompía todo el editor.)
+    // Ninguna etiqueta de script se escribe literalmente en este bloque: hacerlo
+    // corta el script y todo lo que sigue sale como texto en la página.
     const BLOCK_SCRIPTS = <?= json_encode(editor_block_urls(), JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) ?>;
 
     kit.loadBlockScripts(BLOCK_SCRIPTS, editor, (n) => {

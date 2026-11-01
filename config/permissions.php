@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Mapa de permisos por acción del panel.
  *
@@ -159,6 +159,12 @@ return [
     SettingsController::class . '::previewLanding'   => 'settings.manage',
     SettingsController::class . '::footer'           => 'settings.manage',
     SettingsController::class . '::saveFooter'       => 'settings.manage',
+    SettingsController::class . '::footerDesigns'    => 'settings.manage',
+    SettingsController::class . '::createFooterDesign' => 'settings.manage',
+    SettingsController::class . '::activateFooterDesign' => 'settings.manage',
+    SettingsController::class . '::deactivateFooterDesign' => 'settings.manage',
+    SettingsController::class . '::duplicateFooterDesign' => 'settings.manage',
+    SettingsController::class . '::deleteFooterDesign' => 'settings.manage',
     SettingsController::class . '::footerBuilder'    => 'settings.manage',
     SettingsController::class . '::saveFooterBuilder' => 'settings.manage',
     SettingsController::class . '::footerUpload'     => 'settings.manage',
