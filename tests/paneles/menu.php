@@ -235,14 +235,14 @@ $bloques = editor_block_urls();
 
 comprobar('hay ficheros de bloques en disco', $bloques !== [], (string) count($bloques));
 comprobar(
-    'excluye template.js (ya borrado del proyecto)',
+    'template.js ya no existe y no se carga',
     !in_array('template.js', array_map('basename', $bloques), true),
     'su contenido se ejecutaría en el editor'
 );
 comprobar(
-    'excluye bootstrap-blocks-consolidated.js (inyecta un setTimeout en el lienzo)',
-    !in_array('bootstrap-blocks-consolidated.js', array_map('basename', $bloques), true),
-    'su contenido se ejecutaría en el editor'
+    'bootstrap-blocks-consolidated.js se carga (ya sin <script> en el contenido)',
+    in_array('bootstrap-blocks-consolidated.js', array_map('basename', $bloques), true),
+    'se le quitaron las inyecciones: debe entrar'
 );
 comprobar(
     'blocks-bs5-unified.js se carga (fichero unificado)',
@@ -290,6 +290,7 @@ echo "\n== Integración de los ficheros de bloques ==\n";
 $colisionesAceptadas = [
     'hero-split' => 'blocks-bs5-unified.js y grapesjs-presentations.js definen el mismo id; gana el último en cargar',
     'hero-dark'  => 'blocks-bs5-unified.js y grapesjs-presentations.js definen el mismo id; gana el último en cargar',
+    'bs-modal'   => 'bootstrap-blocks-consolidated.js y blocks-bs-advanced.js definen el mismo id; gana el último en cargar',
 ];
 
 $registrados = [];
@@ -397,16 +398,32 @@ comprobar(
 );
 
 comprobar(
-    'bootstrap-blocks-consolidated.js sigue excluido porque inyecta código en el lienzo',
-    str_contains((string) file_get_contents(ROOT_PATH . '/public/assets/js/blocks/bootstrap-blocks-consolidated.js'), '<script')
-        && !in_array('bootstrap-blocks-consolidated.js', array_map('basename', $bloques), true),
-    'si se quitó el <script>, retira la exclusión'
+    'bootstrap-blocks-consolidated.js ya no inyecta <script> dentro del contenido',
+    preg_match("/['\"]\s*<\s*script/i", (string) file_get_contents(ROOT_PATH . '/public/assets/js/blocks/bootstrap-blocks-consolidated.js')) === 0,
+    'volvería a ejecutar código en el lienzo: habría que excluirlo otra vez'
 );
 
 comprobar(
     'blocks-bs5-unified.js (unificado) sí se carga',
     in_array('blocks-bs5-unified.js', array_map('basename', $bloques), true),
     'el fichero unificado no se está sirviendo'
+);
+
+// Ningún fichero cargado puede meter código ejecutable dentro del contenido de
+// un bloque: eso se ejecuta en el lienzo del editor. Es la razón por la que se
+// excluyeron template.js y bootstrap-blocks-consolidated.js en su momento.
+$conInyeccion = [];
+foreach ($bloques as $url) {
+    $nombre = basename($url);
+    $codigo = (string) file_get_contents(ROOT_PATH . '/public/assets/js/blocks/' . $nombre);
+    if (preg_match("/['\"]\s*<\s*script/i", $codigo) === 1) {
+        $conInyeccion[] = $nombre;
+    }
+}
+comprobar(
+    'ningún fichero cargado inyecta <script> en el contenido',
+    $conInyeccion === [],
+    implode(', ', $conInyeccion) . ' meterían código ejecutable en el lienzo'
 );
 
 echo "\n" . str_repeat('-', 56) . "\n";

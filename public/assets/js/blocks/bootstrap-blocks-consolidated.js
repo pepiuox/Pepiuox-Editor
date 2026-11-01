@@ -5,6 +5,7 @@
 // Elimina duplicados y añade variantes mejoradas con Bootstrap 5.3.3
 //
 // Mejoras aplicadas:
+//  - Eliminación de <script> inyectados (evita conflictos con GrapesJS)
 //  - Eliminación de 5 IDs duplicados
 //  - IIFE con verificación de gjsEditor
 //  - Categorías con emojis descriptivos
@@ -12,8 +13,9 @@
 //  - data-bs-theme="dark" para fondos oscuros
 //  - text-bg-* en lugar de bg-* + text-white
 //  - Accesibilidad ARIA completa
-//  - placehold.co con paleta coherente
+//  - placehold.co en lugar de i.pravatar.cc (sin dependencias externas)
 //  - Descripciones detalladas
+//  - Sin Font Awesome (solo Bootstrap Icons)
 //
 // @package Assets\Js\Blocks
 // @since   2026-11-01 (consolidación y modernización)
@@ -26,85 +28,84 @@ if (typeof gjsEditor === 'undefined' || !gjsEditor) {
 }
 
 // ── CATEGORÍAS ──────────────────────────────────────────────────
-var LAYOUT_ADV = { id: 'adv-layout',     label: '🖥️ Layouts Avanzados',     open: true };
-var LAYOUT     = { id: 'bs-layout',      label: '📐 Bootstrap Layout',      open: false };
-var SECTIONS   = { id: 'bs-sections',    label: '🎯 Bootstrap Sections',    open: false };
-var COMP       = { id: 'bs-components',  label: '🧩 Bootstrap Components',  open: false };
-var UI         = { id: 'bs-ui',          label: '🎨 Bootstrap UI',          open: false };
-var FORMS      = { id: 'bs-forms',       label: '📝 Bootstrap Forms',       open: false };
+var LAYOUT_ADV = { id: 'adv-layout',    label: '🖥️ Layouts Avanzados',    open: true };
+var LAYOUT     = { id: 'bs-layout',     label: '📐 Bootstrap Layout',     open: false };
+var SECTIONS   = { id: 'bs-sections',   label: '🎯 Bootstrap Sections',   open: false };
+var COMP       = { id: 'bs-components', label: '🧩 Bootstrap Components', open: false };
+var UI         = { id: 'bs-ui',         label: '🎨 Bootstrap UI',         open: false };
+var FORMS      = { id: 'bs-forms',      label: '📝 Bootstrap Forms',      open: false };
 
 // ══════════════════════════════════════════════════════════════════
 // 🖥️ LAYOUTS AVANZADOS (de template.js)
 // ══════════════════════════════════════════════════════════════════
+
 gjsEditor.BlockManager.add('bs-admin-layout', {
     category: LAYOUT_ADV,
     label: 'Admin Dashboard',
     media: '<i class="bi bi-speedometer2 fs-3"></i>',
-    description: 'Layout completo de panel de administración con sidebar, topbar y contenido',
+    description: 'Layout de panel de administración con sidebar, topbar y contenido (sin scripts inyectados)',
     content: '<style>'
-        + 'body{overflow-x:hidden}'
         + '.admin-wrapper{min-height:100vh;background:var(--bs-body-bg)}'
-        + '.sidebar{width:260px;min-height:100vh;background:#111827;transition:all .3s ease;position:fixed;top:0;left:0;z-index:1050;color:#fff}'
-        + '.sidebar-brand{padding:24px;font-size:1.4rem;font-weight:bold;border-bottom:1px solid rgba(255,255,255,.08)}'
-        + '.sidebar .nav-link{color:#cbd5e1;padding:14px 24px;border-radius:8px;margin:4px 12px;transition:all .2s}'
-        + '.sidebar .nav-link:hover{background:#1e293b;color:#fff}'
-        + '.sidebar .nav-link.active{background:#2563eb;color:#fff}'
-        + '.main-wrapper{margin-left:260px;transition:all .3s ease}'
-        + '.topbar{height:70px;background:var(--bs-body-bg);border-bottom:1px solid var(--bs-border-color);padding:0 20px;position:sticky;top:0;z-index:1040}'
-        + '.content-area{padding:30px}'
-        + '.dashboard-card{border:none;border-radius:16px;box-shadow:0 2px 10px rgba(0,0,0,.05)}'
-        + '@media(max-width:991px){.sidebar{left:-260px}.sidebar.active{left:0}.main-wrapper{margin-left:0}.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1040}.sidebar-overlay.active{display:block}}'
+        + '.admin-sidebar{width:260px;min-height:100vh;background:#111827;color:#fff}'
+        + '.admin-sidebar .nav-link{color:#cbd5e1;padding:12px 20px;border-radius:8px;margin:4px 12px;transition:all .2s}'
+        + '.admin-sidebar .nav-link:hover{background:#1e293b;color:#fff}'
+        + '.admin-sidebar .nav-link.active{background:#2563eb;color:#fff}'
+        + '.admin-topbar{height:70px;background:var(--bs-body-bg);border-bottom:1px solid var(--bs-border-color);padding:0 20px}'
+        + '.admin-card{border:none;border-radius:16px;box-shadow:0 2px 10px rgba(0,0,0,.05)}'
+        + '@media(max-width:991px){.admin-sidebar{width:100%;min-height:auto}}'
         + '</style>'
         + '<div class="admin-wrapper">'
-        + '<div class="sidebar-overlay"></div>'
-        + '<aside class="sidebar"><div class="sidebar-brand">AdminPanel</div><div class="p-3">'
+        + '<div class="row g-0">'
+        + '<aside class="admin-sidebar col-lg-3 col-xl-2">'
+        + '<div class="p-4 border-bottom border-secondary border-opacity-25"><h4 class="fw-bold mb-0">AdminPanel</h4></div>'
+        + '<div class="p-3">'
         + '<ul class="nav flex-column">'
         + '<li class="nav-item"><a class="nav-link active" href="#"><i class="bi bi-house-door me-2" aria-hidden="true"></i>Dashboard</a></li>'
         + '<li class="nav-item"><a class="nav-link" href="#"><i class="bi bi-people me-2" aria-hidden="true"></i>Usuarios</a></li>'
         + '<li class="nav-item"><a class="nav-link" href="#"><i class="bi bi-bar-chart me-2" aria-hidden="true"></i>Reportes</a></li>'
         + '<li class="nav-item"><a class="nav-link" href="#"><i class="bi bi-gear me-2" aria-hidden="true"></i>Configuración</a></li>'
         + '</ul></div></aside>'
-        + '<div class="main-wrapper">'
-        + '<nav class="topbar d-flex align-items-center justify-content-between">'
-        + '<div class="d-flex align-items-center"><button class="btn btn-light me-3" id="sidebarToggle" aria-label="Alternar sidebar"><i class="bi bi-list" aria-hidden="true"></i></button><h5 class="mb-0">Dashboard</h5></div>'
-        + '<div class="d-flex align-items-center"><div class="dropdown">'
-        + '<button class="btn btn-light dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">'
+        + '<div class="col-lg-9 col-xl-10">'
+        + '<nav class="admin-topbar d-flex align-items-center justify-content-between">'
+        + '<div class="d-flex align-items-center gap-3">'
+        + '<button class="btn btn-light" type="button" aria-label="Menú"><i class="bi bi-list" aria-hidden="true"></i></button>'
+        + '<h5 class="mb-0 fw-bold">Dashboard</h5></div>'
+        + '<div class="dropdown">'
+        + '<button class="btn btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">'
         + '<img src="https://placehold.co/40x40/667eea/white?text=A" class="rounded-circle me-2" width="40" height="40" alt="Avatar">Admin</button>'
         + '<ul class="dropdown-menu dropdown-menu-end">'
         + '<li><a class="dropdown-item" href="#">Perfil</a></li>'
         + '<li><a class="dropdown-item" href="#">Configuración</a></li>'
         + '<li><hr class="dropdown-divider"></li>'
         + '<li><a class="dropdown-item text-danger" href="#">Logout</a></li>'
-        + '</ul></div></div></nav>'
-        + '<main class="content-area">'
+        + '</ul></div></nav>'
+        + '<main class="p-4">'
         + '<div class="row g-4 mb-4">'
-        + '<div class="col-md-3"><div class="card dashboard-card"><div class="card-body"><h6 class="text-body-secondary">Usuarios</h6><h2 class="fw-bold mb-0">12,540</h2></div></div></div>'
-        + '<div class="col-md-3"><div class="card dashboard-card"><div class="card-body"><h6 class="text-body-secondary">Ventas</h6><h2 class="fw-bold mb-0">$24K</h2></div></div></div>'
-        + '<div class="col-md-3"><div class="card dashboard-card"><div class="card-body"><h6 class="text-body-secondary">Órdenes</h6><h2 class="fw-bold mb-0">1,240</h2></div></div></div>'
-        + '<div class="col-md-3"><div class="card dashboard-card"><div class="card-body"><h6 class="text-body-secondary">Tickets</h6><h2 class="fw-bold mb-0">87</h2></div></div></div>'
+        + '<div class="col-md-3"><div class="card admin-card"><div class="card-body"><h6 class="text-body-secondary">Usuarios</h6><h2 class="fw-bold mb-0">12,540</h2></div></div></div>'
+        + '<div class="col-md-3"><div class="card admin-card"><div class="card-body"><h6 class="text-body-secondary">Ventas</h6><h2 class="fw-bold mb-0">$24K</h2></div></div></div>'
+        + '<div class="col-md-3"><div class="card admin-card"><div class="card-body"><h6 class="text-body-secondary">Órdenes</h6><h2 class="fw-bold mb-0">1,240</h2></div></div></div>'
+        + '<div class="col-md-3"><div class="card admin-card"><div class="card-body"><h6 class="text-body-secondary">Tickets</h6><h2 class="fw-bold mb-0">87</h2></div></div></div>'
         + '</div>'
-        + '<div class="card dashboard-card"><div class="card-body">'
-        + '<div class="d-flex justify-content-between mb-4"><h5 class="fw-bold mb-0">Usuarios recientes</h5><button class="btn btn-primary">Nuevo Usuario</button></div>'
+        + '<div class="card admin-card"><div class="card-body">'
+        + '<div class="d-flex justify-content-between align-items-center mb-4"><h5 class="fw-bold mb-0">Usuarios recientes</h5><button class="btn btn-primary">Nuevo Usuario</button></div>'
         + '<div class="table-responsive"><table class="table align-middle mb-0">'
         + '<thead><tr><th scope="col">Usuario</th><th scope="col">Email</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr></thead>'
         + '<tbody>'
         + '<tr><td><div class="d-flex align-items-center"><img src="https://placehold.co/45x45/667eea/white?text=JP" class="rounded-circle me-2" width="45" height="45" alt="Avatar">Juan Pérez</div></td><td>juan@email.com</td><td><span class="badge text-bg-success">Activo</span></td><td><button class="btn btn-sm btn-light me-1">Editar</button><button class="btn btn-sm btn-danger">Eliminar</button></td></tr>'
         + '<tr><td><div class="d-flex align-items-center"><img src="https://placehold.co/45x45/764ba2/white?text=ML" class="rounded-circle me-2" width="45" height="45" alt="Avatar">María López</div></td><td>maria@email.com</td><td><span class="badge text-bg-warning text-dark">Pendiente</span></td><td><button class="btn btn-sm btn-light me-1">Editar</button><button class="btn btn-sm btn-danger">Eliminar</button></td></tr>'
         + '</tbody></table></div></div></div>'
-        + '</main></div></div>'
-        + '<script>setTimeout(()=>{const s=document.querySelector(".sidebar"),t=document.querySelector("#sidebarToggle"),o=document.querySelector(".sidebar-overlay");if(t)t.addEventListener("click",()=>{s.classList.toggle("active");o.classList.toggle("active")});if(o)o.addEventListener("click",()=>{s.classList.remove("active");o.classList.remove("active")})},500);</script>'
+        + '</main></div></div></div>'
 });
 
 // ══════════════════════════════════════════════════════════════════
 // 📐 BOOTSTRAP LAYOUT
 // ══════════════════════════════════════════════════════════════════
 
-// Navbar oscura (variante 1)
 gjsEditor.BlockManager.add('bs-navbar-dark', {
     category: LAYOUT,
     label: 'Navbar Oscura',
     media: '<i class="bi bi-list fs-3"></i>',
-    description: 'Barra de navegación oscura responsive',
+    description: 'Barra de navegación oscura responsive con data-bs-theme',
     content: '<nav class="navbar navbar-expand-lg bg-dark" data-bs-theme="dark">'
         + '<div class="container">'
         + '<a class="navbar-brand fw-bold" href="#">MiLogo</a>'
@@ -118,7 +119,6 @@ gjsEditor.BlockManager.add('bs-navbar-dark', {
         + '</ul></div></div></nav>'
 });
 
-// Navbar clara (variante 2 - mejorada)
 gjsEditor.BlockManager.add('bs-navbar-light', {
     category: LAYOUT,
     label: 'Navbar Clara',
@@ -137,7 +137,6 @@ gjsEditor.BlockManager.add('bs-navbar-light', {
         + '</ul></div></div></nav>'
 });
 
-// Hero mejorado (split con imagen)
 gjsEditor.BlockManager.add('bs-hero-split', {
     category: SECTIONS,
     label: 'Hero Split',
@@ -155,9 +154,9 @@ gjsEditor.BlockManager.add('bs-hero-split', {
         + '</div>'
         + '<div class="mt-4 d-flex align-items-center gap-3">'
         + '<div class="d-flex">'
-        + '<img src="https://i.pravatar.cc/40?img=1" class="rounded-circle border border-2 border-white" style="margin-right:-10px" alt="">'
-        + '<img src="https://i.pravatar.cc/40?img=2" class="rounded-circle border border-2 border-white" style="margin-right:-10px" alt="">'
-        + '<img src="https://i.pravatar.cc/40?img=3" class="rounded-circle border border-2 border-white" alt="">'
+        + '<img src="https://placehold.co/40x40/667eea/white?text=1" class="rounded-circle border border-2 border-white" style="margin-right:-10px" alt="Usuario 1">'
+        + '<img src="https://placehold.co/40x40/764ba2/white?text=2" class="rounded-circle border border-2 border-white" style="margin-right:-10px" alt="Usuario 2">'
+        + '<img src="https://placehold.co/40x40/f093fb/white?text=3" class="rounded-circle border border-2 border-white" alt="Usuario 3">'
         + '</div>'
         + '<small class="text-body-secondary">+10,000 usuarios satisfechos</small>'
         + '</div></div>'
@@ -166,13 +165,12 @@ gjsEditor.BlockManager.add('bs-hero-split', {
         + '</div></div></div></section>'
 });
 
-// Hero simple (variante centrada)
 gjsEditor.BlockManager.add('bs-hero-centered', {
     category: SECTIONS,
     label: 'Hero Centrado',
     media: '<i class="bi bi-easel fs-3"></i>',
     description: 'Hero centrado con fondo primario',
-    content: '<section class="py-5 bg-primary text-white" data-bs-theme="dark">'
+    content: '<section class="py-5 text-bg-primary" data-bs-theme="dark">'
         + '<div class="container text-center py-5">'
         + '<h1 class="display-3 fw-bold mb-3">Bootstrap Hero</h1>'
         + '<p class="lead mb-4 opacity-75">Crea páginas increíbles con GrapesJS</p>'
@@ -180,7 +178,6 @@ gjsEditor.BlockManager.add('bs-hero-centered', {
         + '</div></section>'
 });
 
-// Footer completo (3 columnas)
 gjsEditor.BlockManager.add('bs-footer-full', {
     category: LAYOUT,
     label: 'Footer Completo',
@@ -202,11 +199,10 @@ gjsEditor.BlockManager.add('bs-footer-full', {
         + '<a href="#" class="text-white" aria-label="Facebook"><i class="bi bi-facebook"></i></a>'
         + '<a href="#" class="text-white" aria-label="Twitter"><i class="bi bi-twitter-x"></i></a>'
         + '<a href="#" class="text-white" aria-label="Instagram"><i class="bi bi-instagram"></i></a>'
-        + '</div><p class="mt-3 text-white-50 small">&copy; 2026 Todos los derechos reservados.</p></div>'
+        + '</div><p class="mt-3 text-white-50 small">© 2026 Todos los derechos reservados.</p></div>'
         + '</div></div></footer>'
 });
 
-// Footer simple (variante minimalista)
 gjsEditor.BlockManager.add('bs-footer-simple', {
     category: LAYOUT,
     label: 'Footer Simple',
@@ -215,11 +211,10 @@ gjsEditor.BlockManager.add('bs-footer-simple', {
     content: '<footer class="bg-dark text-white py-4" data-bs-theme="dark">'
         + '<div class="container text-center">'
         + '<h5 class="fw-bold">Mi Sitio Web</h5>'
-        + '<p class="mb-0 small opacity-75">&copy; 2026 Todos los derechos reservados</p>'
+        + '<p class="mb-0 small opacity-75">© 2026 Todos los derechos reservados</p>'
         + '</div></footer>'
 });
 
-// Grid 3 columnas
 gjsEditor.BlockManager.add('bs-grid-3', {
     category: LAYOUT,
     label: 'Grid 3 Columnas',
@@ -236,7 +231,6 @@ gjsEditor.BlockManager.add('bs-grid-3', {
 // 🧩 BOOTSTRAP COMPONENTS
 // ══════════════════════════════════════════════════════════════════
 
-// Card con imagen
 gjsEditor.BlockManager.add('bs-card', {
     category: COMP,
     label: 'Card',
@@ -251,7 +245,6 @@ gjsEditor.BlockManager.add('bs-card', {
         + '</div></div>'
 });
 
-// Alerta dismissible mejorada
 gjsEditor.BlockManager.add('bs-alert-dismissible', {
     category: COMP,
     label: 'Alerta Cerrable',
@@ -264,7 +257,6 @@ gjsEditor.BlockManager.add('bs-alert-dismissible', {
         + '</div>'
 });
 
-// Acordeón FAQ mejorado
 gjsEditor.BlockManager.add('bs-accordion-faq', {
     category: COMP,
     label: 'Acordeón FAQ',
@@ -286,7 +278,6 @@ gjsEditor.BlockManager.add('bs-accordion-faq', {
         + '</div>'
 });
 
-// Modal
 gjsEditor.BlockManager.add('bs-modal', {
     category: COMP,
     label: 'Modal',
@@ -302,7 +293,6 @@ gjsEditor.BlockManager.add('bs-modal', {
         + '</div></div></div></div>'
 });
 
-// Tabs
 gjsEditor.BlockManager.add('bs-tabs', {
     category: COMP,
     label: 'Pestañas',
@@ -324,7 +314,6 @@ gjsEditor.BlockManager.add('bs-tabs', {
 // 🎨 BOOTSTRAP UI
 // ══════════════════════════════════════════════════════════════════
 
-// Botones
 gjsEditor.BlockManager.add('bs-buttons', {
     category: UI,
     label: 'Botones',
@@ -337,7 +326,6 @@ gjsEditor.BlockManager.add('bs-buttons', {
         + '</div>'
 });
 
-// Barras de progreso
 gjsEditor.BlockManager.add('bs-progress', {
     category: UI,
     label: 'Barras de Progreso',
@@ -345,13 +333,12 @@ gjsEditor.BlockManager.add('bs-progress', {
     description: 'Dos barras de progreso con etiquetas',
     content: '<div class="container my-4">'
         + '<div class="mb-2 d-flex justify-content-between small"><span class="fw-semibold">Habilidad 1</span><span class="text-body-secondary">85%</span></div>'
-        + '<div class="progress mb-3" role="progressbar" aria-valuenow="85" aria-valuemin="0" aria-valuemax="100" style="height:8px"><div class="progress-bar bg-success" style="width:85%"></div></div>'
+        + '<div class="progress mb-3" role="progressbar" aria-label="Habilidad 1" aria-valuenow="85" aria-valuemin="0" aria-valuemax="100" style="height:8px"><div class="progress-bar bg-success" style="width:85%"></div></div>'
         + '<div class="mb-2 d-flex justify-content-between small"><span class="fw-semibold">Habilidad 2</span><span class="text-body-secondary">60%</span></div>'
-        + '<div class="progress" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100" style="height:8px"><div class="progress-bar bg-warning" style="width:60%"></div></div>'
+        + '<div class="progress" role="progressbar" aria-label="Habilidad 2" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100" style="height:8px"><div class="progress-bar bg-warning" style="width:60%"></div></div>'
         + '</div>'
 });
 
-// Breadcrumbs
 gjsEditor.BlockManager.add('bs-breadcrumb', {
     category: UI,
     label: 'Breadcrumbs',
@@ -365,7 +352,6 @@ gjsEditor.BlockManager.add('bs-breadcrumb', {
         + '</ol></nav>'
 });
 
-// Paginación
 gjsEditor.BlockManager.add('bs-pagination', {
     category: UI,
     label: 'Paginación',
@@ -381,7 +367,6 @@ gjsEditor.BlockManager.add('bs-pagination', {
         + '</ul></nav>'
 });
 
-// Badges
 gjsEditor.BlockManager.add('bs-badges', {
     category: UI,
     label: 'Badges',
@@ -396,7 +381,6 @@ gjsEditor.BlockManager.add('bs-badges', {
         + '</div>'
 });
 
-// Call to Action
 gjsEditor.BlockManager.add('bs-cta', {
     category: UI,
     label: 'Call to Action',
@@ -413,7 +397,6 @@ gjsEditor.BlockManager.add('bs-cta', {
 // 📝 BOOTSTRAP FORMS
 // ══════════════════════════════════════════════════════════════════
 
-// Formulario de login
 gjsEditor.BlockManager.add('bs-form-login', {
     category: FORMS,
     label: 'Form Login',
@@ -428,7 +411,6 @@ gjsEditor.BlockManager.add('bs-form-login', {
         + '</form>'
 });
 
-// Login Card
 gjsEditor.BlockManager.add('bs-login-card', {
     category: FORMS,
     label: 'Login Card',
@@ -446,7 +428,6 @@ gjsEditor.BlockManager.add('bs-login-card', {
         + '</div></div></div></div></section>'
 });
 
-// Barra de búsqueda
 gjsEditor.BlockManager.add('bs-search-bar', {
     category: FORMS,
     label: 'Barra de Búsqueda',
@@ -455,11 +436,10 @@ gjsEditor.BlockManager.add('bs-search-bar', {
     content: '<div class="container my-4"><div class="row justify-content-center"><div class="col-md-8">'
         + '<div class="input-group input-group-lg shadow-sm rounded-3">'
         + '<input type="text" class="form-control" placeholder="¿Qué estás buscando?" aria-label="Buscar">'
-        + '<button class="btn btn-primary px-4" type="button"><i class="bi bi-search me-1"></i> Buscar</button>'
+        + '<button class="btn btn-primary px-4" type="button"><i class="bi bi-search me-1" aria-hidden="true"></i> Buscar</button>'
         + '</div></div></div></div>'
 });
 
-// Tabla de precios
 gjsEditor.BlockManager.add('bs-pricing', {
     category: FORMS,
     label: 'Tabla de Precios',
@@ -469,30 +449,29 @@ gjsEditor.BlockManager.add('bs-pricing', {
         + '<div class="row g-4 text-center">'
         + '<div class="col-md-4"><div class="card border-0 shadow-sm p-3">'
         + '<h5 class="text-body-secondary fw-bold">Básico</h5>'
-        + '<div class="display-6 fw-bold my-3">$9<span class="fs-6 text-body-secondary">/mes</span></div>'
+        + '<div class="display-6 fw-bold my-3">$9 <span class="fs-6 text-body-secondary">/mes</span></div>'
         + '<ul class="list-unstyled mb-4 small text-start">'
-        + '<li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>1 Usuario</li>'
-        + '<li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>5 Proyectos</li>'
+        + '<li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2" aria-hidden="true"></i>1 Usuario</li>'
+        + '<li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2" aria-hidden="true"></i>5 Proyectos</li>'
         + '</ul><button class="btn btn-outline-primary w-100">Elegir</button></div></div>'
         + '<div class="col-md-4"><div class="card border-primary shadow-sm p-3">'
         + '<div class="badge text-bg-primary mb-2">Popular</div>'
         + '<h5 class="text-primary fw-bold">Pro</h5>'
-        + '<div class="display-6 fw-bold my-3">$29<span class="fs-6 text-body-secondary">/mes</span></div>'
+        + '<div class="display-6 fw-bold my-3">$29 <span class="fs-6 text-body-secondary">/mes</span></div>'
         + '<ul class="list-unstyled mb-4 small text-start">'
-        + '<li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>5 Usuarios</li>'
-        + '<li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Proyectos ilimitados</li>'
+        + '<li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2" aria-hidden="true"></i>5 Usuarios</li>'
+        + '<li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2" aria-hidden="true"></i>Proyectos ilimitados</li>'
         + '</ul><button class="btn btn-primary w-100">Elegir</button></div></div>'
         + '<div class="col-md-4"><div class="card border-0 shadow-sm p-3">'
         + '<h5 class="text-body-secondary fw-bold">Empresas</h5>'
-        + '<div class="display-6 fw-bold my-3">$99<span class="fs-6 text-body-secondary">/mes</span></div>'
+        + '<div class="display-6 fw-bold my-3">$99 <span class="fs-6 text-body-secondary">/mes</span></div>'
         + '<ul class="list-unstyled mb-4 small text-start">'
-        + '<li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Usuarios ilimitados</li>'
-        + '<li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Soporte 24/7</li>'
+        + '<li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2" aria-hidden="true"></i>Usuarios ilimitados</li>'
+        + '<li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2" aria-hidden="true"></i>Soporte 24/7</li>'
         + '</ul><button class="btn btn-outline-dark w-100">Contactar</button></div></div>'
         + '</div></div></section>'
 });
 
-// Tarjetas 3 columnas con iconos
 gjsEditor.BlockManager.add('bs-cards-row', {
     category: COMP,
     label: 'Tarjetas 3 Columnas',
@@ -517,5 +496,5 @@ gjsEditor.BlockManager.add('bs-cards-row', {
         + '</div></div></section>'
 });
 
-console.log('[bootstrap-blocks-consolidated] ✓ Archivo consolidado con 25 bloques únicos');
+console.log('[bootstrap-blocks-consolidated] ✓ Archivo consolidado con 25 bloques únicos (sin scripts inyectados)');
 })();

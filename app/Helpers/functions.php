@@ -284,16 +284,16 @@ function is_active_exact(string $path, string $class = 'active'): string {
 function editor_block_urls(): array {
     // Exclusiones, con el motivo al lado.
     //
+    // AHORA MISMO NO HAY NINGUNA: los dos ficheros que estaban fuera se
+    // corrigieron. `template.js` se borró, y a `bootstrap-blocks-consolidated.js`
+    // se le quitaron los `<script>` que inyectaba en el contenido de un bloque.
+    //
+    // La lista se mantiene porque el mecanismo hace falta: un fichero que meta
+    // código ejecutable dentro de un bloque se ejecuta en el lienzo del editor.
     // OJO con los nombres: si un fichero se renombra y la lista sigue apuntando
-    // al nombre viejo, la exclusión deja de aplicarse EN SILENCIO y el fichero
-    // empieza a cargarse. Por eso `tests/paneles/menu.php` comprueba que cada
-    // nombre excluido exista de verdad en disco.
-    $excluidos = [
-        // Inyecta un <script> con setTimeout dentro del contenido de un bloque;
-        // ese código se ejecuta en el lienzo del editor. Es el mismo motivo por
-        // el que se excluyó template.js antes de que se borrara.
-        'bootstrap-blocks-consolidated.js',
-    ];
+    // al nombre viejo, la exclusión deja de aplicarse EN SILENCIO. Por eso
+    // `tests/paneles/menu.php` comprueba que cada nombre excluido exista en disco.
+    $excluidos = [];
     $nombres = [];
 
     foreach (glob(ASSETS_PATH . '/js/blocks/*.js') ?: [] as $archivo) {

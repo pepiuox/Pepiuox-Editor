@@ -1469,3 +1469,37 @@ Corregido: el helper se detecta por su **cuerpo**, buscando la llave de cierre c
 cuenta si el `BlockManager.add` está **dentro** de esa función. Es la tercera vez que un detector por
 proximidad inventa un problema; la regla queda escrita: acotar la búsqueda a la estructura real, no a la
 distancia.
+
+### Quinta pasada: `bootstrap-blocks-consolidated.js` sin inyecciones (2026-11-01)
+
+El dueño quitó los `<script>` del contenido. Verificado: el único `<script` que queda está en un **comentario**
+de cabecera (línea 8, «Eliminación de `<script>` inyectados»), no en el contenido de ningún bloque.
+
+| Comprobación | Resultado |
+|---|---|
+| Sintaxis JS | OK |
+| Bloques | **24**, todos con prefijo `bs-` |
+| `<script>` dentro de un bloque | **ninguno** |
+| `onclick=` · `javascript:` · `<iframe>` | ninguno |
+| `data-bs-*` (comportamiento Bootstrap) | 32 usos |
+| Colisiones al cargarlo | **1**: `bs-modal` con `blocks-bs-advanced.js` |
+
+**Cargado.** La lista de exclusiones queda **vacía**: no hay ningún fichero fuera.
+Total servido: **14 ficheros, 294 bloques distintos** (eran 271).
+
+### Dos avisos sobre ese fichero
+
+1. **`<style>` dentro del contenido.** El bloque `bs-admin-layout` lleva `content: '<style>…</style>…'`.
+   Comprobado con `PageRenderer::buildPageHtml`: **al publicar, el `<style>` se elimina** (el saneador usa una
+   lista blanca que no lo incluye). El bloque se verá con sus estilos en el editor y **sin ellos en el sitio
+   publicado**. La solución es mover esos estilos a `content_css` de la página, no a un `<style>` dentro del
+   HTML.
+2. **`data-bs-*` necesita el bundle de Bootstrap.** En el lienzo está cargado
+   (`EditorKit.CANVAS_SCRIPTS`), pero el layout público no lo carga: un `collapse`, `modal` o `dropdown` de
+   esos bloques se verá, pero no se desplegará al publicar.
+
+### Estado de la batería
+
+`tests/paneles/menu.php` → **50 comprobaciones**. Tres colisiones declaradas (`hero-split`, `hero-dark`,
+`bs-modal`), y una guarda nueva: **ningún fichero cargado puede inyectar `<script>` en el contenido**. Si
+alguno lo vuelve a hacer, la prueba falla.
