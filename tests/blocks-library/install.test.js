@@ -56,25 +56,40 @@ function makeBlock(id, def) {
     return block;
 }
 
-function makeManager() {
-    const blocks = new Map();
+// BlockManager FIEL a GrapesJS 0.21.10:
+//   - el módulo NO expone `.on` (extiende ItemManagerModule → Module)
+//   - los eventos se emiten en el EDITOR (`em.trigger('block:add', block)`)
+// La versión anterior de esta prueba le daba `.on` al gestor y por eso daba por
+// buena una llamada que en el navegador lanza TypeError.
+function makeEditor() {
     const listeners = {};
     return {
         on(event, cb) { (listeners[event] = listeners[event] || []).push(cb); },
+        trigger(event, arg) { (listeners[event] || []).forEach((cb) => cb(arg)); }
+    };
+}
+
+function makeManager(editor) {
+    const blocks = new Map();
+    return {
         getAll() { return Array.from(blocks.values()); },
         get(id) { return blocks.get(id) || null; },
         remove(id) { blocks.delete(id); },
         add(id, def) {
             const block = makeBlock(id, def);
             blocks.set(id, block);
-            (listeners.add || []).forEach((cb) => cb(block));
+            // Como en GrapesJS: el módulo avisa al editor, no a sí mismo.
+            editor.trigger('block:add', block);
             return block;
         }
     };
 }
 
-const manager = makeManager();
-const editor = { BlockManager: manager };
+const editor = makeEditor();
+const manager = makeManager(editor);
+editor.BlockManager = manager;
+
+check('el BlockManager simulado NO tiene .on (como el real)', typeof manager.on === 'undefined');
 
 // Bloques que ya existirían por los plugins antes de cargar los ficheros.
 manager.add('plugin-text', { label: 'Text', category: 'Basic' });

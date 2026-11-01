@@ -128,13 +128,18 @@ window.EditorKit = (function () {
         // La biblioteca se engancha ANTES de registrar los bloques: así cada
         // bloque recibe su categoría canónica en el mismo instante en que se
         // añade, antes de que el panel lo pinte. Si el fichero no está cargado,
-        // se sigue igual: es una mejora, no un requisito.
+        // se sigue igual (los bloques funcionan con su categoría original), pero
+        // se avisa: un fallo silencioso aquí se confunde con «todo bien» y deja el
+        // panel con categorías duplicadas.
         if (window.BlocksLibrary && typeof window.BlocksLibrary.install === 'function') {
             try {
                 window.BlocksLibrary.install(editor);
             } catch (err) {
                 console.warn('[EditorKit] La biblioteca de bloques no se pudo enganchar:', err);
             }
+        } else {
+            console.warn('[EditorKit] blocks-library.js no está cargado: las categorías no se ' +
+                'agruparán y el panel puede mostrar grupos repetidos. Revisa el <script> del parcial.');
         }
 
         var loadNext = function (index) {

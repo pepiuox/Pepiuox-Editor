@@ -180,7 +180,13 @@ require VIEWS_PATH . '/partials/editor-assets-head.php';
     const BLOCK_SCRIPTS = <?= json_encode(editor_block_urls(), JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) ?>;
 
     kit.loadBlockScripts(BLOCK_SCRIPTS, window.gjsEditor, (n) => {
-        document.getElementById('estadoGuardado').textContent = n + ' fichero(s) de bloques cargados.';
+        // Señal visible, sin depender de la consola: si la biblioteca de bloques
+        // no se enganchó, las categorías no se agrupan y el panel muestra grupos
+        // repetidos. Aquí se ve de un vistazo.
+        const agrupado = window.BlocksLibrary && typeof window.BlocksLibrary.install === 'function';
+        const estado = n + ' fichero(s) de bloques cargados · ' +
+            (agrupado ? 'categorías agrupadas' : 'SIN agrupar (blocks-library.js no cargó)');
+        document.getElementById('estadoGuardado').textContent = estado;
     });
 
     // Contenido previo: si hay proyecto guardado manda él; si no, el HTML.

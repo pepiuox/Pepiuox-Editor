@@ -355,24 +355,58 @@ window.BlocksLibrary = (function () {
     /**
      * Engancha la normalización al registro de bloques.
      *
-     * Se llama antes de inyectar los ficheros de bloques: cada `add` dispara el
-     * evento y la categoría queda puesta antes del primer pintado.
+     * ── Dónde va el listener (esto estaba mal) ──────────────────────────
+     * GrapesJS **no** expone `.on` en el BlockManager: `BlockManager` extiende
+     * `ItemManagerModule` → `Module`, y ninguno de los tres define `.on`. Los
+     * eventos se emiten en el **editor**: `em.trigger('block:add', block)`.
+     *
+     * La versión anterior hacía `manager.on('add', …)`, que lanza
+     * `TypeError: manager.on is not a function`. Como `EditorKit` envuelve la
+     * llamada en try/catch, el error se registraba como aviso y la normalización
+     * no ocurría nunca: cada fichero conservaba su propio objeto de categoría y el
+     * panel mostraba varias categorías con el mismo nombre.
+     *
+     * Se intenta el editor primero y se cae al gestor solo si alguna versión
+     * futura lo expone. Si no hay forma de enganchar, se avisa: un fallo silencioso
+     * aquí se confunde con «todo bien».
      */
     function install(editor) {
-        if (!editor || !editor.BlockManager) return;
+        if (!editor || !editor.BlockManager) {
+            console.warn('[BlocksLibrary] Sin editor o sin BlockManager: no se puede normalizar.');
+            return;
+        }
 
         var manager = editor.BlockManager;
+
+        var normalize = function (block) {
+            try {
+                applyCanonical(block, true);
+            } catch (err) {
+                console.warn('[BlocksLibrary] No se pudo normalizar ' + (block && block.id), err);
+            }
+        };
 
         if (!installed) {
             installed = true;
 
-            manager.on('add', function (block) {
-                try {
-                    applyCanonical(block, true);
-                } catch (err) {
-                    console.warn('[BlocksLibrary] No se pudo normalizar ' + (block && block.id), err);
-                }
-            });
+            var hooked = false;
+
+            // Camino correcto: el editor emite `block:add`.
+            if (typeof editor.on === 'function') {
+                editor.on('block:add', normalize);
+                hooked = true;
+            }
+
+            // Respaldo: algunas versiones antiguas o wrappers exponen `.on`.
+            if (!hooked && typeof manager.on === 'function') {
+                manager.on('add', normalize);
+                hooked = true;
+            }
+
+            if (!hooked) {
+                console.warn('[BlocksLibrary] No se encontró dónde escuchar los bloques nuevos: ' +
+                    'las categorías no se normalizarán al registrarse.');
+            }
         }
 
         // Los bloques de los plugins ya están registrados en este punto: se

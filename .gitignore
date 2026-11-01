@@ -106,3 +106,4 @@ db/backup/
 # Credenciales locales. Nunca se versionan: llevan la contraseña de la base de datos.
 .env
 01-TOOLS/mysql/.env
+AGENTS.md
