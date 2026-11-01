@@ -189,6 +189,46 @@ comprobar('tiene el interruptor de publicación', str_contains($htmlBuilder, 'na
 comprobar('tiene token CSRF', str_contains($htmlBuilder, '_csrf_token'));
 
 // ─────────────────────────────────────────────────────────────────────
+echo "\n== Contrato de la instancia: los bloques necesitan la global gjsEditor ==\n";
+
+// Los ficheros de bloques registran con `gjsEditor.BlockManager.add(...)` y
+// empiezan con `if (typeof gjsEditor === 'undefined') { …omitido }`. Si la
+// instancia se llama de otra forma, no se registra NI UN bloque y el panel
+// derecho del constructor aparece vacío. Es el fallo que tuvo el editor del pie.
+comprobar(
+    'la vista publica la instancia como window.gjsEditor',
+    (bool) preg_match('/window\.gjsEditor\s*=\s*grapesjs\.init\s*\(/', $htmlBuilder),
+    'con otro nombre, todos los ficheros de bloques se omiten'
+);
+
+comprobar(
+    'la carga de bloques recibe esa misma instancia',
+    (bool) preg_match('/loadBlockScripts\(\s*BLOCK_SCRIPTS\s*,\s*window\.gjsEditor/', $htmlBuilder),
+    'los bloques se registrarían en un editor distinto del que se ve'
+);
+
+// El contrato se comprueba también en el lado de los ficheros de bloques: si
+// algún día dejan de usar `gjsEditor`, esta prueba pedirá revisar la vista.
+$bloques = glob(ROOT_PATH . '/public/assets/js/blocks/*.js') ?: [];
+$conGjsEditor = 0;
+foreach ($bloques as $f) {
+    if (str_contains((string) file_get_contents($f), 'gjsEditor')) {
+        $conGjsEditor++;
+    }
+}
+comprobar(
+    'los ficheros de bloques registran contra gjsEditor',
+    $conGjsEditor > 0,
+    'los bloques ya no usan esa global: revisa el nombre en la vista'
+);
+comprobar(
+    'los otros dos editores también la usan',
+    str_contains((string) file_get_contents(VIEWS_PATH . '/pages/builder.php'), 'gjsEditor')
+        && str_contains((string) file_get_contents(VIEWS_PATH . '/templates/edit.php'), 'gjsEditor'),
+    'páginas y plantillas asignan gjsEditor: los tres deben coincidir'
+);
+
+// ─────────────────────────────────────────────────────────────────────
 echo "\n== Bloques del constructor: la misma lista en los tres editores ==\n";
 
 $bloques = editor_block_urls();

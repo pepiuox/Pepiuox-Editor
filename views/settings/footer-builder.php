@@ -136,7 +136,16 @@ require VIEWS_PATH . '/partials/editor-assets-head.php';
         JSON_UNESCAPED_SLASHES | JSON_HEX_TAG
     ) ?>;
 
-    const editor = grapesjs.init({
+    // ⚠️ La instancia DEBE quedar en la global `gjsEditor`.
+    //
+    // Los ficheros de `public/assets/js/blocks/*.js` registran sus bloques con
+    // `gjsEditor.BlockManager.add(...)` — 188 llamadas — y empiezan con un guardia
+    // `if (typeof gjsEditor === 'undefined' || !gjsEditor) { …omitido }`.
+    // Con una instancia llamada de otra forma, todos los ficheros salen por ese
+    // guardia, no se registra ni un bloque y el panel derecho queda vacío.
+    // Asignar a `window` explícitamente porque este bloque es `'use strict'`: una
+    // asignación a variable no declarada lanzaría ReferenceError.
+    window.gjsEditor = grapesjs.init({
         container: '#gjs',
         height: '60vh',
         fromElement: !datos,
@@ -170,30 +179,30 @@ require VIEWS_PATH . '/partials/editor-assets-head.php';
     // corta el script y todo lo que sigue sale como texto en la página.
     const BLOCK_SCRIPTS = <?= json_encode(editor_block_urls(), JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) ?>;
 
-    kit.loadBlockScripts(BLOCK_SCRIPTS, editor, (n) => {
+    kit.loadBlockScripts(BLOCK_SCRIPTS, window.gjsEditor, (n) => {
         document.getElementById('estadoGuardado').textContent = n + ' fichero(s) de bloques cargados.';
     });
 
     // Contenido previo: si hay proyecto guardado manda él; si no, el HTML.
     if (datos) {
         try {
-            editor.loadProjectData(datos);
+            window.gjsEditor.loadProjectData(datos);
         } catch (e) {
             console.warn('[Pie] No se pudo restaurar el proyecto guardado:', e);
         }
     }
 
     const guardar = () => {
-        document.getElementById('formHtml').value = editor.getHtml();
-        document.getElementById('formCss').value  = editor.getCss();
-        document.getElementById('formJs').value   = editor.getJs ? editor.getJs() : '';
-        document.getElementById('formData').value = JSON.stringify(editor.getProjectData());
+        document.getElementById('formHtml').value = window.gjsEditor.getHtml();
+        document.getElementById('formCss').value  = window.gjsEditor.getCss();
+        document.getElementById('formJs').value   = window.gjsEditor.getJs ? window.gjsEditor.getJs() : '';
+        document.getElementById('formData').value = JSON.stringify(window.gjsEditor.getProjectData());
     };
 
     document.getElementById('saveForm').addEventListener('submit', guardar);
     document.getElementById('btnSave').addEventListener('click', guardar);
 
-    editor.on('update', () => {
+    window.gjsEditor.on('update', () => {
         document.getElementById('estadoGuardado').textContent = 'Cambios sin guardar…';
     });
 
