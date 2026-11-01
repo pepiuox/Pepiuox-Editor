@@ -2,6 +2,14 @@
 /**
  * Configuración general de la aplicación.
  */
+
+// Se carga el entorno aquí para que `cron_token` tenga un valor **estable**.
+// Antes se generaba con `bin2hex(random_bytes(8))` en cada carga del archivo,
+// así que el token cambiaba en cada petición y los seis endpoints `/cron/*`
+// respondían siempre 401: no había forma de configurarlo.
+require_once __DIR__ . '/env.php';
+load_env_file(__DIR__ . '/../01-TOOLS/mysql/.env');
+
 return [
     'app_name'      => 'PePiuoX Editor',
     'app_version'   => '1.0.0',
@@ -72,5 +80,13 @@ return [
         'daily_digest' => false,
         'weekly_digest' => true,
     ],
-    'cron_token' => 'cambia-este-token-por-uno-seguro-' . bin2hex(random_bytes(8)),
+    // Token de las tareas programadas (`/cron/*`).
+    //
+    // Debe ser un secreto **estable**, definido en `01-TOOLS/mysql/.env` como
+    // CRON_TOKEN o en el entorno del proceso. Vacío = los endpoints rechazan
+    // toda petición: cerrar por defecto es lo correcto cuando no hay secreto,
+    // porque un cron sin autenticación puede escribir en la base de datos.
+    //
+    // Genera uno con: php -r "echo bin2hex(random_bytes(24)), PHP_EOL;"
+    'cron_token' => (string) (env('CRON_TOKEN') ?? ''),
 ];

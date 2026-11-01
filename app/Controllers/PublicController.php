@@ -3,7 +3,9 @@ namespace App\Controllers;
 
 use App\Core\Request;
 use App\Core\Auth;
+use App\Core\Database;
 use App\Core\View;
+use App\Services\LandingContentService;
 use App\Services\PageRenderer;
 use App\Services\SiteSettings;
 use App\Core\Response;
@@ -19,9 +21,23 @@ class PublicController
 
     /**
      * Muestra la página de inicio
+     *
+     * Orden de decisión:
+     *  1. Si la portada comercial está activa (`landing.enabled`), se pinta
+     *     ella. Es el interruptor que el dueño controla desde el panel y que
+     *     la migración de contenido deja apagado a propósito (ADR-006).
+     *  2. Si no, se mantiene el comportamiento de siempre: la página publicada
+     *     marcada como inicio (`pages.startpage = 1`).
+     *  3. Si tampoco hay página de inicio, el mensaje de bienvenida.
      */
     public function home(Request $request, array $params = []): void
     {
+        if (LandingContentService::enabled()) {
+            $this->renderLanding();
+
+            return;
+        }
+
         $page = $this->renderer->getHomePage();
         
         if (!$page) {
@@ -31,6 +47,32 @@ class PublicController
         }
 
         $this->renderPage($page);
+    }
+
+    /**
+     * Pinta la portada comercial dentro del layout público.
+     *
+     * El layout aporta cabecera (logotipo, nombre, menú y botón de acceso) y
+     * pie; la vista `public.landing` aporta las secciones centrales. Se usa
+     * `renderStandalone` porque esa vista no es un documento completo: solo
+     * devuelve su HTML para inyectarlo como contenido.
+     *
+     * @since 2026-10-31
+     */
+    private function renderLanding(): void
+    {
+        $landing = LandingContentService::all();
+
+        $content = View::renderStandalone('public.landing', [
+            'landing' => $landing,
+            'appName' => SiteSettings::name(),
+        ]);
+
+        $this->renderLayout([
+            'title'       => (string) ($landing['hero_title'] ?? ''),
+            'description' => (string) ($landing['hero_subtitle'] ?? ''),
+            'slug'        => 'inicio',
+        ], $this->renderer->getMenu(), $content);
     }
 
     /**

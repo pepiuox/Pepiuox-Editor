@@ -122,7 +122,32 @@ class RateLimiter
         
         $data = json_decode($row['cache_value'], true);
         if (!is_array($data)) return null;
-        
+
         return $data;
+    }
+
+    /**
+     * Borra las ventanas de limitación ya caducadas.
+     *
+     * ── Por qué existe ahora ────────────────────────────────────────────
+     * La ruta `/cron/cleanup-rate-limits` llamaba a este método desde el primer
+     * día y el método no existía: respondía 500. Nadie lo notó porque el
+     * endpoint no era alcanzable (el token del cron no podía coincidir nunca).
+     * Al arreglar el token, la llamada apareció.
+     *
+     * Solo toca filas con prefijo `rate_limit:` y caducadas: no es una limpieza
+     * general de caché, y no borra nada que siga en vigor.
+     *
+     * @return int Filas eliminadas.
+     * @since 2026-10-31
+     */
+    public static function cleanup(): int
+    {
+        return Database::execute(
+            "DELETE FROM cache_settings
+              WHERE cache_key LIKE 'rate_limit:%'
+                AND expires_at IS NOT NULL
+                AND expires_at < NOW()"
+        );
     }
 }

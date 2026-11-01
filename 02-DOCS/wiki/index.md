@@ -43,6 +43,9 @@ con lo que quedó sin cubrir dicho en voz alta. De la más nueva a la más vieja
 
 | Documento | Qué es | Actualizado |
 |-----------|--------|-------------|
+| [`ftd/sitemap-por-menu-en-uso.md`](ftd/sitemap-por-menu-en-uso.md) | El sitemap pasa a generarse desde el panel y a contener solo lo que el menú en uso expone. De 9 URLs a 5, medido. | 2026-10-31 |
+| [`ftd/portada-comercial-y-paquete-instalable.md`](ftd/portada-comercial-y-paquete-instalable.md) | Portada comercial editable, paquete de instalación limpia, respaldo verificado por restauración y los hallazgos de seguridad que salieron al documentarlo. | 2026-10-31 |
+| [`ftd/inventario-tecnico-plataforma.md`](ftd/inventario-tecnico-plataforma.md) | Inventario verificado: stack real, 27 módulos, contenido editable, portada, residuos muertos y riesgos. | 2026-10-31 |
 | [`ftd/rotar-la-contrasena-de-root.md`](ftd/rotar-la-contrasena-de-root.md) | La cuenta `root` de MySQL deja de entrar con `root`; el inventario de lo que eso rompe queda medido. Deuda 13. | 2026-10-17 |
 | [`ftd/el-indice-del-wiki.md`](ftd/el-indice-del-wiki.md) | Este índice existe, para que la sesión siguiente sepa por dónde entrar. Deuda 5. | 2026-10-17 |
 | [`ftd/retirar-el-tercer-punto-de-entrada.md`](ftd/retirar-el-tercer-punto-de-entrada.md) | `private/index.php` sale de la raíz web: estaba roto y nadie lo usaba. Deuda 10. | 2026-10-17 |

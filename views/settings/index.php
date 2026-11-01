@@ -66,6 +66,9 @@ $tabs = [
     <p class="form-text mb-0">
       La personalización visual afecta <strong>solo a la web pública</strong>. El panel de administración conserva su diseño.
     </p>
+    <a class="btn btn-sm btn-outline-primary" href="<?= url('admin/settings/landing') ?>">
+      <i class="bi bi-window-sidebar"></i> Editar la portada
+    </a>
   </div>
   <div class="card-body">
 

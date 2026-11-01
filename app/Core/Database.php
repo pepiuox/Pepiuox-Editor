@@ -23,7 +23,10 @@ class Database
                 self::$instance = new PDO($dsn, $cfg['username'], $cfg['password'], $cfg['options']);
             } catch (PDOException $e) {
                 error_log('[DB] ' . $e->getMessage());
-                throw new RuntimeException('No se pudo conectar a la base de datos.');
+                throw new RuntimeException(
+                    'No se pudo conectar a la base de datos. Revisa 01-TOOLS/mysql/.env '
+                    . 'o abre /install.php para configurarla desde el navegador.'
+                );
             }
         }
         return self::$instance;

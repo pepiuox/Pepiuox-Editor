@@ -114,10 +114,115 @@ class SeoController
     public function regenerateSitemap(Request $req): void
     {
         CSRF::guard();
-        SitemapService::generate();
-        AuditService::log(Auth::id(), 'sitemap_regenerated', 'Sitemap regenerado', 'seo');
-        Session::flash('flash.success', 'Sitemap regenerado correctamente.');
-        Response::redirect(url('admin/seo'));
+        $this->guardSitemap();
+
+        $informe = SitemapService::generate();
+
+        AuditService::log(
+            Auth::id(),
+            'sitemap_regenerated',
+            'Sitemap regenerado: ' . $informe['total'] . ' URL(s) desde ' . $informe['source'],
+            'seo'
+        );
+
+        Session::flash(
+            $informe['ok'] ? 'flash.success' : 'flash.error',
+            $informe['mensaje']
+        );
+
+        Response::redirect(url('admin/seo/sitemap'));
+    }
+
+    /**
+     * `GET /admin/seo/sitemap` — pantalla del sitemap.
+     *
+     * Muestra qué se está publicando de verdad y por qué: los menús en uso, la
+     * URL base con su origen, el aviso si esa base es `localhost`, y la lista de
+     * URLs que acabarían en el archivo con el motivo de cada una.
+     */
+    public function sitemap(Request $req): void
+    {
+        $this->guardSitemap();
+
+        // Previsualización: abrir la pantalla no reescribe el archivo. Lo
+        // escribe el botón «Regenerar» o el guardado de la configuración.
+        $informe = SitemapService::generate(false);
+        $estado  = SitemapService::status();
+        $base    = SitemapService::baseUrl();
+
+        Response::render(View::render('seo.sitemap', [
+            'informe' => $informe,
+            'estado'  => $estado,
+            'base'    => $base,
+            'ajustes' => SitemapService::settings(),
+            'scopes'  => SitemapService::scopes(),
+            'menus'   => SitemapService::menuCatalog(),
+            'xml'     => SitemapService::currentXml(),
+        ]));
+    }
+
+    /**
+     * `POST /admin/seo/sitemap/settings` — guarda de dónde sale el sitemap.
+     *
+     * El ámbito por defecto son los **menús predeterminados** («Menú
+     * principal»), por decisión del dueño. El menú que el header muestra queda
+     * como opción explícita, porque no es lo mismo: puede haber un menú marcado
+     * como principal que solo muestre una parte del sitio.
+     */
+    public function saveSitemapSettings(Request $req): void
+    {
+        CSRF::guard();
+        $this->guardSitemap();
+
+        $scope = (string) $req->post('scope');
+        if (!array_key_exists($scope, SitemapService::scopes())) {
+            $scope = 'default_menus';
+        }
+
+        $menuId = (int) $req->post('menu_id');
+        if ($scope === 'specific' && $menuId <= 0) {
+            Session::flash('flash.error', 'Elegiste «un menú concreto» pero no indicaste cuál.');
+            Response::redirect(url('admin/seo/sitemap'));
+        }
+
+        $base = trim((string) $req->post('base_url'));
+        if ($base !== '' && !preg_match('#^https?://[^\s]+$#i', $base)) {
+            Session::flash('flash.error', 'La URL base debe empezar por http:// o https://');
+            Response::redirect(url('admin/seo/sitemap'));
+        }
+
+        $incluirInicio = $req->post('include_home') === '1';
+
+        SettingService::set('seo', 'sitemap_scope', $scope, 'string');
+        SettingService::set('seo', 'sitemap_menu_id', (string) $menuId, 'int');
+        SettingService::set('seo', 'sitemap_base_url', rtrim($base, '/'), 'string');
+        SettingService::set('seo', 'sitemap_include_home', $incluirInicio ? '1' : '0', 'bool');
+        SettingService::clearCache();
+
+        $informe = SitemapService::generate();
+
+        AuditService::log(Auth::id(), 'sitemap_settings_saved', 'Ámbito del sitemap: ' . $scope, 'seo');
+        Session::flash(
+            $informe['ok'] ? 'flash.success' : 'flash.error',
+            'Configuración guardada. ' . $informe['mensaje']
+        );
+
+        Response::redirect(url('admin/seo/sitemap'));
+    }
+
+    /**
+     * Permiso del módulo SEO para las acciones del sitemap.
+     *
+     * Se comprueba aquí y no solo con el middleware de sesión porque
+     * `PermissionMiddleware` no está aplicado en ninguna ruta (deuda 14 de la
+     * constitución). Una acción que escribe en `public/` no puede depender de un
+     * middleware que no se ejecuta.
+     */
+    private function guardSitemap(): void
+    {
+        if (!Auth::can('seo.manage')) {
+            Response::abort(403, 'No tienes permiso para gestionar el SEO.');
+        }
     }
 
     /** robots.txt dinámico */

@@ -190,6 +190,11 @@ class BannedUsersController
 
     public function processExpired(Request $req): void
     {
+        // Esta ruta se registra sin middleware y hasta el 2026-10-31 no
+        // comprobaba nada: cualquiera que conociera la URL disparaba un proceso
+        // que escribe en la base de datos. Ahora exige el token del cron.
+        \App\Core\CronToken::require($req);
+
         $count = BanService::processExpiredBans();
         Response::json(['success' => true, 'unbanned' => $count]);
     }

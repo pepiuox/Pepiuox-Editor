@@ -19,7 +19,12 @@ use App\Core\Database;
 $auth = [App\Middleware\AuthMiddleware::class];
 $apiMW = [App\Middleware\ApiAuthMiddleware::class];
 
-// Rate limiting (con manejo de errores)
+// Rate limiting.
+//
+// Si la construcción falla, **no se degrada a «sin límite»**: se coloca el
+// guardián que falla en cerrado (`RateLimitUnavailableMiddleware`), que responde
+// 503 en vez de aceptar intentos sin contar. Un limitador roto no puede
+// convertirse en acceso libre a fuerza bruta (deuda S-5).
 try {
     $rateLimitLogin = [new App\Middleware\RateLimitMiddleware('login', 5, 60)];
     $rateLimitRegister = [new App\Middleware\RateLimitMiddleware('register', 3, 3600)];
@@ -27,11 +32,20 @@ try {
     $rateLimitReset = [new App\Middleware\RateLimitMiddleware('reset', 5, 3600)];
     $rateLimit2FA = [new App\Middleware\RateLimitMiddleware('2fa', 3, 60)];
 } catch (Throwable $e) {
-    $rateLimitLogin = [];
-    $rateLimitForgot = [];
-    $rateLimitReset = [];
-    $rateLimit2FA = [];
-    error_log('[Routes] Error al inicializar RateLimitMiddleware: ' . $e->getMessage());
+    error_log(
+        '[RateLimit] No se pudo construir el limitador: ' . $e->getMessage()
+        . '. Las rutas sensibles fallarán en cerrado (503) hasta que se corrija.'
+    );
+
+    // Las cinco, sin excepción. Antes `$rateLimitRegister` ni se reiniciaba, así
+    // que quedaba sin definir y su uso habría lanzado un error más confuso que
+    // el original.
+    $sinProteccion  = [App\Middleware\RateLimitUnavailableMiddleware::class];
+    $rateLimitLogin    = $sinProteccion;
+    $rateLimitRegister = $sinProteccion;
+    $rateLimitForgot   = $sinProteccion;
+    $rateLimitReset    = $sinProteccion;
+    $rateLimit2FA      = $sinProteccion;
 }
 
 /**
@@ -45,6 +59,14 @@ return function(Router $router, Request $request) use (
     $auth, $apiMW,
     $rateLimitLogin, $rateLimitRegister, $rateLimitForgot, $rateLimitReset, $rateLimit2FA
 ) {
+
+// ── Permisos por acción ─────────────────────────────────────────────
+// El router consulta este mapa después de resolver la ruta y antes de ejecutar
+// el controlador. Es lo que conecta `PermissionMiddleware`, que hasta ahora
+// existía sin estar aplicado en ninguna ruta. Las acciones sin declarar siguen
+// funcionando con solo sesión, pero quedan registradas en el log con el
+// prefijo `[Permisos]` para que el hueco se pueda medir.
+$router->setPermissionMap(require CONFIG_PATH . '/permissions.php');
 
 // ═══════════════════════════════════════════════════════════════════
 // 1. RUTAS PÚBLICAS (sin autenticación)
@@ -62,15 +84,13 @@ $router->get('/robots.txt', [App\Controllers\SeoController::class, 'robots']);
 $router->get('/public-theme.css', [App\Controllers\PublicThemeController::class, 'css']);
 $router->get('/site.webmanifest', [App\Controllers\PublicThemeController::class, 'manifest']);
 
-// ── 1.2. Páginas Públicas (dinámicas) ────────────────────────────
-$router->get('/page', function() use ($request) {
-    require __DIR__ . '/../page.php';
-});
-
-$router->get('/page/{slug}', function() use ($request) {
-    $_GET['slug'] = $request->uri();
-    require __DIR__ . '/../page.php';
-});
+// ── 1.2. Alias heredados de página ───────────────────────────────
+// Antes estas dos rutas hacían `require` de `page.php` en la raíz del proyecto,
+// un archivo que nunca existió (el real está en `public/`): respondían 500.
+// Ahora son alias de las rutas públicas que ya funcionan, así que `/page/x` se
+// comporta igual que `/x` sin duplicar la lógica de renderizado.
+$router->get('/page', [App\Controllers\PublicController::class, 'home']);
+$router->get('/page/{slug}', [App\Controllers\PublicController::class, 'show']);
 
 // ── 1.3. Autenticación ───────────────────────────────────────────
 $router->get('/login', [App\Controllers\AuthController::class, 'showLogin']);
@@ -97,24 +117,16 @@ $router->get('/cron/process-expired-bans', [App\Controllers\BannedUsersControlle
 
 // Cron - Cleanup rate limits
 $router->get('/cron/cleanup-rate-limits', function() use ($request) {
-    $cfg = require CONFIG_PATH . '/config.php';
-    $token = $request->get('token');
-    $expected = $cfg['cron_token'] ?? '';
-    if (!$expected || $token !== $expected) {
-        Response::json(['success' => false, 'message' => 'Unauthorized'], 401);
-    }
+    // Autenticación centralizada del cron (S-1 y S-2 de la deuda de seguridad).
+    \App\Core\CronToken::require($request);
     $cleaned = \App\Services\RateLimiter::cleanup();
     Response::json(['success' => true, 'cleaned' => $cleaned]);
 });
 
 // Cron - Security digest
 $router->get('/cron/security-digest', function() use ($request) {
-    $cfg = require CONFIG_PATH . '/config.php';
-    $token = $request->get('token');
-    $expected = $cfg['cron_token'] ?? '';
-    if (!$expected || $token !== $expected) {
-        Response::json(['success' => false, 'message' => 'Unauthorized'], 401);
-    }
+    // Autenticación centralizada del cron (S-1 y S-2 de la deuda de seguridad).
+    \App\Core\CronToken::require($request);
     $period = $request->get('period', 'daily');
     $success = \App\Services\EmailNotificationService::sendSecurityDigest($period);
     Response::json(['success' => $success, 'period' => $period]);
@@ -122,24 +134,16 @@ $router->get('/cron/security-digest', function() use ($request) {
 
 // Cron - Cleanup trusted devices
 $router->get('/cron/cleanup-trusted-devices', function() use ($request) {
-    $cfg = require CONFIG_PATH . '/config.php';
-    $token = $request->get('token');
-    $expected = $cfg['cron_token'] ?? '';
-    if (!$expected || $token !== $expected) {
-        Response::json(['success' => false, 'message' => 'Unauthorized'], 401);
-    }
+    // Autenticación centralizada del cron (S-1 y S-2 de la deuda de seguridad).
+    \App\Core\CronToken::require($request);
     $cleaned = \App\Services\TrustedDeviceService::cleanupExpired();
     Response::json(['success' => true, 'cleaned' => $cleaned]);
 });
 
 // Cron - Cleanup collaboration
 $router->get('/cron/cleanup-collaboration', function() use ($request) {
-    $cfg = require CONFIG_PATH . '/config.php';
-    $token = $request->get('token');
-    $expected = $cfg['cron_token'] ?? '';
-    if (!$expected || $token !== $expected) {
-        Response::json(['success' => false, 'message' => 'Unauthorized'], 401);
-    }
+    // Autenticación centralizada del cron (S-1 y S-2 de la deuda de seguridad).
+    \App\Core\CronToken::require($request);
     $cleaned = Database::execute(
         "UPDATE collaboration_sessions SET is_active = 0 WHERE last_heartbeat < DATE_SUB(NOW(), INTERVAL 30 SECOND)"
     );
@@ -294,6 +298,12 @@ $router->get('/admin/seo/redirects', [App\Controllers\SeoController::class, 'red
 $router->post('/admin/seo/redirects/store', [App\Controllers\SeoController::class, 'redirectStore'], $auth);
 $router->post('/admin/seo/redirects/{id}/delete', [App\Controllers\SeoController::class, 'redirectDelete'], $auth);
 $router->post('/admin/seo/sitemap/regenerate', [App\Controllers\SeoController::class, 'regenerateSitemap'], $auth);
+
+// Sitemap: pantalla propia. El sitemap dejó de ser «todas las publicadas» y pasa
+// a depender del menú en uso, así que necesita mostrar qué entra y por qué.
+// Ojo con el orden: van antes de las rutas con `{id}`.
+$router->get('/admin/seo/sitemap', [App\Controllers\SeoController::class, 'sitemap'], $auth);
+$router->post('/admin/seo/sitemap/settings', [App\Controllers\SeoController::class, 'saveSitemapSettings'], $auth);
 $router->get('/admin/seo/{id}/analyze', [App\Controllers\SeoController::class, 'analyze'], $auth);
 $router->get('/admin/seo/{id}/competitor', [App\Controllers\SeoController::class, 'competitor'], $auth);
 $router->get('/admin/seo/{id}/meta-generator', [App\Controllers\SeoController::class, 'metaGenerator'], $auth);
@@ -362,6 +372,15 @@ $router->post('/admin/settings/brand/asset', [App\Controllers\SettingsController
 $router->post('/admin/settings/brand/asset/delete', [App\Controllers\SettingsController::class, 'deleteAsset'], $auth);
 $router->post('/admin/settings/brand/reset', [App\Controllers\SettingsController::class, 'resetPublic'], $auth);
 
+// Vista previa de la portada comercial. Existe para que el dueño pueda mirarla
+// sin activarla: `landing.enabled` sigue en 0 hasta que él decida (ADR-006).
+$router->get('/admin/settings/landing/preview', [App\Controllers\SettingsController::class, 'previewLanding'], $auth);
+
+// Editor del contenido de la portada. Pantalla propia: son listas repetibles
+// con alta y baja de filas, no un grupo más del formulario de configuración.
+$router->get('/admin/settings/landing', [App\Controllers\SettingsController::class, 'landing'], $auth);
+$router->post('/admin/settings/landing', [App\Controllers\SettingsController::class, 'saveLanding'], $auth);
+
 // ── 3.17. Backups ────────────────────────────────────────────────
 $router->get('/admin/backups', [App\Controllers\BackupsController::class, 'index'], $auth);
 $router->post('/admin/backups/create', [App\Controllers\BackupsController::class, 'create'], $auth);
@@ -401,29 +420,36 @@ $router->get('/admin/analytics/export', [App\Controllers\AnalyticsController::cl
 $router->get('/admin/analytics/api', [App\Controllers\AnalyticsController::class, 'apiSummary'], $auth);
 
 // ── 3.22. Auditoría ──────────────────────────────────────────────
-// ✅ RUTAS LITERALES primero
+// ORDEN IMPORTANTE. `Router::findRoute()` recorre las rutas en el orden en que
+// se registran y devuelve **la primera** que coincide. Por eso toda ruta literal
+// va antes que cualquier ruta con `{parámetro}`: `/admin/audit/{id}` habría
+// capturado `/admin/audit/activity` con id = "activity" (casteado a 0), y la
+// pantalla de actividad quedaba inalcanzable.
+//
+// Se comprueba en `tests/rutas/check.php`: si alguien registra una literal
+// después de una parametrizada que la tapa, la prueba falla.
+
+// Todas las literales de auditoría y de actividad, primero.
 $router->get('/admin/audit', [App\Controllers\AuditController::class, 'index'], $auth);
 $router->get('/admin/audit/export', [App\Controllers\AuditController::class, 'export'], $auth);
 $router->get('/admin/audit/export-json', [App\Controllers\AuditController::class, 'exportJson'], $auth);
 $router->get('/admin/audit/stats', [App\Controllers\AuditController::class, 'stats'], $auth);
 $router->post('/admin/audit/clean', [App\Controllers\AuditController::class, 'clean'], $auth);
 
-// ✅ RUTAS PARAMETRIZADAS al final
-$router->get('/admin/audit/user/{id}', [App\Controllers\AuditController::class, 'userLogs'], $auth);
-$router->get('/admin/audit/ip/{ip}', [App\Controllers\AuditController::class, 'ipLogs'], $auth);
-$router->get('/admin/audit/{id}', [App\Controllers\AuditController::class, 'show'], $auth);
-
-// ── 3.23. Activity Logs (se mantiene igual) ──────────────────────
 $router->get('/admin/audit/activity', [App\Controllers\ActivityLogsController::class, 'index'], $auth);
 $router->get('/admin/audit/activity/export', [App\Controllers\ActivityLogsController::class, 'export'], $auth);
 $router->get('/admin/audit/activity/export-json', [App\Controllers\ActivityLogsController::class, 'exportJson'], $auth);
 $router->get('/admin/audit/activity/stats', [App\Controllers\ActivityLogsController::class, 'stats'], $auth);
 $router->post('/admin/audit/activity/clean', [App\Controllers\ActivityLogsController::class, 'clean'], $auth);
 
-// ✅ Rutas parametrizadas AL FINAL
+// Después, las parametrizadas.
 $router->get('/admin/audit/activity/user/{id}', [App\Controllers\ActivityLogsController::class, 'userLogs'], $auth);
 $router->get('/admin/audit/activity/ip/{ip}', [App\Controllers\ActivityLogsController::class, 'ipLogs'], $auth);
 $router->get('/admin/audit/activity/{id}', [App\Controllers\ActivityLogsController::class, 'show'], $auth);
+
+$router->get('/admin/audit/user/{id}', [App\Controllers\AuditController::class, 'userLogs'], $auth);
+$router->get('/admin/audit/ip/{ip}', [App\Controllers\AuditController::class, 'ipLogs'], $auth);
+$router->get('/admin/audit/{id}', [App\Controllers\AuditController::class, 'show'], $auth);
 
 // ── 3.24. Seguridad - Dashboard ──────────────────────────────────
 $router->get('/admin/security/dashboard', [App\Controllers\SecurityDashboardController::class, 'index'], $auth);

@@ -27,6 +27,45 @@ class Router
     /** @var string Prefijo base para todas las rutas */
     private string $basePath = '';
 
+    /**
+     * Mapa `Controlador::método` → permiso exigido.
+     *
+     * Existe porque `PermissionMiddleware` no estaba aplicado en ninguna ruta y
+     * anotar ~150 declaraciones a mano se desactualiza en el primer cambio. Aquí
+     * se consulta **después** de resolver la ruta, cuando ya se sabe qué acción
+     * va a ejecutarse. Ver `config/permissions.php`.
+     *
+     * @var array<string, string>
+     */
+    private array $permissionMap = [];
+
+    /**
+     * Rutas del panel ejecutadas sin permiso declarado, para poder medir el hueco.
+     *
+     * @var list<string>
+     */
+    private array $unmappedAdminRoutes = [];
+
+    /**
+     * Establece el mapa de permisos por acción.
+     *
+     * @param array<string, string> $map Claves `Controlador::método`, valores permiso.
+     */
+    public function setPermissionMap(array $map): void
+    {
+        $this->permissionMap = $map;
+    }
+
+    /**
+     * Acciones del panel ejecutadas sin permiso declarado en el mapa.
+     *
+     * @return list<string>
+     */
+    public function unmappedAdminRoutes(): array
+    {
+        return $this->unmappedAdminRoutes;
+    }
+
     // ──────────────────────────────────────────────────────────────
     //  CONFIGURACIÓN
     // ──────────────────────────────────────────────────────────────
@@ -118,12 +157,19 @@ class Router
 
             [$route, $params] = $matched;
 
-            // Middlewares de ruta
+            // Middlewares de ruta primero: `AuthMiddleware` redirige al login a
+            // quien no tiene sesión. Si el permiso se comprobara antes, un
+            // visitante anónimo recibiría un 403 en lugar del formulario de
+            // acceso, y además sabría que la ruta existe.
             foreach ($route['middlewares'] as $mw) {
                 if ($this->executeMiddleware($mw, $request) === false) {
                     return;
                 }
             }
+
+            // Permisos por acción: ya sabemos que hay sesión y qué se va a
+            // ejecutar. Antes de ejecutarlo.
+            $this->enforcePermission($route['handler'], $request, $uri);
 
             // Ejecutar handler
             $this->executeHandler($route['handler'], $request, $params);
@@ -211,6 +257,37 @@ class Router
             error_log('[Router] Middleware error: ' . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * Exige el permiso declarado para la acción que va a ejecutarse.
+     *
+     * Si la acción no está en el mapa no se exige nada adicional (comportamiento
+     * anterior); las acciones del panel sin mapear se guardan en memoria y se
+     * registran en el log, para que el hueco se pueda medir en lugar de quedar
+     * invisible. Ver `tests/seguridad/check.php`.
+     *
+     * @param mixed $handler Handler de la ruta resuelta.
+     */
+    private function enforcePermission($handler, Request $request, string $uri): void
+    {
+        if (!is_array($handler) || count($handler) !== 2 || !is_string($handler[0])) {
+            return; // Cierres y otros handlers sin clase: fuera del alcance del mapa.
+        }
+
+        $clave   = $handler[0] . '::' . (string) $handler[1];
+        $permiso = $this->permissionMap[$clave] ?? null;
+
+        if ($permiso === null) {
+            if (str_starts_with($uri, '/admin')) {
+                $this->unmappedAdminRoutes[] = $clave;
+                error_log('[Permisos] Acción de panel sin permiso declarado: ' . $clave . ' (' . $uri . ')');
+            }
+
+            return;
+        }
+
+        (new \App\Middleware\PermissionMiddleware($permiso))->handle($request);
     }
 
     // ──────────────────────────────────────────────────────────────

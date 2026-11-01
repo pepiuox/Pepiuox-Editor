@@ -65,6 +65,14 @@
     RewriteRule ^public/?(.*)$ /$1 [L,NE,R=301]
 
     # ═══════════════════════════════════════════════════════════════
+    # 5.b INSTALADOR WEB (excepcion expresa, ver install.php)
+    #     Sin esta regla, la regla 6 lo reescribiria a public/install.php
+    #     (que no existe), acabaria en public/index.php y la instalacion
+    #     seria imposible: el arranque falla sin base de datos y devuelve 500.
+    #     Cuando storage/.installed existe, el propio install.php responde 410.
+    # ═══════════════════════════════════════════════════════════════
+    RewriteRule ^install\.php$ - [L]
+    # ═══════════════════════════════════════════════════════════════
     # 6. REESCRITURA INTERNA HACIA /public/
     #    Todo lo que no empiece por public/ se reescribe a public/
     # ═══════════════════════════════════════════════════════════════

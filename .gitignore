@@ -92,3 +92,8 @@
 .opencode/rsc/php
 .opencode/rsc/secure-coding
 .opencode/rsc/sql
+
+# Copia estática de la portada para revisarla sin servidor (tests/landing/snapshot.php).
+# Es un artefacto generado, no código: se regenera con una orden.
+storage/preview/
+

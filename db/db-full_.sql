@@ -14,13 +14,7 @@
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
-
--- Volcando estructura de base de datos para web_editor_db
-CREATE DATABASE IF NOT EXISTS `web_editor_db` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */;
-USE `web_editor_db`;
-
 -- Volcando estructura para tabla web_editor_db.activity_log
-DROP TABLE IF EXISTS `activity_log`;
 CREATE TABLE IF NOT EXISTS `activity_log` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) DEFAULT NULL,
@@ -71,7 +65,6 @@ INSERT INTO `activity_log` (`id`, `user_id`, `action`, `description`, `ip_addres
 	(26, NULL, 'user_deleted', 'Usuario eliminado: zz_files_admin', NULL, NULL, 'DELETE', '/admin/users/delete', '{"username": "zz_files_admin", "email": "zz_files@example.test", "role": "Super admin", "id": 7}', NULL, '2026-10-25 18:16:13');
 
 -- Volcando estructura para tabla web_editor_db.activity_logs
-DROP TABLE IF EXISTS `activity_logs`;
 CREATE TABLE IF NOT EXISTS `activity_logs` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) DEFAULT NULL,
@@ -198,7 +191,6 @@ INSERT INTO `activity_logs` (`id`, `user_id`, `action`, `details`, `ip_address`,
 	(109, 1, 'menu_synced', 'Menú automático sincronizado: +0 ~9 -0', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:160.0) Gecko/20100101 Firefox/160.0', '2026-10-31 01:25:07');
 
 -- Volcando estructura para tabla web_editor_db.analytics_events
-DROP TABLE IF EXISTS `analytics_events`;
 CREATE TABLE IF NOT EXISTS `analytics_events` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `event_type` varchar(50) NOT NULL,
@@ -223,7 +215,6 @@ CREATE TABLE IF NOT EXISTS `analytics_events` (
 -- Volcando datos para la tabla web_editor_db.analytics_events: ~0 rows (aproximadamente)
 
 -- Volcando estructura para tabla web_editor_db.api_access_logs
-DROP TABLE IF EXISTS `api_access_logs`;
 CREATE TABLE IF NOT EXISTS `api_access_logs` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `application_id` int(11) DEFAULT NULL,
@@ -246,7 +237,6 @@ CREATE TABLE IF NOT EXISTS `api_access_logs` (
 -- Volcando datos para la tabla web_editor_db.api_access_logs: ~0 rows (aproximadamente)
 
 -- Volcando estructura para tabla web_editor_db.api_applications
-DROP TABLE IF EXISTS `api_applications`;
 CREATE TABLE IF NOT EXISTS `api_applications` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `app_name` varchar(255) NOT NULL,
@@ -278,7 +268,6 @@ INSERT INTO `api_applications` (`id`, `app_name`, `app_key`, `app_secret`, `api_
 	(3, 'PePiuoX Maker', '48a4626fa518dc86652906a6e3118dc5', '8eZkxiuxMcPBon9i/9hBdBhCv4jNlapLrNB3t1BaMFNK/sJM6GMga3xt631gGEdXKJVE2yFbB45cUdgAXdkXU8A7zIY0Y+ZBquzl0tM0jrtSzn8RlVzzRSiR8tc=', 'pk_d39c9fe8afeac8231e4b29e2ecb8fb0d82d31ec1a7c7ae13', '+WSDaWhdGtmrXQ5Ja7ncfbdkU7yVyrBVw8et4fESDazxsNElibsZrGzrMcjQZA0IXlupcl+K6+yc6FiZ0kW3HqMpzOKg4ywsKqQcxHZy1zuLxeZyPvGP8BEKe76R+x0=', 'Aplicación para gestionar páginas', '["127.0.0.1","192.168.1.100"]', 200, '["read","write","delete"]', 'active', NULL, '2026-06-12 18:36:04', '2026-06-12 18:36:04', '2026-06-12 18:36:04');
 
 -- Volcando estructura para tabla web_editor_db.api_tokens
-DROP TABLE IF EXISTS `api_tokens`;
 CREATE TABLE IF NOT EXISTS `api_tokens` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `application_id` int(11) NOT NULL,
@@ -308,7 +297,6 @@ INSERT INTO `api_tokens` (`id`, `application_id`, `token`, `refresh_token`, `tok
 	(3, 3, 'dMddNIHpJYR0gkedwuLpQ30bzhF00XQrXEII42IbzH/odTpCOIoshfJzDQT1YUGYdi4ufiLxF+j/YrNoOthovFrbO5BXB45Mv33P07tfzYGA79ip1pTpZBrNN/U=', '3wOyfWUuyJq+XKUePP3sg02QxHHw0VfmYo9Jfz3tEdlLVnroda5iYtflB7nfNsfyIpug5Pix6fOgNGg4SVfs0ZMEyoFhSPN3Y6+yipciAXgtiWVIIhxYfjITbmw=', 'bearer', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:152.0) Gecko/20100101 Firefox/152.0', '["read","write"]', '2026-06-12 22:36:04', '2026-06-13 00:36:04', 0, '2026-06-12 18:36:04');
 
 -- Volcando estructura para tabla web_editor_db.audit_logs
-DROP TABLE IF EXISTS `audit_logs`;
 CREATE TABLE IF NOT EXISTS `audit_logs` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `table_name` varchar(100) DEFAULT NULL,
@@ -759,7 +747,6 @@ INSERT INTO `audit_logs` (`id`, `table_name`, `record_id`, `action`, `details`, 
 	(430, NULL, NULL, 'page_updated', 'Página actualizada: Inicio (ID 1)', 'pages', NULL, NULL, 1, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:160.0) Gecko/20100101 Firefox/160.0', '2026-10-31 01:25:07');
 
 -- Volcando estructura para tabla web_editor_db.backup_schedule
-DROP TABLE IF EXISTS `backup_schedule`;
 CREATE TABLE IF NOT EXISTS `backup_schedule` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
@@ -782,7 +769,6 @@ INSERT INTO `backup_schedule` (`id`, `name`, `type`, `frequency`, `retention_day
 	(1, 'Backup diario automático', 'full', 'daily', 30, 'gzip', 1, 1, 1, NULL, NULL, '2026-08-24 04:01:29', '2026-08-24 04:01:29');
 
 -- Volcando estructura para tabla web_editor_db.backups
-DROP TABLE IF EXISTS `backups`;
 CREATE TABLE IF NOT EXISTS `backups` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `filename` varchar(255) NOT NULL,
@@ -810,7 +796,6 @@ CREATE TABLE IF NOT EXISTS `backups` (
 -- Volcando datos para la tabla web_editor_db.backups: ~0 rows (aproximadamente)
 
 -- Volcando estructura para tabla web_editor_db.ban_history
-DROP TABLE IF EXISTS `ban_history`;
 CREATE TABLE IF NOT EXISTS `ban_history` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) NOT NULL,
@@ -836,7 +821,6 @@ CREATE TABLE IF NOT EXISTS `ban_history` (
 -- Volcando datos para la tabla web_editor_db.ban_history: ~0 rows (aproximadamente)
 
 -- Volcando estructura para tabla web_editor_db.blocked_ips
-DROP TABLE IF EXISTS `blocked_ips`;
 CREATE TABLE IF NOT EXISTS `blocked_ips` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `ip_address` varchar(45) NOT NULL,
@@ -852,7 +836,6 @@ CREATE TABLE IF NOT EXISTS `blocked_ips` (
 -- Volcando datos para la tabla web_editor_db.blocked_ips: ~0 rows (aproximadamente)
 
 -- Volcando estructura para tabla web_editor_db.cache_settings
-DROP TABLE IF EXISTS `cache_settings`;
 CREATE TABLE IF NOT EXISTS `cache_settings` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `cache_key` varchar(100) NOT NULL,
@@ -870,7 +853,6 @@ INSERT INTO `cache_settings` (`id`, `cache_key`, `cache_value`, `expires_at`, `c
 	(35, 'rate_limit:login:837ec5754f503cfaaee0929fd48974e7', '{"attempts":1,"window_end":1792952139}', '2026-10-25 13:15:39', '2026-10-25 17:05:58', '2026-10-25 18:14:39');
 
 -- Volcando estructura para tabla web_editor_db.collaboration_events
-DROP TABLE IF EXISTS `collaboration_events`;
 CREATE TABLE IF NOT EXISTS `collaboration_events` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `page_id` int(11) NOT NULL,
@@ -890,7 +872,6 @@ CREATE TABLE IF NOT EXISTS `collaboration_events` (
 -- Volcando datos para la tabla web_editor_db.collaboration_events: ~0 rows (aproximadamente)
 
 -- Volcando estructura para tabla web_editor_db.collaboration_locks
-DROP TABLE IF EXISTS `collaboration_locks`;
 CREATE TABLE IF NOT EXISTS `collaboration_locks` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `page_id` int(11) NOT NULL,
@@ -909,7 +890,6 @@ CREATE TABLE IF NOT EXISTS `collaboration_locks` (
 -- Volcando datos para la tabla web_editor_db.collaboration_locks: ~0 rows (aproximadamente)
 
 -- Volcando estructura para tabla web_editor_db.collaboration_messages
-DROP TABLE IF EXISTS `collaboration_messages`;
 CREATE TABLE IF NOT EXISTS `collaboration_messages` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `page_id` int(11) NOT NULL,
@@ -926,7 +906,6 @@ CREATE TABLE IF NOT EXISTS `collaboration_messages` (
 -- Volcando datos para la tabla web_editor_db.collaboration_messages: ~0 rows (aproximadamente)
 
 -- Volcando estructura para tabla web_editor_db.collaboration_sessions
-DROP TABLE IF EXISTS `collaboration_sessions`;
 CREATE TABLE IF NOT EXISTS `collaboration_sessions` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `page_id` int(11) NOT NULL,
@@ -949,7 +928,6 @@ CREATE TABLE IF NOT EXISTS `collaboration_sessions` (
 -- Volcando datos para la tabla web_editor_db.collaboration_sessions: ~0 rows (aproximadamente)
 
 -- Volcando estructura para tabla web_editor_db.comment_mentions
-DROP TABLE IF EXISTS `comment_mentions`;
 CREATE TABLE IF NOT EXISTS `comment_mentions` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `comment_id` int(11) NOT NULL,
@@ -968,7 +946,6 @@ CREATE TABLE IF NOT EXISTS `comment_mentions` (
 -- Volcando datos para la tabla web_editor_db.comment_mentions: ~0 rows (aproximadamente)
 
 -- Volcando estructura para tabla web_editor_db.comment_replies
-DROP TABLE IF EXISTS `comment_replies`;
 CREATE TABLE IF NOT EXISTS `comment_replies` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `comment_id` int(11) NOT NULL,
@@ -986,7 +963,6 @@ CREATE TABLE IF NOT EXISTS `comment_replies` (
 -- Volcando datos para la tabla web_editor_db.comment_replies: ~0 rows (aproximadamente)
 
 -- Volcando estructura para tabla web_editor_db.component_comments
-DROP TABLE IF EXISTS `component_comments`;
 CREATE TABLE IF NOT EXISTS `component_comments` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `page_id` int(11) NOT NULL,
@@ -1015,7 +991,6 @@ CREATE TABLE IF NOT EXISTS `component_comments` (
 -- Volcando datos para la tabla web_editor_db.component_comments: ~0 rows (aproximadamente)
 
 -- Volcando estructura para tabla web_editor_db.components
-DROP TABLE IF EXISTS `components`;
 CREATE TABLE IF NOT EXISTS `components` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
@@ -1034,7 +1009,6 @@ CREATE TABLE IF NOT EXISTS `components` (
 -- Volcando datos para la tabla web_editor_db.components: ~0 rows (aproximadamente)
 
 -- Volcando estructura para tabla web_editor_db.daily_stats
-DROP TABLE IF EXISTS `daily_stats`;
 CREATE TABLE IF NOT EXISTS `daily_stats` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `stat_date` date NOT NULL,
@@ -1058,7 +1032,6 @@ INSERT INTO `daily_stats` (`id`, `stat_date`, `total_users`, `new_users`, `activ
 	(2, '2026-09-08', 3, 0, 1, 0, 0, 0, '2026-09-08 00:00:00', '2026-09-08 00:00:00');
 
 -- Volcando estructura para vista web_editor_db.daily_summary
-DROP VIEW IF EXISTS `daily_summary`;
 -- Creando tabla temporal para superar errores de dependencia de VIEW
 CREATE TABLE `daily_summary` (
 	`date` DATE NULL,
@@ -1070,7 +1043,6 @@ CREATE TABLE `daily_summary` (
 );
 
 -- Volcando estructura para tabla web_editor_db.file_shares
-DROP TABLE IF EXISTS `file_shares`;
 CREATE TABLE IF NOT EXISTS `file_shares` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `file_id` int(11) NOT NULL,
@@ -1093,7 +1065,6 @@ CREATE TABLE IF NOT EXISTS `file_shares` (
 -- Volcando datos para la tabla web_editor_db.file_shares: ~0 rows (aproximadamente)
 
 -- Volcando estructura para tabla web_editor_db.files
-DROP TABLE IF EXISTS `files`;
 CREATE TABLE IF NOT EXISTS `files` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) NOT NULL,
@@ -1118,7 +1089,7 @@ CREATE TABLE IF NOT EXISTS `files` (
   CONSTRAINT `files_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
--- Volcando datos para la tabla web_editor_db.files: ~25 rows (aproximadamente)
+-- Volcando datos para la tabla web_editor_db.files: ~23 rows (aproximadamente)
 INSERT INTO `files` (`id`, `user_id`, `filename`, `original_name`, `file_path`, `file_size`, `file_type`, `mime_type`, `category`, `description`, `is_public`, `metadata`, `download_count`, `created_at`, `updated_at`, `deleted_at`) VALUES
 	(1, 1, '69488b03e05f9_1766361859.jpg', 'tapon roscado de 4 sistema de drenaje 7.jpg', 'C:\\Users\\PePiuoX\\Documents\\Github\\web_editor_db\\users/uploads/images/69488b03e05f9_1766361859.jpg', 13100, 'jpg', 'image/jpeg', 'image', '', 0, NULL, 3, '2025-12-22 00:04:19', '2025-12-26 16:12:45', '2025-12-26 16:12:45'),
 	(2, 1, '694eb418cb53a_1766765592.png', 'logo circulo.png', 'C:\\Users\\PePiuoX\\Documents\\Github\\web_editor_db\\users/uploads/images/694eb418cb53a_1766765592.png', 61823, 'png', 'image/png', 'image', '', 0, NULL, 0, '2025-12-26 16:13:12', '2026-08-27 22:03:17', '2026-08-27 22:03:17'),
@@ -1145,7 +1116,6 @@ INSERT INTO `files` (`id`, `user_id`, `filename`, `original_name`, `file_path`, 
 	(23, 1, 'Screenshot_2026-08-09_005753.png', 'Screenshot_2026-08-09_005753.png', 'Screenshot_2026-08-09_005753.png', 434299, 'png', 'image/png', 'image', 'Importado desde uploads/', 0, '{"width":1172,"height":883}', 0, '2026-10-25 18:13:02', '2026-10-25 18:13:02', NULL);
 
 -- Volcando estructura para tabla web_editor_db.languages
-DROP TABLE IF EXISTS `languages`;
 CREATE TABLE IF NOT EXISTS `languages` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `code` varchar(10) NOT NULL,
@@ -1170,7 +1140,6 @@ INSERT INTO `languages` (`id`, `code`, `name`, `native_name`, `flag`, `is_active
 	(7, 'it', 'Italian', 'Italiano', '🇮🇹', 1, 0, 7);
 
 -- Volcando estructura para tabla web_editor_db.login_attempts
-DROP TABLE IF EXISTS `login_attempts`;
 CREATE TABLE IF NOT EXISTS `login_attempts` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `username` varchar(255) NOT NULL,
@@ -1185,7 +1154,7 @@ CREATE TABLE IF NOT EXISTS `login_attempts` (
   KEY `idx_ip_time` (`ip_address`,`attempt_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
--- Volcando datos para la tabla web_editor_db.login_attempts: ~4 rows (aproximadamente)
+-- Volcando datos para la tabla web_editor_db.login_attempts: ~6 rows (aproximadamente)
 INSERT INTO `login_attempts` (`id`, `username`, `ip_address`, `successful`, `attempt_time`, `user_agent`) VALUES
 	(1, 'admin', '127.0.0.1', 0, '2026-08-30 04:59:03', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0'),
 	(2, 'admin', '127.0.0.1', 0, '2026-10-17 02:33:22', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:159.0) Gecko/20100101 Firefox/159.0'),
@@ -1195,7 +1164,6 @@ INSERT INTO `login_attempts` (`id`, `username`, `ip_address`, `successful`, `att
 	(6, 'superadmin@sistema.local', '127.0.0.1', 0, '2026-10-25 14:39:31', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:159.0) Gecko/20100101 Firefox/159.0');
 
 -- Volcando estructura para tabla web_editor_db.menus
-DROP TABLE IF EXISTS `menus`;
 CREATE TABLE IF NOT EXISTS `menus` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
@@ -1216,7 +1184,6 @@ INSERT INTO `menus` (`id`, `name`, `slug`, `location`, `is_active`, `created_at`
 	(9, 'Menu top', 'menu-top', 'header', 1, '2026-10-25 18:00:16', 0, 1);
 
 -- Volcando estructura para tabla web_editor_db.meta_tags
-DROP TABLE IF EXISTS `meta_tags`;
 CREATE TABLE IF NOT EXISTS `meta_tags` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `page_id` int(11) NOT NULL,
@@ -1257,7 +1224,6 @@ INSERT INTO `meta_tags` (`id`, `page_id`, `tag_type`, `tag_name`, `tag_value`, `
 	(132, 1, 'twitter', 'card', 'summary_large_image', 1, 0);
 
 -- Volcando estructura para tabla web_editor_db.notifications
-DROP TABLE IF EXISTS `notifications`;
 CREATE TABLE IF NOT EXISTS `notifications` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) NOT NULL,
@@ -1277,7 +1243,6 @@ CREATE TABLE IF NOT EXISTS `notifications` (
 -- Volcando datos para la tabla web_editor_db.notifications: ~0 rows (aproximadamente)
 
 -- Volcando estructura para tabla web_editor_db.page_autosave
-DROP TABLE IF EXISTS `page_autosave`;
 CREATE TABLE IF NOT EXISTS `page_autosave` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `page_id` int(11) NOT NULL,
@@ -1304,7 +1269,6 @@ INSERT INTO `page_autosave` (`id`, `page_id`, `user_id`, `content_html`, `conten
 	(22, 20, 1, '<body id="itw3"><div></div><div class="py-5 text-center"><div class="container"><div class="row"><div class="col-md-8 mx-auto"><p class="mb-3">"A wonderful serenity has taken possession of my entire soul, like these sweet mornings of spring which I enjoy with my whole heart."</p><a href="#" class="btn btn-primary">Act now!</a></div></div></div></div><div class="py-5"><div class="container"><div class="row"><div class="mx-auto col-lg-6 col-md-8"><ul><li class="mb-2"><b>Absorbed</b> - in the exquisite sense of mere tranquil existence, that I neglect my talents.</li><li class="mb-2"><b>Moment</b> - yet I feel that I never was a greater artist than now. When, while the lovely valley teems with vapour around me.</li><li class="mb-2"><b>Sun</b> - strikes the upper surface of the impenetrable foliage of my trees.</li></ul></div></div></div></div></body>', '* { box-sizing: border-box; } body {margin: 0;}', '', '', '2026-10-30 08:00:55');
 
 -- Volcando estructura para tabla web_editor_db.page_cache
-DROP TABLE IF EXISTS `page_cache`;
 CREATE TABLE IF NOT EXISTS `page_cache` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `page_id` int(11) NOT NULL,
@@ -1320,7 +1284,6 @@ CREATE TABLE IF NOT EXISTS `page_cache` (
 -- Volcando datos para la tabla web_editor_db.page_cache: ~0 rows (aproximadamente)
 
 -- Volcando estructura para tabla web_editor_db.page_menu
-DROP TABLE IF EXISTS `page_menu`;
 CREATE TABLE IF NOT EXISTS `page_menu` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `menu_id` int(11) NOT NULL,
@@ -1370,7 +1333,6 @@ INSERT INTO `page_menu` (`id`, `menu_id`, `page_id`, `title`, `slug`, `url`, `ic
 	(33, 9, 4, 'Portafolio', 'portafolio', NULL, NULL, 2, 2, NULL, 0, 1, 'main', 'published', '_self', '2026-10-30 06:19:12', '2026-10-30 06:19:12');
 
 -- Volcando estructura para tabla web_editor_db.page_statistics
-DROP TABLE IF EXISTS `page_statistics`;
 CREATE TABLE IF NOT EXISTS `page_statistics` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `page_id` int(11) NOT NULL,
@@ -1392,7 +1354,6 @@ INSERT INTO `page_statistics` (`id`, `page_id`, `visits`, `version`, `last_visit
 	(8, 3, 1, '1.0', NULL, '2026-08-25 05:13:52', '2026-08-25 05:13:52');
 
 -- Volcando estructura para tabla web_editor_db.page_versions
-DROP TABLE IF EXISTS `page_versions`;
 CREATE TABLE IF NOT EXISTS `page_versions` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `page_id` int(11) NOT NULL,
@@ -1412,7 +1373,7 @@ CREATE TABLE IF NOT EXISTS `page_versions` (
   CONSTRAINT `page_versions_ibfk_2` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
--- Volcando datos para la tabla web_editor_db.page_versions: ~49 rows (aproximadamente)
+-- Volcando datos para la tabla web_editor_db.page_versions: ~55 rows (aproximadamente)
 INSERT INTO `page_versions` (`id`, `page_id`, `version_number`, `title`, `content_html`, `content_css`, `content_php`, `content_js`, `created_at`, `created_by`, `note`) VALUES
 	(1, 1, 1, '', '', '', '', NULL, '2025-12-19 23:38:44', 1, NULL),
 	(2, 2, 1, '', '<div class="contact-form"><h2>Contáctanos</h2><form><input type="text" placeholder="Nombre"><input type="email" placeholder="Email"><textarea placeholder="Mensaje"></textarea><button type="submit">Enviar</button></form></div>', '.contact-form { padding: 20px; }', '', NULL, '2025-12-19 23:49:39', 1, NULL),
@@ -1471,7 +1432,6 @@ INSERT INTO `page_versions` (`id`, `page_id`, `version_number`, `title`, `conten
 	(66, 1, 10, 'Inicio', '<body><section class="about-area about-one"><div class="container"><div class="row"><div class="col-lg-12"><div class="about-title text-center"><h2 class="title fw-bold">Why Choose Us</h2></div></div></div><div class="row justify-content-center"><div class="col-md-4 col-sm-8"><div class="single-about-items"><div class="items-icon"><i class="lni lni-bullhorn"></i></div><div class="items-content"><h4 class="items-title">Digital Marketing</h4><p class="text">Short description for the ones who look for something new</p></div></div></div><div class="col-md-4 col-sm-8"><div class="single-about-items"><div class="items-icon"><i class="lni lni-investment"></i></div><div class="items-content"><h4 class="items-title">Consulting Services</h4><p class="text">Short description for the ones who look for something new</p></div></div></div><div class="col-md-4 col-sm-8"><div class="single-about-items"><div class="items-icon"><i class="lni lni-handshake"></i></div><div class="items-content"><h4 class="items-title">Business Solutions</h4><p class="text">Short description for the ones who look for something new</p></div></div></div></div></div></section><div id="ibkxm" class="container"><p id="itjyg">Contenido del container</p><section class="py-5 text-center bg-white"><div class="container py-5"><h1 class="display-6 fw-bold mb-3">Un titular claro y directo</h1><p id="iah6h" class="lead text-muted mx-auto mb-4">Una línea que explique el valor y quite la duda principal del visitante.</p><a href="#" class="btn btn-success px-4">Empezar</a></div></section><div class="py-5"><div class="container"><div class="row"><div class="mx-auto col-lg-6 col-md-8"><ul><li class="mb-2"><b>Absorbed</b> - in the exquisite sense of mere tranquil existence, that I neglect my talents.</li><li class="mb-2"><b>Moment</b> - yet I feel that I never was a greater artist than now. When, while the lovely valley teems with vapour around me.</li><li class="mb-2"><b>Sun</b> - strikes the upper surface of the impenetrable foliage of my trees.</li></ul></div></div></div></div></div></body>', '* { box-sizing: border-box; } body {margin: 0;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}#ibkxm{padding:20px;border:1px dashed #ddd;}#iah6h{max-width:620px;}', '', 'var imagesload = images;', '2026-10-31 01:25:07', 1, 'Edición desde builder visual');
 
 -- Volcando estructura para tabla web_editor_db.pages
-DROP TABLE IF EXISTS `pages`;
 CREATE TABLE IF NOT EXISTS `pages` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) NOT NULL,
@@ -1521,7 +1481,6 @@ INSERT INTO `pages` (`id`, `user_id`, `template_id`, `menu_id`, `parent_id`, `ti
 	(20, 1, 1, NULL, 12, 'Abancay', 'abancay', 'Viaje a Abncay', 'Abancay', '<body id="itw3"><div></div><div class="py-5 text-center"><div class="container"><div class="row"><div class="col-md-8 mx-auto"><p class="mb-3">"A wonderful serenity has taken possession of my entire soul, like these sweet mornings of spring which I enjoy with my whole heart."</p><a href="#" class="btn btn-primary">Act now!</a></div></div></div></div><div class="py-5"><div class="container"><div class="row"><div class="mx-auto col-lg-6 col-md-8"><ul><li class="mb-2"><b>Absorbed</b> - in the exquisite sense of mere tranquil existence, that I neglect my talents.</li><li class="mb-2"><b>Moment</b> - yet I feel that I never was a greater artist than now. When, while the lovely valley teems with vapour around me.</li><li class="mb-2"><b>Sun</b> - strikes the upper surface of the impenetrable foliage of my trees.</li></ul></div></div></div></div></body>', '* { box-sizing: border-box; } body {margin: 0;}', '', '', '{"assets":[{"type":"image","src":"http://localhost:170/uploads/2026/10/helado-de-lucuma.jpg","unitDim":"px","height":500,"width":750,"name":"helado-de-lucuma.jpg","size":57385,"uploaded_at":"2026-10-25 17:16:07"},{"type":"image","src":"http://localhost:170/uploads/2026/10/anticuchos-de-corazon-2.jpg","unitDim":"px","height":567,"width":850,"name":"anticuchos-de-corazon-2.jpg","size":219695,"uploaded_at":"2026-10-25 16:56:01"},{"type":"image","src":"http://localhost:170/uploads/2026/10/beb_chicha_mo-1.jpg","unitDim":"px","height":800,"width":800,"name":"beb_chicha_mo-1.jpg","size":77692,"uploaded_at":"2026-10-25 07:25:40"},{"type":"image","src":"http://localhost:170/uploads/2026/10/anticuchos-de-corazon-1.jpg","unitDim":"px","height":567,"width":850,"name":"anticuchos-de-corazon-1.jpg","size":219695,"uploaded_at":"2026-10-19 21:39:54"},{"type":"image","src":"http://localhost:170/uploads/2026/10/Causa-Limena-02-800x530.jpg","unitDim":"px","height":530,"width":800,"name":"Causa-Limena-02-800x530.jpg","size":59138,"uploaded_at":"2026-10-19 20:11:31"},{"type":"image","src":"http://localhost:170/uploads/2026/10/beb_chicha_mo.jpg","unitDim":"px","height":800,"width":800,"name":"beb_chicha_mo.jpg","size":77692,"uploaded_at":"2026-10-19 19:49:06"},{"type":"image","src":"http://localhost:170/uploads/2026/10/anticuchos-de-corazon.jpg","unitDim":"px","height":567,"width":850,"name":"anticuchos-de-corazon.jpg","size":219695,"uploaded_at":"2026-10-19 19:20:44"},{"type":"image","src":"http://localhost:170/uploads/2026/10/8fbdf2f461068b7d7b23724a69139422.jpg","unitDim":"px","height":567,"width":850,"name":"8fbdf2f461068b7d7b23724a69139422.jpg","size":219695,"uploaded_at":"2026-10-19 18:07:37"},{"type":"image","src":"http://localhost:170/uploads/images/6a91cf8d56d44_1787940749.png","unitDim":"px","height":785,"width":1560,"name":"6a91cf8d56d44_1787940749.png","size":436392,"uploaded_at":"2026-08-28 20:12:29"},{"type":"image","src":"http://localhost:170/uploads/images/6a91cf2fc9de1_1787940655.png","unitDim":"px","height":876,"width":1458,"name":"6a91cf2fc9de1_1787940655.png","size":778535,"uploaded_at":"2026-08-28 20:10:55"},{"type":"image","src":"http://localhost:170/uploads/1f8af182bf1a5b5621058447ccbe6c2f.png","unitDim":"px","height":627,"width":1038,"name":"1f8af182bf1a5b5621058447ccbe6c2f.png","size":95890,"uploaded_at":"2026-08-25 05:03:31"},{"type":"image","src":"http://localhost:170/uploads/Screenshot 2026-08-09 005401.png","unitDim":"px","height":882,"width":1482,"name":"Screenshot 2026-08-09 005401.png","size":921027,"uploaded_at":"2026-08-10 01:05:56"},{"type":"image","src":"http://localhost:170/uploads/Screenshot_2026-08-09_005753.png","unitDim":"px","height":883,"width":1172,"name":"Screenshot_2026-08-09_005753.png","size":434299,"uploaded_at":"2026-08-10 00:32:59"},{"type":"image","src":"http://localhost:170/uploads/newroom3_wall_3_14.jpeg","unitDim":"px","height":512,"width":512,"name":"newroom3_wall_3_14.jpeg","size":68667,"uploaded_at":"2026-08-05 08:19:38"},{"type":"image","src":"http://localhost:170/uploads/pirkahome_room_16_92.jpeg","unitDim":"px","height":512,"width":512,"name":"pirkahome_room_16_92.jpeg","size":48078,"uploaded_at":"2026-08-05 08:18:21"},{"type":"image","src":"http://localhost:170/uploads/pirkahome_bed_venge.jpeg","unitDim":"px","height":256,"width":256,"name":"pirkahome_bed_venge.jpeg","size":21060,"uploaded_at":"2026-08-05 08:06:40"},{"type":"image","src":"http://localhost:170/uploads/Planos-de-casas-de-campo-7.jpg","unitDim":"px","height":573,"width":969,"name":"Planos-de-casas-de-campo-7.jpg","size":148403,"uploaded_at":"2026-08-05 08:05:34"},{"type":"image","src":"http://localhost:170/uploads/plano-casa-campo.jpg","unitDim":"px","height":986,"width":1005,"name":"plano-casa-campo.jpg","size":97242,"uploaded_at":"2026-08-05 07:55:14"},{"type":"image","src":"http://localhost:170/uploads/pirkahome.png","unitDim":"px","height":188,"width":400,"name":"pirkahome.png","size":32731,"uploaded_at":"2026-08-05 07:04:22"},{"type":"image","src":"http://localhost:170/uploads/contact-sheet.jpg","unitDim":"px","height":300,"width":792,"name":"contact-sheet.jpg","size":126925,"uploaded_at":"2026-08-05 06:55:00"},{"type":"image","src":"http://localhost:170/uploads/img_6a72adaed150b7.31479953.png","unitDim":"px","height":564,"width":564,"name":"img_6a72adaed150b7.31479953.png","size":684460,"uploaded_at":"2026-08-05 05:27:42"}],"styles":[],"pages":[{"frames":[{"component":{"type":"wrapper","stylable":["background","background-color","background-image","background-repeat","background-attachment","background-position","background-size"],"attributes":{"id":"itw3"},"components":[{},{"classes":["py-5","text-center"],"components":[{"classes":["container"],"components":[{"classes":["row"],"components":[{"classes":["col-md-8","mx-auto"],"components":[{"tagName":"p","type":"text","classes":["mb-3"],"components":[{"type":"textnode","content":"\\"A wonderful serenity has taken possession of my entire soul, like these sweet mornings of spring which I enjoy with my whole heart.\\""}]},{"type":"link","classes":["btn","btn-primary"],"attributes":{"href":"#"},"components":[{"type":"textnode","content":"Act now!"}]}]}]}]}]},{"classes":["py-5"],"components":[{"classes":["container"],"components":[{"classes":["row"],"components":[{"classes":["mx-auto","col-lg-6","col-md-8"],"components":[{"tagName":"ul","components":[{"tagName":"li","type":"text","classes":["mb-2"],"components":[{"tagName":"b","type":"text","components":[{"type":"textnode","content":"Absorbed"}]},{"type":"textnode","content":" - in the exquisite sense of mere tranquil existence, that I neglect my talents."}]},{"tagName":"li","type":"text","classes":["mb-2"],"components":[{"tagName":"b","type":"text","components":[{"type":"textnode","content":"Moment"}]},{"type":"textnode","content":" - yet I feel that I never was a greater artist than now. When, while the lovely valley teems with vapour around me."}]},{"tagName":"li","type":"text","classes":["mb-2"],"components":[{"tagName":"b","type":"text","components":[{"type":"textnode","content":"Sun"}]},{"type":"textnode","content":" - strikes the upper surface of the impenetrable foliage of my trees."}]}]}]}]}]}]}]},"id":"STWRCRDqhL5lGDft"}],"id":"5YyZUkK2TD4vwLua"}]}', 0, 1, NULL, 'published', '2026-10-25 17:42:18', '2026-10-25 17:42:42');
 
 -- Volcando estructura para tabla web_editor_db.redirects
-DROP TABLE IF EXISTS `redirects`;
 CREATE TABLE IF NOT EXISTS `redirects` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `from_path` varchar(500) NOT NULL,
@@ -1537,7 +1496,6 @@ CREATE TABLE IF NOT EXISTS `redirects` (
 -- Volcando datos para la tabla web_editor_db.redirects: ~0 rows (aproximadamente)
 
 -- Volcando estructura para tabla web_editor_db.reports
-DROP TABLE IF EXISTS `reports`;
 CREATE TABLE IF NOT EXISTS `reports` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
@@ -1557,7 +1515,6 @@ CREATE TABLE IF NOT EXISTS `reports` (
 -- Volcando datos para la tabla web_editor_db.reports: ~0 rows (aproximadamente)
 
 -- Volcando estructura para tabla web_editor_db.secure_pages
-DROP TABLE IF EXISTS `secure_pages`;
 CREATE TABLE IF NOT EXISTS `secure_pages` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `title` varchar(255) NOT NULL,
@@ -1582,7 +1539,6 @@ CREATE TABLE IF NOT EXISTS `secure_pages` (
 -- Volcando datos para la tabla web_editor_db.secure_pages: ~0 rows (aproximadamente)
 
 -- Volcando estructura para tabla web_editor_db.seo_audit
-DROP TABLE IF EXISTS `seo_audit`;
 CREATE TABLE IF NOT EXISTS `seo_audit` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `page_id` int(11) DEFAULT NULL,
@@ -1600,7 +1556,6 @@ CREATE TABLE IF NOT EXISTS `seo_audit` (
 -- Volcando datos para la tabla web_editor_db.seo_audit: ~0 rows (aproximadamente)
 
 -- Volcando estructura para tabla web_editor_db.settings
-DROP TABLE IF EXISTS `settings`;
 CREATE TABLE IF NOT EXISTS `settings` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `group` varchar(50) NOT NULL DEFAULT 'general',
@@ -1612,7 +1567,7 @@ CREATE TABLE IF NOT EXISTS `settings` (
   UNIQUE KEY `uniq_group_key` (`group`,`key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
--- Volcando datos para la tabla web_editor_db.settings: ~60 rows (aproximadamente)
+-- Volcando datos para la tabla web_editor_db.settings: ~61 rows (aproximadamente)
 INSERT INTO `settings` (`id`, `group`, `key`, `value`, `type`, `updated_at`) VALUES
 	(1, 'general', 'site_name', 'Lab eMotion', 'string', '2026-10-30 06:04:24'),
 	(2, 'general', 'site_description', 'CMS profesional', 'string', '2026-10-30 06:04:24'),
@@ -1677,7 +1632,6 @@ INSERT INTO `settings` (`id`, `group`, `key`, `value`, `type`, `updated_at`) VAL
 	(2568, 'public', 'color_button_text', '', 'string', '2026-10-30 06:04:35');
 
 -- Volcando estructura para tabla web_editor_db.template_versions
-DROP TABLE IF EXISTS `template_versions`;
 CREATE TABLE IF NOT EXISTS `template_versions` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `template_id` int(11) NOT NULL,
@@ -1696,7 +1650,6 @@ INSERT INTO `template_versions` (`id`, `template_id`, `content_html`, `content_c
 	(3, 2, '<article><div class="content"><h1>Título del Artículo</h1></div></article>', 'article { max-width: 800px; margin: 0 auto; }', '<?php\r\necho \'hello\';\r\n?>', 'document.addEventListener(\'DOMContentLoaded\', () => {\r\n    const boton = document.getElementById(\'btnSaludo\');\r\n    const contenedorMensaje = document.getElementById(\'mensaje\');\r\n\r\n    boton.addEventListener(\'click\', () => {\r\n        // Ejemplo de interactividad simple\r\n        contenedorMensaje.innerHTML = `\r\n            <div class="alerta">\r\n                <p>¡Hola! JavaScript está funcionando correctamente.</p>\r\n            </div>\r\n        `;\r\n        console.log("El usuario hizo clic en el botón.");\r\n    });\r\n});', '2026-10-25 16:52:22');
 
 -- Volcando estructura para tabla web_editor_db.templates
-DROP TABLE IF EXISTS `templates`;
 CREATE TABLE IF NOT EXISTS `templates` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
@@ -1714,7 +1667,7 @@ CREATE TABLE IF NOT EXISTS `templates` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
--- Volcando datos para la tabla web_editor_db.templates: ~11 rows (aproximadamente)
+-- Volcando datos para la tabla web_editor_db.templates: ~13 rows (aproximadamente)
 INSERT INTO `templates` (`id`, `name`, `description`, `content_html`, `content_css`, `content_php`, `content_js`, `grapesjs_data`, `is_system_template`, `is_active`, `is_default`, `created_by`, `created_at`) VALUES
 	(1, 'Landing Page', 'Plantilla para página de inicio moderna', '<div class="container"><h1>Bienvenido</h1><p>Contenido de ejemplo</p></div>', 'body { font-family: Arial; }', '<?php', NULL, NULL, 1, 1, 0, NULL, '2025-12-19 22:52:33'),
 	(2, 'Blog Post', 'Plantilla para artículos de blog', '<body><article><div class="content"><h1 id="i5pi">Título del Artículo</h1></div></article><img src="http://localhost:170/uploads/2026/10/anticuchos-de-corazon-2.jpg" alt="Imagen responsive" id="i7mt" class="img-fluid rounded"/></body>', '* { box-sizing: border-box; } body {margin: 0;}article{max-width:800px;margin-top:0px;margin-right:auto;margin-bottom:0px;margin-left:auto;}', '<?php\r\necho \'hello\';\r\n?>', 'document.addEventListener(\'DOMContentLoaded\', () => {\r\n    const boton = document.getElementById(\'btnSaludo\');\r\n    const contenedorMensaje = document.getElementById(\'mensaje\');\r\n\r\n    boton.addEventListener(\'click\', () => {\r\n        // Ejemplo de interactividad simple\r\n        contenedorMensaje.innerHTML = `\r\n            <div class="alerta">\r\n                <p>¡Hola! JavaScript está funcionando correctamente.</p>\r\n            </div>\r\n        `;\r\n        console.log("El usuario hizo clic en el botón.");\r\n    });\r\n});', '{"assets":[{"type":"image","src":"http://localhost:170/uploads/2026/10/helado-de-lucuma.jpg","unitDim":"px","height":500,"width":750,"name":"helado-de-lucuma.jpg","size":57385,"uploaded_at":"2026-10-25 17:16:07"},{"type":"image","src":"http://localhost:170/uploads/2026/10/anticuchos-de-corazon-2.jpg","unitDim":"px","height":567,"width":850,"name":"anticuchos-de-corazon-2.jpg","size":219695,"uploaded_at":"2026-10-25 16:56:01"},{"type":"image","src":"http://localhost:170/uploads/2026/10/beb_chicha_mo-1.jpg","unitDim":"px","height":800,"width":800,"name":"beb_chicha_mo-1.jpg","size":77692,"uploaded_at":"2026-10-25 07:25:40"},{"type":"image","src":"http://localhost:170/uploads/2026/10/anticuchos-de-corazon-1.jpg","unitDim":"px","height":567,"width":850,"name":"anticuchos-de-corazon-1.jpg","size":219695,"uploaded_at":"2026-10-19 21:39:54"},{"type":"image","src":"http://localhost:170/uploads/2026/10/Causa-Limena-02-800x530.jpg","unitDim":"px","height":530,"width":800,"name":"Causa-Limena-02-800x530.jpg","size":59138,"uploaded_at":"2026-10-19 20:11:31"},{"type":"image","src":"http://localhost:170/uploads/2026/10/beb_chicha_mo.jpg","unitDim":"px","height":800,"width":800,"name":"beb_chicha_mo.jpg","size":77692,"uploaded_at":"2026-10-19 19:49:06"},{"type":"image","src":"http://localhost:170/uploads/2026/10/anticuchos-de-corazon.jpg","unitDim":"px","height":567,"width":850,"name":"anticuchos-de-corazon.jpg","size":219695,"uploaded_at":"2026-10-19 19:20:44"},{"type":"image","src":"http://localhost:170/uploads/2026/10/8fbdf2f461068b7d7b23724a69139422.jpg","unitDim":"px","height":567,"width":850,"name":"8fbdf2f461068b7d7b23724a69139422.jpg","size":219695,"uploaded_at":"2026-10-19 18:07:37"},{"type":"image","src":"http://localhost:170/uploads/images/6a91cf8d56d44_1787940749.png","unitDim":"px","height":785,"width":1560,"name":"6a91cf8d56d44_1787940749.png","size":436392,"uploaded_at":"2026-08-28 20:12:29"},{"type":"image","src":"http://localhost:170/uploads/images/6a91cf2fc9de1_1787940655.png","unitDim":"px","height":876,"width":1458,"name":"6a91cf2fc9de1_1787940655.png","size":778535,"uploaded_at":"2026-08-28 20:10:55"},{"type":"image","src":"http://localhost:170/uploads/1f8af182bf1a5b5621058447ccbe6c2f.png","unitDim":"px","height":627,"width":1038,"name":"1f8af182bf1a5b5621058447ccbe6c2f.png","size":95890,"uploaded_at":"2026-08-25 05:03:31"},{"type":"image","src":"http://localhost:170/uploads/Screenshot 2026-08-09 005401.png","unitDim":"px","height":882,"width":1482,"name":"Screenshot 2026-08-09 005401.png","size":921027,"uploaded_at":"2026-08-10 01:05:56"},{"type":"image","src":"http://localhost:170/uploads/Screenshot_2026-08-09_005753.png","unitDim":"px","height":883,"width":1172,"name":"Screenshot_2026-08-09_005753.png","size":434299,"uploaded_at":"2026-08-10 00:32:59"},{"type":"image","src":"http://localhost:170/uploads/newroom3_wall_3_14.jpeg","unitDim":"px","height":512,"width":512,"name":"newroom3_wall_3_14.jpeg","size":68667,"uploaded_at":"2026-08-05 08:19:38"},{"type":"image","src":"http://localhost:170/uploads/pirkahome_room_16_92.jpeg","unitDim":"px","height":512,"width":512,"name":"pirkahome_room_16_92.jpeg","size":48078,"uploaded_at":"2026-08-05 08:18:21"},{"type":"image","src":"http://localhost:170/uploads/pirkahome_bed_venge.jpeg","unitDim":"px","height":256,"width":256,"name":"pirkahome_bed_venge.jpeg","size":21060,"uploaded_at":"2026-08-05 08:06:40"},{"type":"image","src":"http://localhost:170/uploads/Planos-de-casas-de-campo-7.jpg","unitDim":"px","height":573,"width":969,"name":"Planos-de-casas-de-campo-7.jpg","size":148403,"uploaded_at":"2026-08-05 08:05:34"},{"type":"image","src":"http://localhost:170/uploads/plano-casa-campo.jpg","unitDim":"px","height":986,"width":1005,"name":"plano-casa-campo.jpg","size":97242,"uploaded_at":"2026-08-05 07:55:14"},{"type":"image","src":"http://localhost:170/uploads/pirkahome.png","unitDim":"px","height":188,"width":400,"name":"pirkahome.png","size":32731,"uploaded_at":"2026-08-05 07:04:22"},{"type":"image","src":"http://localhost:170/uploads/contact-sheet.jpg","unitDim":"px","height":300,"width":792,"name":"contact-sheet.jpg","size":126925,"uploaded_at":"2026-08-05 06:55:00"},{"type":"image","src":"http://localhost:170/uploads/img_6a72adaed150b7.31479953.png","unitDim":"px","height":564,"width":564,"name":"img_6a72adaed150b7.31479953.png","size":684460,"uploaded_at":"2026-08-05 05:27:42"}],"styles":[{"selectors":[],"selectorsAdd":"article","style":{"max-width":"800px","margin-top":"0px","margin-right":"auto","margin-bottom":"0px","margin-left":"auto"}}],"pages":[{"frames":[{"component":{"type":"wrapper","stylable":["background","background-color","background-image","background-repeat","background-attachment","background-position","background-size"],"components":[{"tagName":"article","components":[{"classes":["content"],"components":[{"tagName":"h1","type":"text","attributes":{"id":"i5pi"},"components":[{"type":"textnode","content":"Título del Artículo"}]}]}]},{"type":"image","resizable":{"ratioDefault":1},"classes":["img-fluid","rounded"],"attributes":{"src":"http://localhost:170/uploads/2026/10/anticuchos-de-corazon-2.jpg","alt":"Imagen responsive","id":"i7mt"}}]},"id":"vk0tt7UPVkSqFQCn"}],"id":"5VE0HlppGfIU4o4G"}]}', 1, 1, 1, NULL, '2025-12-19 22:52:33'),
@@ -1731,7 +1684,6 @@ INSERT INTO `templates` (`id`, `name`, `description`, `content_html`, `content_c
 	(14, 'ZZ VER', 't', '<div>v1</div>', '', '', '', NULL, 0, 1, 0, 1, '2026-10-25 14:48:26');
 
 -- Volcando estructura para tabla web_editor_db.translations
-DROP TABLE IF EXISTS `translations`;
 CREATE TABLE IF NOT EXISTS `translations` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `lang_code` varchar(10) NOT NULL,
@@ -1870,7 +1822,6 @@ INSERT INTO `translations` (`id`, `lang_code`, `group`, `key`, `value`, `updated
 	(122, 'en', 'profile', 'timezone', 'Timezone', '2026-08-24 03:32:52');
 
 -- Volcando estructura para tabla web_editor_db.trusted_devices
-DROP TABLE IF EXISTS `trusted_devices`;
 CREATE TABLE IF NOT EXISTS `trusted_devices` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) NOT NULL,
@@ -1894,7 +1845,6 @@ CREATE TABLE IF NOT EXISTS `trusted_devices` (
 -- Volcando datos para la tabla web_editor_db.trusted_devices: ~0 rows (aproximadamente)
 
 -- Volcando estructura para tabla web_editor_db.two_factor_recovery_codes
-DROP TABLE IF EXISTS `two_factor_recovery_codes`;
 CREATE TABLE IF NOT EXISTS `two_factor_recovery_codes` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) NOT NULL,
@@ -1911,7 +1861,6 @@ CREATE TABLE IF NOT EXISTS `two_factor_recovery_codes` (
 -- Volcando datos para la tabla web_editor_db.two_factor_recovery_codes: ~0 rows (aproximadamente)
 
 -- Volcando estructura para tabla web_editor_db.user_activities
-DROP TABLE IF EXISTS `user_activities`;
 CREATE TABLE IF NOT EXISTS `user_activities` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) NOT NULL,
@@ -1925,12 +1874,11 @@ CREATE TABLE IF NOT EXISTS `user_activities` (
   CONSTRAINT `user_activities_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
--- Volcando datos para la tabla web_editor_db.user_activities: ~0 rows (aproximadamente)
+-- Volcando datos para la tabla web_editor_db.user_activities: ~1 rows (aproximadamente)
 INSERT INTO `user_activities` (`id`, `user_id`, `activity_type`, `description`, `ip_address`, `user_agent`, `created_at`) VALUES
 	(1, 1, 'login', 'Usuario inició sesión exitosamente', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:159.0) Gecko/20100101 Firefox/159.0', '2026-10-19 01:30:03');
 
 -- Volcando estructura para vista web_editor_db.user_activity_summary
-DROP VIEW IF EXISTS `user_activity_summary`;
 -- Creando tabla temporal para superar errores de dependencia de VIEW
 CREATE TABLE `user_activity_summary` (
 	`id` INT(11) NOT NULL,
@@ -1944,7 +1892,6 @@ CREATE TABLE `user_activity_summary` (
 );
 
 -- Volcando estructura para tabla web_editor_db.user_logins
-DROP TABLE IF EXISTS `user_logins`;
 CREATE TABLE IF NOT EXISTS `user_logins` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) NOT NULL,
@@ -2009,7 +1956,6 @@ INSERT INTO `user_logins` (`id`, `user_id`, `login_date`, `login_time`, `ip_addr
 	(44, 1, '2026-10-30', '19:26:22', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:160.0) Gecko/20100101 Firefox/160.0', 1, NULL, NULL, '2026-10-31 00:26:22');
 
 -- Volcando estructura para tabla web_editor_db.user_sessions
-DROP TABLE IF EXISTS `user_sessions`;
 CREATE TABLE IF NOT EXISTS `user_sessions` (
   `id` varchar(128) NOT NULL,
   `user_id` int(11) DEFAULT NULL,
@@ -2067,7 +2013,6 @@ INSERT INTO `user_sessions` (`id`, `user_id`, `ip_address`, `user_agent`, `paylo
 	('eb01128dd5351755e0f77ca44cd1edbc', 1, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0', '', 1787849678, '2026-08-27 16:54:38');
 
 -- Volcando estructura para tabla web_editor_db.users
-DROP TABLE IF EXISTS `users`;
 CREATE TABLE IF NOT EXISTS `users` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `username` varchar(50) NOT NULL,
@@ -2121,7 +2066,6 @@ INSERT INTO `users` (`id`, `username`, `email`, `password_hash`, `full_name`, `b
 	(3, 'admin', 'admin@local.test', '$2y$10$e0NRbQ7K5z1qVxJmXyOaQ.8FhT9vZ2wK3pL4mN5bV6cX7yZ8aB9cD0', 'Administrador', NULL, NULL, 'es', 'dark', 'Europe/Madrid', '2026-08-24 02:03:33', '2026-08-24 02:31:12', 1, 'Super admin', 1, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, 0, NULL);
 
 -- Volcando estructura para tabla web_editor_db.users_permissions
-DROP TABLE IF EXISTS `users_permissions`;
 CREATE TABLE IF NOT EXISTS `users_permissions` (
   `idPer` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
@@ -2201,7 +2145,6 @@ INSERT INTO `users_permissions` (`idPer`, `name`, `description`, `category`, `re
 	(109, 'comments.delete', 'Eliminar comentarios', 'Comments', 1);
 
 -- Volcando estructura para tabla web_editor_db.users_role_permissions
-DROP TABLE IF EXISTS `users_role_permissions`;
 CREATE TABLE IF NOT EXISTS `users_role_permissions` (
   `idRp` int(11) NOT NULL AUTO_INCREMENT,
   `role_id` int(11) NOT NULL,
@@ -2486,7 +2429,6 @@ INSERT INTO `users_role_permissions` (`idRp`, `role_id`, `permission_id`) VALUES
 	(328, 2, 106);
 
 -- Volcando estructura para tabla web_editor_db.users_roles
-DROP TABLE IF EXISTS `users_roles`;
 CREATE TABLE IF NOT EXISTS `users_roles` (
   `idRol` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(45) NOT NULL,
@@ -2507,7 +2449,6 @@ INSERT INTO `users_roles` (`idRol`, `name`, `description`, `required`, `default_
 	(5, 'Guest', 'Guest visit', 0, 0);
 
 -- Volcando estructura para tabla web_editor_db.visits
-DROP TABLE IF EXISTS `visits`;
 CREATE TABLE IF NOT EXISTS `visits` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `page_id` int(11) NOT NULL,
@@ -2522,7 +2463,6 @@ CREATE TABLE IF NOT EXISTS `visits` (
 -- Volcando datos para la tabla web_editor_db.visits: ~0 rows (aproximadamente)
 
 -- Volcando estructura para disparador web_editor_db.after_page_update
-DROP TRIGGER IF EXISTS `after_page_update`;
 SET @OLDTMP_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO';
 DELIMITER //
 //
@@ -2530,7 +2470,6 @@ DELIMITER ;
 SET SQL_MODE=@OLDTMP_SQL_MODE;
 
 -- Volcando estructura para disparador web_editor_db.after_user_insert
-DROP TRIGGER IF EXISTS `after_user_insert`;
 SET @OLDTMP_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO';
 DELIMITER //
 //
@@ -2538,7 +2477,6 @@ DELIMITER ;
 SET SQL_MODE=@OLDTMP_SQL_MODE;
 
 -- Volcando estructura para disparador web_editor_db.after_user_update
-DROP TRIGGER IF EXISTS `after_user_update`;
 SET @OLDTMP_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO';
 DELIMITER //
 //
@@ -2546,7 +2484,6 @@ DELIMITER ;
 SET SQL_MODE=@OLDTMP_SQL_MODE;
 
 -- Volcando estructura para disparador web_editor_db.before_user_delete
-DROP TRIGGER IF EXISTS `before_user_delete`;
 SET @OLDTMP_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO';
 DELIMITER //
 //

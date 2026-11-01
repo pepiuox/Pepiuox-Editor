@@ -1,0 +1,294 @@
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Comprobación de seguridad del panel y de las tareas programadas.
+ *
+ *   php tests/seguridad/check.php
+ *
+ * Cubre los dos cambios del 2026-10-31:
+ *
+ *  S-6 — el mapa de permisos por acción. No basta con que el mapa exista: lo que
+ *        importa es cuántas acciones del panel quedan **sin** declarar, porque
+ *        esas siguen dependiendo solo de tener sesión. Este script las cuenta y
+ *        falla si aparece una nueva que nadie clasificó.
+ *
+ *  S-1 y S-2 — el token de las tareas programadas. Comprueba que sin token
+ *        configurado se rechaza todo, que con token configurado solo pasa el
+ *        correcto y que la comparación no acepta el vacío.
+ *
+ * No necesita base de datos ni servidor web.
+ */
+
+$_SERVER['SERVER_PORT'] ??= '80';
+$_SERVER['HTTP_HOST']   ??= 'localhost';
+$_SERVER['REQUEST_URI'] ??= '/';
+
+require __DIR__ . '/../../config/paths.php';
+
+spl_autoload_register(static function (string $class): void {
+    if (str_starts_with($class, 'App\\')) {
+        $path = APP_PATH . '/' . str_replace('\\', '/', substr($class, 4)) . '.php';
+        if (is_file($path)) {
+            require_once $path;
+        }
+    }
+});
+
+require_once APP_PATH . '/Helpers/functions.php';
+
+use App\Core\CronToken;
+
+$fallos = 0;
+$total  = 0;
+
+function comprobar(string $descripcion, bool $ok, string $detalle = ''): void
+{
+    global $fallos, $total;
+    $total++;
+    if ($ok) {
+        echo "  OK    {$descripcion}\n";
+        return;
+    }
+    $fallos++;
+    echo "  FALLO {$descripcion}" . ($detalle !== '' ? " -> {$detalle}" : '') . "\n";
+}
+
+// ─────────────────────────────────────────────────────────────────────
+echo "== S-6 · Mapa de permisos ==\n";
+
+$mapa = require CONFIG_PATH . '/permissions.php';
+comprobar('el mapa de permisos existe y no está vacío', is_array($mapa) && $mapa !== [], (string) count($mapa));
+
+// Acciones declaradas en routes.php, en la forma `Controlador::class, 'metodo'`.
+$rutas = (string) file_get_contents(CONFIG_PATH . '/routes.php');
+preg_match_all(
+    '/App\\\\Controllers\\\\([A-Za-z0-9_]+)::class\s*,\s*\'([A-Za-z0-9_]+)\'/',
+    $rutas,
+    $coincidencias,
+    PREG_SET_ORDER
+);
+
+$acciones = [];
+foreach ($coincidencias as $c) {
+    $acciones['App\\Controllers\\' . $c[1] . '::' . $c[2]] = true;
+}
+$acciones = array_keys($acciones);
+sort($acciones);
+
+comprobar('se pudieron leer acciones de routes.php', $acciones !== [], (string) count($acciones));
+
+/**
+ * Acciones que se dejan sin permiso a propósito: son de cada usuario sobre sus
+ * propias cosas. Si se mapean, hay que asegurarse antes de que todos los roles
+ * tienen el permiso, o se deja gente fuera de su propia pantalla.
+ */
+$sinPermisoAdrede = [
+    'App\\Controllers\\DashboardController::index'      => 'tablero: es la pantalla de entrada de cualquier rol',
+    'App\\Controllers\\ProfileController::index'        => 'perfil propio',
+    'App\\Controllers\\ProfileController::update'       => 'perfil propio',
+    'App\\Controllers\\ProfileController::changePassword' => 'perfil propio',
+    'App\\Controllers\\NotificationsController::index'  => 'notificaciones propias',
+    'App\\Controllers\\NotificationsController::list'   => 'notificaciones propias',
+    'App\\Controllers\\NotificationsController::markRead' => 'notificaciones propias',
+    'App\\Controllers\\NotificationsController::markAllRead' => 'notificaciones propias',
+    'App\\Controllers\\NotificationsController::clearAll' => 'notificaciones propias',
+    'App\\Controllers\\NotificationsController::delete' => 'notificaciones propias',
+    'App\\Controllers\\AuthController::closeOtherSessions' => 'cerrar las sesiones propias',
+    'App\\Controllers\\TwoFactorController::challenge'  => 'segundo factor en el acceso',
+    'App\\Controllers\\TwoFactorController::recoverySuccess' => 'segundo factor en el acceso',
+];
+
+/**
+ * Acciones **públicas**: se sirven sin sesión, así que un permiso no aplica. No
+ * necesitan estar en el mapa y no representan un hueco de autorización.
+ */
+$publicas = [
+    'App\\Controllers\\PublicController::home'    => 'portada pública',
+    'App\\Controllers\\PublicController::show'    => 'página pública',
+    'App\\Controllers\\PublicController::sitemap' => 'sitemap',
+    'App\\Controllers\\PublicThemeController::css'      => 'hoja de estilos del tema',
+    'App\\Controllers\\PublicThemeController::manifest' => 'manifiesto de la aplicación web',
+    'App\\Controllers\\SeoController::robots'     => 'robots.txt',
+    'App\\Controllers\\AuthController::showLogin' => 'formulario de acceso',
+    'App\\Controllers\\AuthController::login'     => 'acceso',
+    'App\\Controllers\\AuthController::logout'    => 'salida',
+    'App\\Controllers\\AuthController::verify2FA' => 'segundo factor en el acceso',
+    'App\\Controllers\\PasswordController::registerForm' => 'registro',
+    'App\\Controllers\\PasswordController::registerSend' => 'registro',
+    'App\\Controllers\\PasswordController::forgotForm'   => 'recuperación de contraseña',
+    'App\\Controllers\\PasswordController::forgotSend'   => 'recuperación de contraseña',
+    'App\\Controllers\\PasswordController::resetForm'    => 'restablecimiento de contraseña',
+    'App\\Controllers\\PasswordController::resetSave'    => 'restablecimiento de contraseña',
+    'App\\Controllers\\LanguageController::switch'       => 'cambio de idioma público',
+    'App\\Controllers\\ApiController::pagesIndex'  => 'API v1: se autentica por token Bearer',
+    'App\\Controllers\\ApiController::pagesShow'   => 'API v1: se autentica por token Bearer',
+    'App\\Controllers\\ApiController::menusShow'   => 'API v1: se autentica por token Bearer',
+    'App\\Controllers\\ApiController::me'          => 'API v1: se autentica por token Bearer',
+];
+
+/**
+ * Acciones **autenticadas por token**, no por sesión: son los endpoints de
+ * tareas programadas. Mapearlas a un permiso las dejaría exigiendo un usuario
+ * logueado y rompería el cron — se comprobó al hacerlo: respondían 403.
+ */
+$porToken = [
+    'App\\Controllers\\BackupsController::cron'            => 'cron: token en la URL',
+    'App\\Controllers\\BannedUsersController::processExpired' => 'cron: token en la URL',
+];
+
+$mapeadas   = [];
+$sinMapear  = [];
+$permitidas = 0;
+foreach ($acciones as $accion) {
+    if (array_key_exists($accion, $mapa)) {
+        $mapeadas[] = $accion;
+    } elseif (array_key_exists($accion, $sinPermisoAdrede)
+           || array_key_exists($accion, $publicas)
+           || array_key_exists($accion, $porToken)) {
+        $permitidas++;
+    } else {
+        $sinMapear[] = $accion;
+    }
+}
+
+printf("        acciones en rutas: %d · con permiso: %d · justificadas sin permiso: %d · sin clasificar: %d\n",
+    count($acciones), count($mapeadas), $permitidas, count($sinMapear));
+
+comprobar(
+    'toda acción del panel tiene permiso o motivo para no tenerlo',
+    $sinMapear === [],
+    implode(', ', $sinMapear)
+);
+
+// Cada permiso del mapa debe ser un nombre que exista en el catálogo del
+// proyecto. Se lista aquí para no depender de la base de datos.
+$catalogo = [
+    '2fa.manage', 'analytics.view', 'api.manage', 'audit.view', 'backups.manage',
+    'backups.restore', 'cache.manage', 'collaboration.use', 'comments.create',
+    'comments.delete', 'comments.resolve', 'comments.view', 'components.manage',
+    'files.delete', 'files.manage', 'files.share', 'files.upload', 'files.view',
+    'menus.manage', 'notifications.manage', 'pages.create', 'pages.delete',
+    'pages.edit', 'pages.publish', 'pages.restore', 'pages.view', 'profile.edit',
+    'redirects.manage', 'reports.manage', 'roles.manage', 'security.ban_users',
+    'security.dashboard', 'seo.global', 'seo.manage', 'settings.manage',
+    'templates.create', 'templates.delete', 'templates.edit', 'templates.view',
+    'translations.manage', 'trusted_devices.manage', 'users.ban',
+    'users.ban.permanent', 'users.create', 'users.delete', 'users.edit',
+    'users.view', 'users.view.ban_history',
+];
+
+$permisosUsados = array_values(array_unique(array_values($mapa)));
+$desconocidos   = array_values(array_diff($permisosUsados, $catalogo));
+comprobar('todos los permisos del mapa existen en el catálogo', $desconocidos === [], implode(', ', $desconocidos));
+
+// ─────────────────────────────────────────────────────────────────────
+echo "\n== S-1 / S-2 · Token de tareas programadas ==\n";
+
+putenv('CRON_TOKEN');
+comprobar('sin token configurado se rechaza el vacío', CronToken::isValid('') === false);
+comprobar('sin token configurado se rechaza cualquier valor', CronToken::isValid('abc') === false);
+
+$secreto = 'token-de-prueba-' . bin2hex(random_bytes(6));
+putenv('CRON_TOKEN=' . $secreto);
+comprobar('con token configurado se acepta el correcto', CronToken::isValid($secreto) === true);
+comprobar('se rechaza uno incorrecto', CronToken::isValid($secreto . 'x') === false);
+comprobar('se rechaza el vacío aunque haya token', CronToken::isValid('') === false);
+comprobar('se rechaza un prefijo del token', CronToken::isValid(substr($secreto, 0, 8)) === false);
+putenv('CRON_TOKEN');
+
+// ─────────────────────────────────────────────────────────────────────
+echo "\n== Rutas de cron con guardián ==\n";
+$rutasCron = preg_match_all('/\$router->get\(\'\/cron\//', $rutas);
+comprobar('las rutas /cron/* están declaradas', $rutasCron > 0, (string) $rutasCron);
+
+$guardianes = preg_match_all('/\\\\App\\\\Core\\\\CronToken::require\(\$request\)/', $rutas);
+printf("        rutas /cron/*: %d · llamadas al guardián en routes.php: %d\n", $rutasCron, $guardianes);
+
+$bans = (string) file_get_contents(APP_PATH . '/Controllers/BannedUsersController.php');
+comprobar(
+    '/cron/process-expired-bans exige token (S-1)',
+    str_contains($bans, 'CronToken::require'),
+    'el endpoint que escribe en la base de datos sigue sin comprobar credencial'
+);
+
+$respuestasCron = (string) file_get_contents(APP_PATH . '/Controllers/BackupsController.php');
+comprobar('el cron de copias usa el guardián central', str_contains($respuestasCron, 'CronToken::require'));
+
+$config = (string) file_get_contents(CONFIG_PATH . '/config.php');
+comprobar(
+    'el token se lee del entorno y no se genera (S-2)',
+    str_contains($config, "env('CRON_TOKEN')"),
+    'el token seguiría cambiando en cada carga'
+);
+comprobar(
+    'el token ya no se concatena con random_bytes en la asignación (S-2)',
+    !preg_match("/'cron_token'\s*=>\s*'[^']*'\s*\.\s*bin2hex/", $config) === true,
+    'el valor esperado cambiaría entre comprobación y comprobación'
+);
+
+// ─────────────────────────────────────────────────────────────────────
+echo "\n== S-5 · El limitador falla en cerrado ==\n";
+
+$rutasPhp = (string) file_get_contents(CONFIG_PATH . '/routes.php');
+
+comprobar(
+    'la construcción del limitador no degrada a arreglos vacíos',
+    !preg_match('/catch\s*\(Throwable\s*\$e\)\s*\{\s*\$rateLimitLogin\s*=\s*\[\];/', $rutasPhp),
+    'un fallo al construir el limitador dejaría las rutas sensibles sin límite'
+);
+comprobar(
+    'las cinco variables se reinician en el catch',
+    substr_count($rutasPhp, '$rateLimitRegister = $sinProteccion;') === 1,
+    '`$rateLimitRegister` quedaba sin definir y su uso lanzaba un error más confuso'
+);
+comprobar(
+    'el guardián de fallo en cerrado existe y se usa',
+    class_exists('App\\Middleware\\RateLimitUnavailableMiddleware')
+        && str_contains($rutasPhp, 'RateLimitUnavailableMiddleware'),
+    'no hay nada que impida aceptar peticiones sin límite'
+);
+
+$noDisponible = (string) file_get_contents(APP_PATH . '/Middleware/RateLimitUnavailableMiddleware.php');
+comprobar('el guardián responde 503 y no deja pasar', str_contains($noDisponible, '503'));
+
+$limitador = (string) file_get_contents(APP_PATH . '/Middleware/RateLimitMiddleware.php');
+comprobar(
+    'el fallo en tiempo de ejecución se registra diciendo que permite la petición',
+    str_contains($limitador, 'se permite la petición'),
+    'el log anterior decía solo «Error» y no advertía de que la petición pasaba'
+);
+
+// ─────────────────────────────────────────────────────────────────────
+echo "\n== Deuda 17 · Rutas que fallaban por desajuste archivo↔clase ==\n";
+
+// El cargador resuelve `App\Controllers\X` buscando `app/Controllers/X.php`. Si
+// el archivo no se llama igual que la clase, la ruta no encuentra nada y
+// responde 500. Estas dos clases estaban en archivos con otro nombre.
+comprobar(
+    'ComponentsController resuelve (archivo con el nombre correcto)',
+    class_exists('App\\Controllers\\ComponentsController'),
+    'el archivo no se llama ComponentsController.php'
+);
+comprobar(
+    'LanguageController resuelve (archivo con el nombre correcto)',
+    class_exists('App\\Controllers\\LanguageController'),
+    'el archivo no se llama LanguageController.php'
+);
+comprobar(
+    'no quedan `require` del page.php inexistente',
+    !str_contains($rutasPhp, "require __DIR__ . '/../page.php'"),
+    'las rutas /page seguían apuntando a un archivo que no existe'
+);
+comprobar(
+    'las clases viejas ya no existen con el nombre antiguo',
+    !class_exists('App\\Controllers\\ComponentController')
+        && !class_exists('App\\Controllers\\LenguageController'),
+    'quedó un duplicado con el nombre mal escrito'
+);
+
+// ─────────────────────────────────────────────────────────────────────
+echo "\n" . str_repeat('-', 56) . "\n";
+printf("Comprobaciones: %d · Fallos: %d\n", $total, $fallos);
+exit($fallos === 0 ? 0 : 1);

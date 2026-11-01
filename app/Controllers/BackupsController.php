@@ -88,12 +88,10 @@ class BackupsController
     /** Endpoint para cron externo: /cron/backup?token=XXX */
     public function cron(Request $req): void
     {
-        $cfg = require dirname(__DIR__, 2) . '/config/config.php';
-        $token = $req->get('token');
-        $expected = $cfg['cron_token'] ?? '';
-        if (!$expected || $token !== $expected) {
-            Response::json(['success'=>false,'message'=>'Unauthorized'], 401);
-        }
+        // Comprobación centralizada: un solo sitio que decide si la petición
+        // puede ejecutar una tarea programada (ver App\Core\CronToken).
+        \App\Core\CronToken::require($req);
+
         $results = BackupService::runScheduled();
         Response::json(['success'=>true,'results'=>$results]);
     }

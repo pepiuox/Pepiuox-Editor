@@ -40,6 +40,7 @@ $scoreColor = fn($s) => $s >= 80 ? 'success' : ($s >= 50 ? 'warning' : 'danger')
     <div class="d-flex gap-2">
       <a class="btn btn-ghost btn-sm" href="<?= url('admin/seo/global') ?>"><i class="bi bi-globe"></i> SEO Global</a>
       <a class="btn btn-ghost btn-sm" href="<?= url('admin/seo/redirects') ?>"><i class="bi bi-signpost-split"></i> Redirecciones</a>
+      <a class="btn btn-ghost btn-sm" href="<?= url('admin/seo/sitemap') ?>"><i class="bi bi-diagram-2"></i> Sitemap</a>
       <form method="post" action="<?= url('admin/seo/sitemap/regenerate') ?>" class="d-inline">
         <?= csrf_field() ?>
         <button class="btn btn-primary btn-sm"><i class="bi bi-arrow-repeat"></i> Regenerar Sitemap</button>

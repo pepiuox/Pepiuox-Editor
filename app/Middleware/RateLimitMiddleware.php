@@ -72,8 +72,19 @@ class RateLimitMiddleware
             }
             
         } catch (\Throwable $e) {
-            // En caso de error, permitir el acceso pero loguear
-            error_log('[RateLimit] Error: ' . $e->getMessage());
+            // Se deja pasar la petición, y se dice en el log con esas palabras.
+            //
+            // Por qué aquí se falla en abierto y en la construcción en cerrado:
+            // este `catch` se dispara cuando el almacenamiento del contador no
+            // responde, y si la base de datos no responde la aplicación entera
+            // está caída (no hay sesión, no hay usuario, no hay contraseña que
+            // comprobar). Bloquear el acceso aquí no protegería nada: solo
+            // añadiría un error menos claro. La construcción sí se cierra,
+            // porque ahí el fallo es de código y la ruta quedaría sin límite.
+            error_log(
+                '[RateLimit] No se pudo aplicar el límite (' . $this->prefix . '): '
+                . $e->getMessage() . ' — se permite la petición.'
+            );
         }
     }
 

@@ -49,6 +49,27 @@ const MAX_TRIES = 20;     // intentos por ventana antes de bloquear
 // MODO CONSOLA: generar el token de instalación
 // ═══════════════════════════════════════════════════════════════════
 if (PHP_SAPI === 'cli') {
+    if (in_array('--allow-remote', $argv ?? [], true)) {
+        if (is_file($lockFile)) {
+            fwrite(STDERR, "Ya está instalado (storage/.installed existe).\n");
+            exit(1);
+        }
+        if (!is_dir($storageDir) && !@mkdir($storageDir, 0775, true) && !is_dir($storageDir)) {
+            fwrite(STDERR, "No se pudo crear storage/.\n");
+            exit(1);
+        }
+        $flag = $storageDir . '/.install-allow-remote';
+        if (@file_put_contents($flag, date('c') . PHP_EOL, LOCK_EX) === false) {
+            fwrite(STDERR, "No se pudo escribir {$flag}. Revisa permisos de storage/.\n");
+            exit(1);
+        }
+        @chmod($flag, 0600);
+        echo "Instalación remota permitida.\n";
+        echo "Se revoca sola al terminar (o borrando storage/.install-allow-remote).\n";
+        echo "Ahora genera el token: php install.php --make-token\n";
+        exit(0);
+    }
+
     if (in_array('--make-token', $argv ?? [], true)) {
         if (is_file($lockFile)) {
             fwrite(STDERR, "Ya está instalado (storage/.installed existe). No se genera token.\n");
@@ -70,7 +91,7 @@ if (PHP_SAPI === 'cli') {
         exit(0);
     }
 
-    fwrite(STDERR, "Uso: php install.php --make-token\n");
+    fwrite(STDERR, "Uso: php install.php --make-token | --allow-remote\n");
     exit(2);
 }
 
@@ -98,11 +119,31 @@ if (is_file($lockFile)) {
     fail(410, 'La plataforma ya está instalada. Este asistente está desactivado.');
 }
 
-// ── Guarda 2: solo desde el propio servidor ────────────────────────
-$ip = $_SERVER['REMOTE_ADDR'] ?? '';
-$local = in_array($ip, ['127.0.0.1', '::1'], true);
-if (!$local && getenv('INSTALL_ALLOW_REMOTE') !== '1') {
-    fail(403, 'El asistente solo funciona desde localhost. Accede por terminal al servidor.');
+// ── Guarda 2: desde el propio servidor, o con permiso explícito ────
+// El token ya es la autenticación real (solo se genera por consola). Esta
+// guarda añade una segunda llave que también exige acceso al servidor: o el
+// asistente se abre desde localhost, o alguien con terminal ha ejecutado
+// `php install.php --allow-remote` (que escribe un archivo fuera de la raíz
+// web, 0600, y se borra al terminar).
+$ip         = $_SERVER['REMOTE_ADDR'] ?? '';
+$esLocal    = in_array($ip, ['127.0.0.1', '::1'], true);
+$permisoRemoto = is_file($storageDir . '/.install-allow-remote');
+$porEntorno = getenv('INSTALL_ALLOW_REMOTE') === '1';
+
+if (!$esLocal && !$permisoRemoto && !$porEntorno) {
+    http_response_code(403);
+    echo '<!doctype html><html lang="es"><meta charset="utf-8"><title>Instalación</title>'
+        . '<body style="font-family:system-ui;padding:2rem;max-width:700px;margin:auto;line-height:1.6">'
+        . '<h1 style="font-size:1.2rem">Falta un permiso de servidor</h1>'
+        . '<p>Estás entrando desde <code>' . htmlspecialchars($ip !== '' ? $ip : 'desconocida', ENT_QUOTES, 'UTF-8') . '</code>, '
+        . 'no desde el propio servidor. Para instalar en remoto hace falta habilitarlo '
+        . '<strong>desde la terminal del servidor</strong> (una sola vez):</p>'
+        . '<pre style="background:#f4f4f4;padding:1rem;border-radius:8px;overflow:auto">'
+        . "php install.php --allow-remote\nphp install.php --make-token</pre>"
+        . '<p>El permiso se revoca solo al terminar la instalación. Si no tienes acceso a la terminal, '
+        . 'también puedes instalar por consola sin asistente: <code>docs/INSTALL.md</code>.</p>'
+        . '</body></html>';
+    exit;
 }
 
 // ── Guarda 3: límite de intentos, contado en disco ─────────────────
@@ -249,6 +290,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $paso === '2') {
             @file_put_contents($lockFile, date('c') . PHP_EOL, LOCK_EX);
             @unlink($tokenFile);
             @unlink($attempts);
+            @unlink($storageDir . '/.install-allow-remote');
 
             $aplicado = ['tablas' => $tablasTras, 'base' => $name];
         } catch (Throwable $e) {

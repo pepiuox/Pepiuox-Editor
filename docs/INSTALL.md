@@ -7,6 +7,31 @@ Esta guía está escrita para el proyecto tal como está hoy. Si algo de aquí n
 encuentras, es un error de la guía: anótalo en la deuda de la constitución
 (`02-DOCS/wiki/sdd/constitution.md`) en vez de improvisar.
 
+> ## ⚠️ Lee esto antes de seguir (revisión del 31 de octubre de 2026)
+>
+> Esta guía sigue siendo válida para instalar **por consola**, pero se queda corta en tres puntos y
+> conviene que lo sepas antes de ejecutar nada:
+>
+> 1. **La guía completa es [`MANUAL_DE_INSTALACION.md`](MANUAL_DE_INSTALACION.md).** Cubre servidor
+>    web, privilegios mínimos de base de datos, SSL, tareas programadas, restauración de copias y
+>    veinte errores frecuentes. Este archivo se conserva como guía breve.
+> 2. **Para una instalación nueva, el volcado es `db/install/initial_database.sql`**, no
+>    `db/db-full.sql`. El segundo es el esquema de referencia del proyecto y **contiene datos de una
+>    instalación real** —cuentas con sus hashes y secretos de aplicaciones de API—, así que no debe
+>    usarse para montar un sistema limpio ni para distribuirlo. El primero trae estructura, catálogos
+>    y nada más: 52 tablas, 2 vistas, 4 triggers, 5 rutinas y cero datos de personas.
+> 3. **El primer administrador ya no viene sembrado.** `initial_database.sql` no incluye ninguna
+>    cuenta ni contraseña. Se crea por consola:
+>    `php 01-TOOLS/bootstrap/create-admin.php --username=admin --email=tu@dominio.com --generate`
+>
+> **Sobre el instalador web.** El párrafo siguiente dice que está retirado y que no vuelve. Eso sigue
+> siendo el estado **documentado y confirmado**: la ruta soportada es la de consola. En el árbol de
+> trabajo existen `install.php` y `public/install.php` **sin confirmar en git**, producto de un
+> trabajo en curso del dueño del proyecto. No forman parte de este procedimiento, no están probados
+> aquí y su adopción chocaría de frente con el principio 16 de la constitución: si se decide
+> adoptarlos, hay que enmendar la constitución a propósito y con su propia prueba, no por la puerta
+> de atrás.
+
 ## Antes de empezar: no hay instalador web
 
 Existió un `install.php` que instalaba desde el navegador. Está retirado y **no vuelve**: nada que

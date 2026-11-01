@@ -509,6 +509,11 @@ class MenuController
             $this->cacheService->invalidateAllPages();
             $this->auditService->log(Auth::id(), 'menu_changed', 'Cambio en menús', 'menus');
             $this->logger->logCurrentUser('menu_changed', 'Cambio en menús');
+
+            // El menú en uso decide qué es público, así que el sitemap depende de
+            // él. `refresh()` no lanza nunca: un fallo del sitemap no puede
+            // impedir guardar un menú.
+            \App\Services\SitemapService::refresh();
         } catch (Throwable $e) {
             error_log('[MenuController] Error invalidando caché: ' . $e->getMessage());
         }

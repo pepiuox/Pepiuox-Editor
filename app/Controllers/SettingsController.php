@@ -6,7 +6,7 @@ namespace App\Controllers;
 
 use App\Core\{Request, Response, View, Session, CSRF, Auth};
 use App\Models\Setting;
-use App\Services\{SettingService, AuditService, PublicThemeService, SettingsAssetService, SiteSettings};
+use App\Services\{SettingService, AuditService, PublicThemeService, SettingsAssetService, SiteSettings, LandingContentService, PageRenderer};
 
 /**
  * Módulo de configuración del sistema.
@@ -286,7 +286,130 @@ class SettingsController
     // ────────────────────────────────────────────────────────────────
 
     /**
-     * Exige el permiso `settings.manage`; si falta, 403 y fin.
+     * `GET /admin/settings/landing/preview` — pinta la portada aunque esté apagada.
+     *
+     * Para qué: el dueño tiene que poder ver la portada antes de decidir si la
+     * convierte en la página de inicio. Sin esta ruta, mirarla obligaría a
+     * activarla en la base de datos, que es justo lo que se quiere evitar.
+     *
+     * Autorización: `guardManage()`, igual que el resto del módulo. No se delega
+     * en `PermissionMiddleware` porque ese middleware no está aplicado en
+     * ninguna ruta (deuda 14 de la constitución).
+     *
+     * Renderiza el layout público real, no una maqueta: lo que se ve aquí es lo
+     * que se servirá en `/`, con el menú y los colores vigentes.
+     *
+     * @since 2026-10-31
+     */
+    public function previewLanding(Request $req): void
+    {
+        $this->guardManage();
+
+        $landing = LandingContentService::all();
+        $appName = SiteSettings::name();
+
+        $content = View::renderStandalone('public.landing', [
+            'landing' => $landing,
+            'appName' => $appName,
+        ]);
+
+        $html = View::renderStandalone('public.layout', [
+            'page' => [
+                'title'       => (string) ($landing['hero_title'] ?? ''),
+                'description' => (string) ($landing['hero_subtitle'] ?? ''),
+                'slug'        => 'inicio',
+            ],
+            'menu'     => (new PageRenderer())->getMenu(),
+            'content'  => $content,
+            'appName'  => $appName,
+            'authUser' => Auth::user(),
+        ]);
+
+        Response::render($html);
+    }
+
+    /**
+     * `GET /admin/settings/landing` — editor del contenido de la portada.
+     *
+     * Pantalla propia y no una pestaña más: el formulario de configuración es
+     * uno solo con varios grupos, y el contenido de la portada son listas
+     * repetibles con alta y baja de filas. Mezclarlos habría convertido un
+     * formulario de 600 líneas en otro de 900 y habría obligado a guardar todo
+     * junto.
+     *
+     * @since 2026-10-31
+     */
+    public function landing(Request $req): void
+    {
+        $this->guardManage();
+
+        Response::render(View::render('settings.landing', [
+            'landing' => LandingContentService::all(),
+            'limites' => [
+                'features' => LandingContentService::MAX_FEATURES,
+                'specs'    => LandingContentService::MAX_SPECS,
+                'benefits' => LandingContentService::MAX_BENEFITS,
+                'gallery'  => LandingContentService::MAX_GALLERY,
+            ],
+        ]));
+    }
+
+    /**
+     * `POST /admin/settings/landing` — guarda el contenido de la portada.
+     *
+     * La validación vive en el servicio (`LandingContentService::save()`), que
+     * aplica las mismas reglas que la lectura: lo que no pasa se descarta y se
+     * informa, en vez de guardarse y romper la portada después.
+     */
+    public function saveLanding(Request $req): void
+    {
+        $this->guardManage();
+        CSRF::guard();
+
+        $resultado = LandingContentService::save([
+            'enabled'          => $req->post('enabled'),
+            'hero_kicker'      => (string) $req->post('hero_kicker'),
+            'hero_title'       => (string) $req->post('hero_title'),
+            'hero_subtitle'    => (string) $req->post('hero_subtitle'),
+            'hero_description' => (string) $req->post('hero_description'),
+            'hero_image'       => (string) $req->post('hero_image'),
+            'hero_cta_primary_label'   => (string) $req->post('hero_cta_primary_label'),
+            'hero_cta_primary_href'    => (string) $req->post('hero_cta_primary_href'),
+            'hero_cta_secondary_label' => (string) $req->post('hero_cta_secondary_label'),
+            'hero_cta_secondary_href'  => (string) $req->post('hero_cta_secondary_href'),
+            'footer_note'      => (string) $req->post('footer_note'),
+            'sections'         => $req->post('sections') ?? [],
+            'features'         => $req->post('features') ?? [],
+            'specs'            => $req->post('specs') ?? [],
+            'benefits'         => $req->post('benefits') ?? [],
+            'gallery'          => $req->post('gallery') ?? [],
+        ]);
+
+        AuditService::log(
+            Auth::id(),
+            'landing_saved',
+            'Contenido de la portada guardado (' . $resultado['guardadas'] . ' claves)',
+            'settings'
+        );
+
+        if ($resultado['errores'] !== []) {
+            Session::flash('flash.error', 'Se guardó lo válido. ' . implode(' ', $resultado['errores']));
+        } else {
+            Session::flash('flash.success', 'Contenido de la portada guardado.');
+        }
+
+        if ($resultado['avisos'] !== []) {
+            Session::flash('flash.warning', implode(' ', $resultado['avisos']));
+        }
+
+        Response::redirect(url('admin/settings/landing'));
+    }
+
+    /**
+     * Comprueba el permiso de gestión de configuración (`settings.manage`).
+     *
+     * Se comprueba en el controlador y no se delega en `PermissionMiddleware`
+     * porque ese middleware no está aplicado en ninguna ruta (deuda 14).
      *
      * El middleware de sesión ya garantiza que hay usuario; esto añade la
      * autorización por rol, que es lo que impide que un editor sin permiso
