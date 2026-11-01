@@ -1560,3 +1560,66 @@ en 226 comprobaciones, 0 fallos.
 
 **Lo que no se pudo comprobar:** el clic real en el panel. El navegador headless no arranca bajo el sandbox;
 la verificación es sobre el modelo (identidad y estado de las categorías), que es donde estaba el defecto.
+
+---
+
+## Corrección: cerrar y abrir categorías (CSS, no JavaScript) — 2026-11-01
+
+### El síntoma
+
+Con la agrupación y el orden ya correctos, las categorías no se cerraban al pulsarlas.
+
+### La causa
+
+GrapesJS cierra una categoría con un **estilo en línea**:
+
+```js
+close() {
+    this.$el.removeClass(this.activeClass);   // quita `gjs-open`
+    this.getTypeEl().style.display = 'none';  // ← estilo en línea
+}
+```
+
+Y nuestra hoja tenía:
+
+```css
+.gjs-block-category .gjs-blocks-c { display: grid !important; }
+```
+
+**Un `!important` de la hoja gana a un estilo en línea.** Resultado: `close()` marcaba la categoría
+como cerrada, el chevrón giraba, la clase `gjs-open` desaparecía… y las tarjetas seguían visibles. El
+clic funcionaba; lo que fallaba era la cascada.
+
+### La corrección
+
+```css
+.gjs-block-category .gjs-blocks-c { display: grid !important; }
+.gjs-block-category:not(.gjs-open) .gjs-blocks-c { display: none !important; }
+```
+
+El estado cerrado se ata a la clase que GrapesJS sí quita (`gjs-open`), no al estilo en línea. Así el
+`!important` de la rejilla queda compensado por otro `!important` del estado cerrado, y la categoría se
+cierra de verdad.
+
+### Verificación
+
+`tests/paneles/menu.php` gana dos comprobaciones sobre la hoja de estilos:
+
+| Comprobación | |
+|---|---|
+| Existe la regla que oculta las tarjetas al cerrar | ✅ |
+| La regla es específica de la categoría (`:not(.gjs-open)`) | ✅ |
+
+**202 comprobaciones PHP y las dos pruebas de la biblioteca, 0 fallos.**
+
+### Por qué costó tres intentos
+
+| Intento | Qué se arregló | Qué quedaba |
+|---|---|---|
+| 1 | Objeto de categoría compartido | El objeto plano que GrapesJS rechaza |
+| 2 | Escucha de `block:add` en el editor | `TypeError` silencioso corregido |
+| 3 | Modelo real de categoría | Agrupación correcta |
+| 4 | Regla CSS del estado cerrado | El `!important` que se comía el `display:none` |
+
+Cada uno era un defecto real y **ninguno era el último**: el fallo tenía cuatro capas. Lo que faltó desde
+el principio fue revisar la **cascada de CSS**, porque el síntoma parecía de JavaScript.

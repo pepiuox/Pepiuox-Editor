@@ -426,6 +426,27 @@ comprobar(
     implode(', ', $conInyeccion) . ' meterían código ejecutable en el lienzo'
 );
 
+
+// ─────────────────────────────────────────────────────────────────────
+echo "\n== El CSS no puede impedir cerrar una categoría ==\n";
+
+// GrapesJS cierra una categoría con un estilo EN LÍNEA (`display: none`). Un
+// `display: ... !important` sobre ese contenedor gana al estilo en línea, así que
+// la categoría se marca cerrada pero las tarjetas siguen viéndose. Hace falta una
+// regla explícita para el estado cerrado.
+$cssBloques = (string) file_get_contents(ROOT_PATH . '/public/assets/css/blocks-library.css');
+
+comprobar(
+    'existe una regla que oculta las tarjetas al cerrar la categoría',
+    preg_match('/\.gjs-open\)\s*\.gjs-blocks-c\s*\{[^}]*display:\s*none\s*!important/i', $cssBloques) === 1,
+    'sin ella, el `display: grid !important` gana al display inline de GrapesJS'
+);
+
+comprobar(
+    'la regla del estado cerrado es específica de la categoría',
+    str_contains($cssBloques, '.gjs-block-category:not(.gjs-open)'),
+    'una regla global ocultaría también las categorías abiertas'
+);
 echo "\n" . str_repeat('-', 56) . "\n";
 printf("Comprobaciones: %d · Fallos: %d\n", $total, $fallos);
 exit($fallos === 0 ? 0 : 1);

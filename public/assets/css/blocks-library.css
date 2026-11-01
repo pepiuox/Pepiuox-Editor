@@ -58,12 +58,22 @@
     transform: rotate(180deg);
 }
 
-/* ═══ Rejilla de tarjetas ═══ */
+/* ═══ Rejilla de tarjetas ═══
+   OJO con el `!important`: GrapesJS cierra una categoría poniendo un estilo EN
+   LÍNEA (`style="display: none"` en este mismo contenedor). Un `display: grid
+   !important` gana a un estilo en línea, así que la categoría se marcaba como
+   cerrada —el chevrón giraba— pero las tarjetas seguían visibles: parecía que no
+   se podía cerrar. Por eso el estado cerrado también lleva `!important`, atado a
+   la clase que GrapesJS sí quita y pone. */
 .gjs-block-category .gjs-blocks-c {
     display: grid !important;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: .4rem;
     padding: .45rem .5rem .6rem;
+}
+
+.gjs-block-category:not(.gjs-open) .gjs-blocks-c {
+    display: none !important;
 }
 
 /* ═══ Tarjeta de bloque ═══ */
