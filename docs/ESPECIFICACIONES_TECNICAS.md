@@ -1176,3 +1176,62 @@ de ficheros de bloques: `editor_block_urls()` en `app/Helpers/functions.php`. Ex
 que se ejecuta en el lienzo), y ordena alfabéticamente porque el orden decide qué bloque gana ante un id
 repetido. Antes cada editor construía su lista: el pie cargaba los doce ficheros y sus bloques no se
 comportaban como en páginas y plantillas.
+
+---
+
+## 12. Los tres editores visuales: cómo están montados (análisis del 31 de octubre de 2026)
+
+Antes de tocar nada se compararon las tres pantallas. Las tres usan **las mismas piezas**; no hay un
+editor distinto.
+
+| Pieza | `pages/builder.php` | `templates/edit.php` | `settings/footer-builder.php` |
+|---|---|---|---|
+| Documento | `<DOCTYPE html>` completo (vista standalone) | igual | **dentro del layout del panel** |
+| `views/partials/editor-assets-head.php` | `require` con `$editorIncludeBootstrap = false` | igual | **igual** |
+| `views/partials/editor-assets-body.php` | `require` | `require` | `require` (antes `include`) |
+| `public/assets/js/grapesjs-shared.js` (`EditorKit`) | sí | sí | **sí** |
+| `public/assets/js/blocks-library.js` | sí | sí | **sí** |
+| Lista de bloques | `editor_block_urls()` | `editor_block_urls()` | **`editor_block_urls()`** |
+| `grapesjs.init` | con `EditorKit.PLUGINS_OPTS` y lienzo compartido | igual | **igual** |
+| Carga de bloques | `EditorKit.loadBlockScripts` tras crear el editor | igual | **igual** |
+| Gestor de imágenes | `uploadUrl` + `assetsUrl` con `fetch` propio | `buildAssetManagerConfig()` | **lista en línea + subida** |
+| Comentarios colaborativos | `comments.js` | no | no (no aplica) |
+
+**Por qué el pie no es una vista standalone:** vive dentro del panel, junto al resto de Configuración,
+para no duplicar la barra lateral y el diseño. El lienzo de GrapesJS funciona igual en ambos casos.
+
+**Una función de menos, no una de más.** La primera versión añadió
+`GET /admin/settings/footer/builder/assets`. Se retiró: `GET /admin/pages/assets` ya existía y devuelve
+lo mismo. La subida sí necesita endpoint propio, porque la de páginas está atada a un `{id}` de página.
+
+### Dónde se guardan los diseños del pie
+
+HECHO OBSERVADO (consultado en `web_editor_db`):
+
+```
+settings  ·  group = 'footer'  ·  value  es LONGTEXT
+  about           string   110 B
+  columns         json     281 B
+  contact_email   string    16 B
+  contact_note    string     0 B
+  contact_title   string     8 B
+  copyright       string    47 B
+  show_contact    bool       1 B
+```
+
+Los diseños del constructor van al **mismo sitio**, con claves `builder_html`, `builder_css`,
+`builder_js`, `builder_data` y `builder_enabled`. `LONGTEXT` admite 4 GB, así que el tamaño no es límite.
+
+**Estado actual: 0 diseños del constructor guardados.** El mecanismo está probado (guardar, leer, pintar,
+apagar y volver al pie por campos) contra una base aislada, pero nadie ha guardado uno todavía desde el
+panel.
+
+### Lo que hoy se guarda y lo que no
+
+Hoy se conserva **un diseño a la vez**: el activo. El pie por campos queda como alternativa y vuelve
+intacto al desactivar el constructor.
+
+**Tener una variedad de diseños para elegir** es una capacidad nueva, no una corrección: exige un catálogo
+(nombre por diseño, lista, elegir activo) y un sitio donde guardarlo — o una tabla `footer_designs`, o
+claves con prefijo en `settings`. No se ha implementado: es alcance nuevo y hay que decidir el modelo
+antes de escribirlo.

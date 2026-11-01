@@ -221,5 +221,6 @@ dueño, sin documentar como ruta soportada**) · `assets/{css,js,js/blocks}`.
 | Cambiar el pie | `Configuración → Editar el pie`: campos (ooter.php) o **constructor** (ooter-builder.php) |
 | Reutilizar el editor visual | `public/assets/js/grapesjs-shared.js` (window.EditorKit): lienzo, plugins y carga de bloques |
 | Tocar el constructor visual | `views/pages/builder.php` + `public/assets/js/grapesjs-shared.js` |
+| Comparar los tres editores | `docs/ESPECIFICACIONES_TECNICAS.md` §12: piezas compartidas y qué cambia en cada uno |
 | Cambiar el esquema | `db/migrations/<fecha>_<nombre>.{up,down}.sql` + `db/db-full.sql` |
 | Entender una decisión | `02-DOCS/wiki/` (`ftd/` y `constitution.md`) |
