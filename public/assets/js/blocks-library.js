@@ -134,6 +134,35 @@ window.BlocksLibrary = (function () {
     var installed = false;
 
     /**
+     * Una sola instancia de categoría por clave, compartida por todos los bloques.
+     *
+     * ── Por qué no crear un objeto nuevo por bloque ────────────────────
+     * Antes, cada bloque recibía `{ id, label, order, open }` recién construido.
+     * GrapesJS trata cada objeto de categoría como una entrada propia del panel,
+     * así que acababa con **una categoría por bloque** aunque compartieran id y
+     * etiqueta: el desplegable abría y cerraba grupos distintos y parecía que no
+     * funcionaba.
+     *
+     * Compartiendo la instancia hay una categoría real por clave, y `open` se
+     * decide una vez: si se reescribiera en cada bloque, abrir o cerrar a mano se
+     * revertiría con el siguiente bloque que se registrara.
+     */
+    var CATEGORY_OBJECTS = {};
+
+    function categoryObject(key) {
+        if (!CATEGORY_OBJECTS[key]) {
+            var meta = CATEGORIES[key] || CATEGORIES['px-other'];
+            CATEGORY_OBJECTS[key] = {
+                id: key,
+                label: meta.label,
+                order: meta.order,
+                open: key === 'px-quick' || key === 'px-layout'
+            };
+        }
+        return CATEGORY_OBJECTS[key];
+    }
+
+    /**
      * Categoría canónica de un bloque.
      *
      * Prioridad: el nombre manda para los hero y los quick templates; después el
@@ -293,7 +322,6 @@ window.BlocksLibrary = (function () {
 
         var category = readCategory(block.get('category'));
         var key = resolveCategory(block.id, plainLabel(block.get('label')), category.id, category.label);
-        var meta = CATEGORIES[key] || CATEGORIES['px-other'];
 
         // Etiqueta limpia: varios ficheros meten el icono dentro del `label`
         // (`<i class="fas fa-…"></i> Sección`). El icono va en `media`, no en el
@@ -313,12 +341,10 @@ window.BlocksLibrary = (function () {
 
         normalizeContent(block, silent);
 
-        block.set('category', {
-            id: key,
-            label: meta.label,
-            order: meta.order,
-            open: key === 'px-quick' || key === 'px-layout'
-        }, { silent: silent !== false });
+        // Misma instancia para todos los bloques de la categoría: ver
+        // categoryObject(). Con un objeto nuevo por bloque, el panel mostraba
+        // grupos repetidos y el desplegable no se comportaba.
+        block.set('category', categoryObject(key), { silent: silent !== false });
 
         var attributes = Object.assign({}, block.get('attributes') || {});
         var description = plainLabel(block.get('description') || '');

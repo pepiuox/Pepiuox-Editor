@@ -108,6 +108,44 @@ check('la categoría lleva label y order', (() => {
 console.log('\n== Atributos y duplicados ==');
 check('se añade title para el tooltip', typeof manager.get('bs-navbar').get('attributes').title === 'string' && manager.get('bs-navbar').get('attributes').title.length > 0);
 
+console.log('\n== Categorías compartidas (el desplegable del panel) ==');
+// El panel agrupa por categoría. Si cada bloque trae su propio objeto, GrapesJS
+// crea una categoría por bloque: aparecen grupos repetidos y abrir o cerrar deja
+// de comportarse. Todos los bloques de una misma clave deben compartir instancia.
+const catNav1 = manager.get('bs-navbar').get('category');
+manager.add('nav-extra', { label: 'Navbar extra', category: 'bootstrap-navigation' });
+const catNav2 = manager.get('nav-extra').get('category');
+check('dos bloques de Navegación comparten la MISMA instancia', catNav1 === catNav2,
+    'son objetos distintos: el panel los trata como categorías separadas');
+
+const catHero = manager.get('hero').get('category');
+manager.add('hero-dos', { label: 'Hero dos', category: { id: 'Layout', label: 'Layout' } });
+check('dos bloques de Encabezados comparten instancia', catHero === manager.get('hero-dos').get('category'));
+
+// Abrir/cerrar a mano no puede revertirse al registrar otro bloque.
+catNav1.open = false;
+manager.add('nav-tercero', { label: 'Navbar tres', category: 'bootstrap-navigation' });
+check('cerrar una categoría se mantiene al añadir otro bloque',
+    manager.get('nav-tercero').get('category').open === false,
+    'el bloque nuevo reabrió la categoría: el cierre manual se revertiría');
+
+// Estado inicial: solo «Plantillas rápidas» y «Estructura y layout» abren; el
+// resto arranca cerrado para que el panel no sea un muro de tarjetas.
+check('Plantillas rápidas abre por defecto', manager.get('px-faq').get('category').open === true);
+check('Estructura y layout abre por defecto', manager.get('plugin-columns').get('category').open === true);
+check('Navegación arranca cerrada', catNav1.open === false);
+check('Encabezados arranca cerrada', manager.get('hero').get('category').open === false);
+check('Tarjetas arranca cerrada', manager.get('bootstrap-card-basic').get('category').open === false);
+
+// Ninguna categoría se duplica por identidad.
+const instancias = new Set();
+manager.getAll().forEach((b) => {
+    const c = b.get('category');
+    if (c && typeof c === 'object') instancias.add(c);
+});
+const claves = new Set(Array.from(instancias).map((c) => c.id));
+check('hay una sola instancia por clave de categoría', instancias.size === claves.size,
+    instancias.size + ' instancias para ' + claves.size + ' claves');
 manager.add('divider', { label: 'Divider', category: 'utils' });
 lib.install(editor);
 check('los duplicados de HIDE se retiran', manager.get('divider') === null);

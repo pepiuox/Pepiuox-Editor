@@ -1503,3 +1503,60 @@ Total servido: **14 ficheros, 294 bloques distintos** (eran 271).
 `tests/paneles/menu.php` → **50 comprobaciones**. Tres colisiones declaradas (`hero-split`, `hero-dark`,
 `bs-modal`), y una guarda nueva: **ningún fichero cargado puede inyectar `<script>` en el contenido**. Si
 alguno lo vuelve a hacer, la prueba falla.
+
+---
+
+## Corrección: abrir y cerrar categorías del BlockManager (2026-11-01)
+
+### El defecto
+
+`blocks-library.js` asignaba la categoría de cada bloque con un **objeto recién construido**:
+
+```js
+block.set('category', { id: key, label: meta.label, order: meta.order, open: … });
+```
+
+GrapesJS trata cada objeto de categoría como una entrada propia del panel. Con uno nuevo por bloque, el
+BlockManager acababa con **una categoría por bloque** que compartían id y etiqueta: varios grupos con el
+mismo nombre, y el desplegable abría y cerraba grupos distintos de la misma lista. De ahí la sensación de que
+«no funciona».
+
+Además, `open` se reescribía con cada bloque registrado: aunque el grupo se abriera o cerrara a mano, el
+siguiente bloque lo devolvía a su estado por defecto.
+
+### La corrección
+
+Una **sola instancia por clave**, guardada en un mapa:
+
+```js
+var CATEGORY_OBJECTS = {};
+
+function categoryObject(key) {
+    if (!CATEGORY_OBJECTS[key]) {
+        var meta = CATEGORIES[key] || CATEGORIES['px-other'];
+        CATEGORY_OBJECTS[key] = { id: key, label: meta.label, order: meta.order, open: key === 'px-quick' || key === 'px-layout' };
+    }
+    return CATEGORY_OBJECTS[key];
+}
+```
+
+`applyCanonical()` usa `categoryObject(key)`, así que todos los bloques de una categoría apuntan a la **misma**
+instancia. `open` se decide al crearla, una vez, y ya no se reescribe al añadir bloques.
+
+### Verificación sin navegador
+
+`tests/blocks-library/install.test.js` gana nueve comprobaciones, ejecutadas contra el BlockManager simulado
+que ya existía:
+
+| Comprobación | |
+|---|---|
+| Dos bloques de la misma categoría comparten la **misma instancia** | ✅ |
+| Cerrar una categoría se mantiene al registrar otro bloque | ✅ |
+| Solo «Plantillas rápidas» y «Estructura y layout» abren por defecto | ✅ |
+| Hay una sola instancia por clave (sin duplicados por identidad) | ✅ |
+
+Las dos pruebas de la biblioteca pasan (`install.test.js`, `normalize.test.js`) y el resto del proyecto queda
+en 226 comprobaciones, 0 fallos.
+
+**Lo que no se pudo comprobar:** el clic real en el panel. El navegador headless no arranca bajo el sandbox;
+la verificación es sobre el modelo (identidad y estado de las categorías), que es donde estaba el defecto.
