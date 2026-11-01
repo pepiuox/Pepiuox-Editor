@@ -1233,5 +1233,73 @@ intacto al desactivar el constructor.
 
 **Tener una variedad de diseños para elegir** es una capacidad nueva, no una corrección: exige un catálogo
 (nombre por diseño, lista, elegir activo) y un sitio donde guardarlo — o una tabla `footer_designs`, o
-claves con prefijo en `settings`. No se ha implementado: es alcance nuevo y hay que decidir el modelo
-antes de escribirlo.
+claves con prefijo en `settings`. Implementado el 2026-11-01 en la tabla `footer_designs` (ver §13).
+
+---
+
+## 13. Catálogo de diseños del pie (`footer_designs`)
+
+Antes el pie guardaba **un** diseño en claves del grupo `footer`. Ahora hay catálogo: varios diseños
+con nombre y uno activo a la vez.
+
+### Por qué una tabla y no más claves en `settings`
+
+`settings` guarda pares clave/valor, no N registros con nombre, autor y fechas. Listar «los diseños»
+obligaría a recorrer y parsear el grupo entero en cada lectura. El contenido de una página ya vive así
+(`pages.content_html` longtext): un diseño de pie es lo mismo, un documento.
+
+```
+footer_designs
+  id            int(11) PK auto_increment
+  name          varchar(120) UNIQUE
+  content_html  longtext
+  content_css   longtext
+  content_js    longtext
+  grapesjs_data longtext
+  is_active     tinyint(1)     INDEX     ← solo uno a 1, garantizado en transacción
+  created_by    int(11)        NULL
+  created_at / updated_at  timestamp
+```
+
+Migración `2026_11_01_footer_designs.{up,down}.sql`, idempotente. **Se aplica con `--admin`**: la cuenta de
+la aplicación (`web_editor_app`) no tiene permiso `CREATE`, y es correcto que no lo tenga.
+
+### Reglas
+
+| Regla | Dónde |
+|---|---|
+| Un solo diseño activo | `activateDesign()` apaga el resto dentro de una transacción |
+| Borrar el activo se niega | `deleteDesign()`: primero activa otro o desactiva |
+| Nombre único y no vacío, máximo 120 | `createDesign()` |
+| Máximo 50 diseños | `MAX_DESIGNS` |
+| Guardado rechazado **no escribe nada** | `saveDesign()`: si un campo no cabe, no se toca la fila |
+| Sin diseño activo, manda el pie por campos | `builder()` cae al grupo `footer` |
+
+### Un defecto que encontraron las pruebas
+
+La primera versión de `saveDesign()` escribía los campos válidos y el que fallaba **vacío**: un guardado
+rechazado por tamaño borraba el contenido del diseño. Lo detectó la prueba («un HTML que pasa del tope se
+rechaza» pasaba, pero el diseño quedaba en blanco). Corregido en `saveDesign()` y en el `saveBuilder()`
+anterior: si algo no cabe, no se escribe.
+
+### Pantallas
+
+| Ruta | Qué hace |
+|---|---|
+| `GET /admin/settings/footer/designs` | Listado: estado, tamaño, fecha, y acciones |
+| `POST /admin/settings/footer/designs` | Crear |
+| `POST .../designs/{id}/activate` | Poner en el sitio |
+| `POST .../designs/deactivate` | Volver al pie por campos |
+| `POST .../designs/{id}/duplicate` | Copia con nombre libre |
+| `POST .../designs/{id}/delete` | Borrar (no si está activo) |
+| `GET/POST .../designs/{id}/builder` | Componer y guardar |
+
+**Orden de rutas:** las de literal (`/designs/deactivate`) van **antes** que las de `{id}`, porque el
+router devuelve la primera coincidencia y `deactivate` se leería como un id.
+
+La ruta anterior `GET /admin/settings/footer/builder` sigue respondiendo: lleva al catálogo.
+
+### Prueba
+
+`tests/footer/designs.php` — **26 comprobaciones** contra una base aislada. Se niega a ejecutarse si
+`DB_NAME` no termina en `_test` ni empieza por `zz_`, porque escribe de verdad.

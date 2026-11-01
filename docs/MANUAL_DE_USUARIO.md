@@ -1315,3 +1315,23 @@ pie → Editar con el constructor` (o `/admin/settings/footer/builder`).
 
 Los textos dinámicos del copyright (`{year}`, `{site}`) son del pie por campos. Si usas el constructor,
 escribe el año a mano o vuelve a los campos.
+
+### I. Guardar varios diseños de pie y elegir cuál se usa
+
+Un diseño es una composición del pie hecha con el constructor. Puedes tener varios y cambiar de uno a otro
+sin volver a componer nada.
+
+**Crear un diseño** — `Configuración → Editar el pie → Catálogo de diseños`, escribe un nombre (por ejemplo
+«Pie oscuro») y pulsa **Crear y componer**. Se abre el constructor vacío.
+
+**Ponerlo en el sitio** — al terminar de componer, marca **«Usar este diseño en el sitio»** y guarda. También
+puedes hacerlo desde el catálogo con el botón **Usar**.
+
+**Copiar un diseño** — **Duplicar** crea una copia con otro nombre. Sirve para probar un cambio sin tocar el
+que ya funciona.
+
+**Quitar un diseño** — solo los que no están en uso. El que está activo no se puede borrar: activa otro o
+pulsa **Volver al pie por campos** y entonces bórralo.
+
+**Volver al pie por campos** — desactiva el diseño y el sitio muestra otra vez el pie de columnas, con todo
+lo que tuviera. Nada se pierde.
