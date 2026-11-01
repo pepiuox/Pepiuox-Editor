@@ -43,7 +43,8 @@ mantener un sitio web desde un panel de administración:
 | Observabilidad | Auditoría, registro de actividad, analítica de visitas, estadísticas diarias |
 | Operación | Copias de seguridad programables, restauración, caché de páginas y de aplicación |
 | Integración | API `/api/v1` con aplicaciones, claves y tokens; internacionalización con traducciones |
-| Portada comercial | Página de presentación editable desde el panel, con hero, tarjetas de funciones, especificaciones, beneficios y galería |
+| Portada comercial | Página de presentación editable desde el panel, con hero, tarjetas de funciones, especificaciones, beneficios y galería
+| Pie de página | Editor visual del pie: texto de marca, columnas de enlaces, contacto y copyright con marcadores |
 | Sitemap | Generado desde el panel y regenerado al guardar páginas o cambiar el menú en uso |
 
 ## Módulos disponibles
@@ -64,7 +65,8 @@ Cada módulo tiene su ruta en `config/routes.php` y su manual de uso en
 | Notificaciones | `/admin/notifications` |
 | Caché | `/admin/cache` |
 | Configuración e identidad visual | `/admin/settings` |
-| Portada comercial | `/admin/settings/landing` · vista previa en `/admin/settings/landing/preview` |
+| Portada comercial | `/admin/settings/landing` · menú lateral **Web pública → Portada** · vista previa en `/admin/settings/landing/preview` |
+| Pie de página | `/admin/settings/footer` · menú lateral **Web pública → Pie de página** |
 | Sitemap | `/admin/seo/sitemap` |
 | Copias de seguridad | `/admin/backups` |
 | API | `/admin/api` |
@@ -280,14 +282,15 @@ Se declaran en voz alta porque afectan a cómo se opera la plataforma, no porque
    `tests/landing`, `tests/sitemap`, `tests/seguridad` y `tests/blocks-library`.
 4. **Residuos:** 10 controladores sin uso y ~590 KB de modelos y servicios duplicados.
 5. `pages.startpage` no tiene unicidad garantizada: guardar una nueva portada no desmarca la anterior.
-6. **`db/db-full.sql` versionado contiene datos sensibles**: hashes de contraseñas sembradas y
-   secretos de tres aplicaciones de API. El SQL de instalación limpia no los lleva, pero el historial
-   de git sí. Rotar esas credenciales es decisión del dueño.
+6. **El historial de git conserva secretos antiguos.** Los volcados versionados ya no llevan hashes ni
+   filas de aplicaciones de API, y los tokens filtrados se rotaron en la base. Pero los commits
+   anteriores siguen conteniéndolos: borrarlos del historial exige reescribirlo. Los **respaldos**
+   (db/backup/) ya no se versionan.
 7. **El cron necesita `CRON_TOKEN`.** Sin ese valor los seis endpoints responden 401 a propósito.
 
 Resueltas el 2026-10-31 y verificadas: ① el middleware de permisos ya está en vigor en todo el panel
 (deuda 14), ② el token del cron es estable y `/cron/process-expired-bans` exige credencial (deuda 15),
-③ `VersionsController` comprueba permisos y el limitador falla en cerrado, ④ las tres rutas que daban 500 por desajuste archivo↔clase y la pantalla de actividad de auditoría funcionan (deudas 17 y 18). El detalle está en
+③ `VersionsController` comprueba permisos y el limitador falla en cerrado, ④ las tres rutas que daban 500 por desajuste archivo↔clase y la pantalla de actividad de auditoría funcionan (deudas 17 y 18), ⑤ los volcados versionados ya no llevan hashes ni secretos de API y los tokens filtrados están rotados (deudas 7 y 16). El detalle está en
 [`02-DOCS/wiki/sdd/constitution.md`](02-DOCS/wiki/sdd/constitution.md).
 
 ## Versiones e historial de cambios

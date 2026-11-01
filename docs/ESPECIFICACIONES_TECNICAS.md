@@ -1099,3 +1099,80 @@ permisos). `tests/seguridad/check.php` incorpora cuatro comprobaciones que falla
 
 **Sigue abierto en la misma familia:** `/admin/audit/activity` es inalcanzable porque `/admin/audit/{id}`
 se registra antes y el router devuelve la primera coincidencia. No se tocó.
+
+### 9. Editor del pie de página (grupo `footer`)
+
+Misma arquitectura que la portada, para que el panel se comporte igual en los dos sitios.
+
+| Pieza | Responsabilidad |
+|---|---|
+| `App\Services\FooterContentService` | Resuelve y valida el grupo `footer`; una consulta cacheada por petición; degrada a los valores por defecto del código si la base falla |
+| `App\Core\LinkGuard` | Única regla de destinos del sitio (rutas internas, anclas y `http(s)`); la usan el pie y los botones de la portada |
+| `views/settings/footer.php` | Editor: columnas con enlaces como filas repetibles |
+| `views/public/layout.php` | Pinta el pie desde el servicio; sustituye `{year}` y `{site}` |
+| `db/migrations/2026_10_31_footer_content.{up,down}.sql` | Siembra las claves; idempotente y reversible |
+
+**Claves** (`settings`, grupo `footer`): `about`, `copyright`, `show_contact`, `contact_title`,
+`contact_email`, `contact_note` y `columns` (JSON con la lista de columnas y sus enlaces).
+
+**Topes:** 4 columnas y 6 enlaces por columna. **Contratos:** `GET` y `POST /admin/settings/footer`, ambos
+con `settings.manage` y CSRF en el POST.
+
+**Corrección de contenido:** los enlaces del pie apuntaban a `about`, `privacy` y `terms`, que no existen
+(404). Los valores por defecto apuntan a páginas reales.
+
+### 10. Acceso desde el menú del panel
+
+Los dos editores de contenido del sitio público son **elementos del menú lateral**, no solo botones dentro
+de Configuración:
+
+```
+Web pública
+  ├── Portada        /admin/settings/landing
+  └── Pie de página  /admin/settings/footer
+```
+
+El grupo **solo se pinta con `settings.manage`**, igual que la entrada de Configuración.
+
+**Detalle que obligó a añadir un helper:** `is_active()` compara por prefijo, así que
+`is_active('/admin/settings')` se cumplía también en `/admin/settings/landing` y el menú encendía dos
+entradas a la vez. Se añadió `is_active_exact()` en `app/Helpers/functions.php` y la entrada de
+Configuración la usa; las dos nuevas usan `is_active()` para que la vista previa de la portada también
+encienda «Portada».
+
+Verificado con `tests/paneles/menu.php`, que **pinta el menú de verdad** con la sesión del Super Admin real
+(no una comprobación del texto del archivo): las dos entradas aparecen, y en cada una de las tres pantallas
+se enciende exactamente una.
+
+### 11. El pie tiene dos editores, y el constructor manda cuando está activo
+
+Se pidió que el pie se editara **como una página**. La plataforma ya tenía la pieza: `window.EditorKit`
+(`public/assets/js/grapesjs-shared.js`) es la configuración compartida del constructor —lienzo, plugins,
+filtro contra el registro real y carga de bloques—, y la usan páginas y plantillas. El pie la reutiliza;
+**no hay un segundo editor distinto**.
+
+| Pieza | Detalle |
+|---|---|
+| `views/settings/footer-builder.php` | Lienzo GrapesJS + formulario. Carga `views/partials/editor-assets-{head,body}.php` y `EditorKit` |
+| `GET/POST /admin/settings/footer/builder` | Editar y guardar. Permiso `settings.manage` y CSRF |
+| Almacenamiento | `settings` grupo `footer`: `builder_html`, `builder_css`, `builder_js`, `builder_data`, `builder_enabled` — las mismas cuatro piezas que guarda una página |
+| Render | `views/public/layout.php`: si `FooterContentService::usesBuilder()`, el HTML se pinta con `PageRenderer::buildPageHtml`, el **mismo saneador** que las páginas |
+| Vuelta atrás | Desmarcar «Usar este pie» devuelve el pie por campos, intacto |
+
+**Un detalle de rendimiento que obligó a tocar `SettingService`:** el HTML del constructor puede pesar
+decenas de kilobytes y `SettingService::all()` se llama en **cada petición pública** (identidad del sitio,
+tema). Se añadió una lista de claves pesadas que se excluyen de la carga en bloque y se leen solo con
+`get()`, que consulta por clave.
+
+**Verificado** (base aislada, 9 comprobaciones): con el constructor apagado se pinta el pie por campos;
+con él activo se pinta su HTML y su CSS, **un `<script>` inyectado en el contenido no se pinta crudo**, el
+pie por campos deja de aparecer; al apagarlo, vuelve el anterior. Y la vista del constructor se renderiza
+con el contenedor `#gjs`, GrapesJS, `EditorKit`, la biblioteca de bloques, los cuatro campos y el token
+CSRF (10 comprobaciones en `tests/paneles/menu.php`).
+
+**Bloques del constructor (corregido el 2026-10-31).** Los tres editores visuales comparten ahora la lista
+de ficheros de bloques: `editor_block_urls()` en `app/Helpers/functions.php`. Excluye `bs-blocks.js`
+(duplica cinco ids de `blocks-bs.js` con contenido distinto) y `template.js` (su bloque lleva un `<script>`
+que se ejecuta en el lienzo), y ordena alfabéticamente porque el orden decide qué bloque gana ante un id
+repetido. Antes cada editor construía su lista: el pie cargaba los doce ficheros y sus bloques no se
+comportaban como en páginas y plantillas.

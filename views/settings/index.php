@@ -69,6 +69,9 @@ $tabs = [
     <a class="btn btn-sm btn-outline-primary" href="<?= url('admin/settings/landing') ?>">
       <i class="bi bi-window-sidebar"></i> Editar la portada
     </a>
+    <a class="btn btn-sm btn-outline-primary" href="<?= url('admin/settings/footer') ?>">
+      <i class="bi bi-layout-three-columns"></i> Editar el pie
+    </a>
   </div>
   <div class="card-body">
 

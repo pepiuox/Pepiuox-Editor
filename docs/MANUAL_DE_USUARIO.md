@@ -1274,3 +1274,44 @@ herramienta de terminal, no un instalador web, y no borra páginas existentes.
 
 La causa era que dos archivos se llamaban distinto que la clase que contenían, y el cargador automático
 busca el nombre exacto. Se renombraron los archivos; el código de las rutas no cambió.
+
+### G. Editor del pie de página — `Configuración → Editar el pie`
+
+El pie aparece en **todas** las páginas públicas y antes tenía su texto escrito en el código. Ahora se
+edita desde el menú lateral, en **Web pública → Pie de página** (o en `/admin/settings/footer`), igual
+que la portada, que está en **Web pública → Portada**.
+
+> El grupo **Web pública** del menú solo aparece a quien tiene el permiso `settings.manage`. Si no lo ves,
+> es que tu rol no lo incluye.
+
+- **Bloque de marca:** el texto que va bajo el logotipo o el nombre del sitio. El logotipo se cambia en
+  `Logotipos e iconos`.
+- **Columnas de enlaces:** se añaden, editan y quitan columnas, y dentro de cada una sus enlaces (texto y
+  destino). Máximo 4 columnas y 6 enlaces por columna. Una columna sin título o sin enlaces válidos
+  desaparece del pie en vez de dibujar un título huérfano.
+- **Columna de contacto:** interruptor para mostrarla, título, correo y una nota libre. Un correo con
+  formato inválido **se guarda vacío**, no se pinta roto.
+- **Línea de copyright:** admite dos marcadores, `{year}` (año en curso) y `{site}` (nombre del sitio).
+  Vacío = la línea no se pinta.
+
+**Destinos aceptados en un enlace:** ruta del sitio (`/funciones`), o URL `http(s)`. Se rechazan
+`javascript:`, `data:` y las direcciones protocolo-relativas (`//otro-dominio`).
+
+**Cambio de contenido respecto a antes:** los enlaces antiguos del pie apuntaban a `about`, `privacy` y
+`terms`, **tres páginas que nunca se crearon** y que llevaban a un 404. Los valores por defecto ahora
+apuntan a páginas reales (`/funciones`, `/seguridad`, `/como-funciona`, `/quienes-somos`).
+
+### H. El pie también se edita con el constructor visual
+
+Además de los campos, el pie tiene un **constructor igual al de las páginas**: `Configuración → Editar el
+pie → Editar con el constructor` (o `/admin/settings/footer/builder`).
+
+- Se arrastran los mismos bloques que en una página y se compone el pie a mano.
+- Al guardar, el sitio pasa a mostrar **ese** pie.
+- La casilla **«Usar este pie»** decide cuál se ve. Desmarcarla y guardar devuelve el pie por campos, con
+  todo lo que tuviera: probar el constructor no destruye nada.
+- El constructor pinta su contenido con el mismo saneado que una página: un `<script>` pegado dentro del
+  contenido no se ejecuta.
+
+Los textos dinámicos del copyright (`{year}`, `{site}`) son del pie por campos. Si usas el constructor,
+escribe el año a mano o vuelve a los campos.

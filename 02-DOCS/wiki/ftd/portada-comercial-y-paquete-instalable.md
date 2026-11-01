@@ -502,3 +502,87 @@ el campo no desactive la portada.
 - [ ] Sin secretos en ningún artefacto generado.
 - [ ] Manuales contrastados contra `config/routes.php`.
 - [ ] Informe de validación con resultados reales y limitaciones declaradas.
+
+---
+
+## Editor del pie de página (31 de octubre de 2026)
+
+### Intención
+
+El pie de `views/public/layout.php` tenía todo su texto escrito a mano — eslogan, dos columnas de enlaces y
+un correo — y se pintaba en **todas** las páginas públicas sin forma de cambiarlo. Se pidió un editor
+visual, con criterio coherente al resto de la plataforma.
+
+### Criterio: reutilizar la receta, no inventar otra
+
+Es exactamente el patrón de la portada, para que el panel se comporte igual en los dos sitios:
+
+| Pieza | Por qué así |
+|---|---|
+| `FooterContentService` | Valores por defecto **en código** → el pie se ve completo antes de sembrar nada; la base solo guarda lo que el dueño cambia. Una consulta cacheada por petición, como `SiteSettings` y `LandingContentService` |
+| Grupo `footer` en `settings` | Listas como **JSON validado**, igual que las tarjetas de la portada. Cuatro columnas no justifican cuatro tablas |
+| `LinkGuard` (nuevo, `app/Core`) | La regla de destinos estaba dentro de `LandingContentService`. Al añadir el pie se movió a un solo sitio para no tener dos listas de esquemas permitidos que se desincronicen. `LandingContentService` ahora la usa también |
+| Pantalla propia `/admin/settings/footer` | Igual que la portada: son columnas con enlaces, no un grupo de campos suelto |
+| Filas repetibles con alta y baja | Mismo patrón de JavaScript delegado que el editor de la portada |
+
+### Hallazgo de contenido corregido
+
+Los enlaces del pie apuntaban a `url('about')`, `url('privacy')` y `url('terms')`. **Esas tres páginas
+nunca se crearon**: el pie llevaba a tres 404. Los valores por defecto nuevos apuntan a páginas que
+existen (`/funciones`, `/seguridad`, `/como-funciona`, `/quienes-somos`).
+
+### Verificación
+
+`php tests/footer/check.php` → **30 comprobaciones, 0 fallos**: forma del contenido por defecto, que
+todos los enlaces por defecto sean rutas válidas, que no queden los antiguos, rechazo de `javascript:`,
+`data:`, `mailto:`, `//host`, anclas sueltas y vacío, descarte de columnas sin título o sin enlaces
+válidos, topes de 4 columnas y 6 enlaces, y sustitución de los marcadores del copyright.
+
+Migración validada en base aislada (7 claves, `JSON_VALID` = 1, reversión a 0 y resto de grupos intacto)
+y aplicada a `web_editor_db`: **aditiva e idempotente**, segunda pasada sin cambios.
+
+Servido por HTTP en `/funciones`, aislado el bloque `<footer>`: las tres columnas, los seis enlaces, el
+correo y el copyright con el año real aparecen; el literal antiguo («Plataforma de creación y gestión de
+contenido profesional») ya no está.
+
+**Dos fallos propios durante la prueba, corregidos:** olvidé un `!` en la comprobación de `data:` (la
+aserción afirmaba lo contrario de lo que quería), y envié cinco columnas cuando el tope es cuatro, con lo
+que la prueba medía el tope en lugar del filtrado. También fallaron cuatro regex de verificación por no
+tolerar los saltos de línea del HTML; se repitieron acotadas al bloque del pie.
+
+### Acceso en el menú del panel
+
+Añadido después de montar el editor: los dos editores de contenido del sitio público pasan a ser
+**elementos del menú lateral**, no solo botones dentro de Configuración.
+
+```
+Web pública
+  ├── Portada        /admin/settings/landing
+  └── Pie de página  /admin/settings/footer
+```
+
+El grupo se pinta únicamente con el permiso `settings.manage`, igual que Configuración.
+
+**Un detalle que obligó a añadir un helper.** `is_active()` compara por prefijo (`str_starts_with`), así
+que `is_active('/admin/settings')` se cumplía también en `/admin/settings/landing`: el menú encendía dos
+entradas a la vez. Se añadió `is_active_exact()` a `app/Helpers/functions.php` y la entrada de
+Configuración la usa. Las dos nuevas usan `is_active()` a propósito, para que la vista previa de la
+portada (`/admin/settings/landing/preview`) también encienda «Portada».
+
+**Verificación que no se queda en leer el archivo.** `tests/paneles/menu.php` **pinta el menú de verdad**,
+simulando la sesión con el Super Admin real de la base de datos y fijando la URI tres veces:
+
+| Comprobación | Resultado |
+|---|---|
+| El menú produce HTML y sin avisos de PHP | 17 555 bytes |
+| Aparecen «Web pública», «Portada» y «Pie de página» | sí |
+| En `/admin/settings/footer` se enciende **solo** «Pie de página» | sí |
+| En `/admin/settings` se enciende **solo** «Configuración» | sí |
+| En `/admin/settings/landing` se enciende **solo** «Portada» | sí |
+
+10 comprobaciones, 0 fallos. Se deja una copia en `storage/preview/menu.html` (ignorada por git) para
+revisarla a ojo.
+
+**Un fallo propio durante la prueba:** la primera aserción usaba una expresión regular con `.*` y `/s`
+para comprobar que el bloque estaba dentro de la guarda de permiso; falló por frágil, no por el código.
+Se cambió a comparación por posiciones (`strpos`), que no depende del formato del archivo.

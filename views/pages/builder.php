@@ -59,20 +59,7 @@ $csrfToken = function_exists('csrf_token') ? csrf_token() : \App\Core\CSRF::toke
 //   - template.js: su único bloque es un layout con <script> dentro del
 //     `content`, y ese contenido se ejecuta en el lienzo del editor.
 // ═══════════════════════════════════════════════════════════════════
-$blockExcluded = ['bs-blocks.js', 'template.js'];
-$blockFiles = [];
-foreach (glob(ASSETS_PATH . '/js/blocks/*.js') ?: [] as $blockFile) {
-    $blockName = basename($blockFile);
-    if (in_array($blockName, $blockExcluded, true)) {
-        continue;
-    }
-    $blockFiles[] = $blockName;
-}
-sort($blockFiles);
-$blockUrls = array_map(
-    static fn (string $name): string => asset('js/blocks/' . $name),
-    $blockFiles
-);
+$blockUrls = editor_block_urls();
 ?>
 <!DOCTYPE html>
 <html lang="es">

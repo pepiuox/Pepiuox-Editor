@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Mapa de permisos por acción del panel.
  *
@@ -157,6 +157,11 @@ return [
     SettingsController::class . '::landing'          => 'settings.manage',
     SettingsController::class . '::saveLanding'      => 'settings.manage',
     SettingsController::class . '::previewLanding'   => 'settings.manage',
+    SettingsController::class . '::footer'           => 'settings.manage',
+    SettingsController::class . '::saveFooter'       => 'settings.manage',
+    SettingsController::class . '::footerBuilder'    => 'settings.manage',
+    SettingsController::class . '::saveFooterBuilder' => 'settings.manage',
+    SettingsController::class . '::footerUpload'     => 'settings.manage',
 
     // ── SEO y sitemap ────────────────────────────────────────────────
     SeoController::class . '::index'             => 'seo.manage',

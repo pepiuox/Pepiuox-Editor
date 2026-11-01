@@ -136,10 +136,23 @@ if (isset($current['id'])) {
       <i class="bi bi-shield-lock"></i>
       <span>Roles y permisos</span>
     </a>
+<!-- ── WEB PÚBLICA ── -->
+    <?php if (!isset($current['id']) || can('settings.manage')): ?>
+    <div class="nav-label">Web pública</div>
+    <a class="nav-link <?= is_active('/admin/settings/landing', 'active') ?>" href="<?= url('admin/settings/landing') ?>">
+      <i class="bi bi-window-sidebar"></i>
+      <span>Portada</span>
+    </a>
+    <a class="nav-link <?= is_active('/admin/settings/footer', 'active') ?>" href="<?= url('admin/settings/footer') ?>">
+      <i class="bi bi-layout-three-columns"></i>
+      <span>Pie de página</span>
+    </a>
+    <?php endif; ?>
+
 <!-- ── ADMINISTRACIÓN ── -->
     <div class="nav-label">Administración</div>
     <?php if (!isset($current['id']) || can('settings.manage')): ?>
-    <a class="nav-link <?= is_active('/admin/settings', 'active') ?>" href="<?= url('admin/settings') ?>">
+    <a class="nav-link <?= is_active_exact('/admin/settings', 'active') ?>" href="<?= url('admin/settings') ?>">
       <i class="bi bi-gear"></i>
       <span>Configuración</span>
     </a>

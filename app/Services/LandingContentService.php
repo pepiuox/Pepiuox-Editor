@@ -407,15 +407,9 @@ final class LandingContentService
             return null;
         }
 
-        if ($href === '' || mb_strlen($href) > 200) {
-            return null;
-        }
-
-        $esRutaInterna = str_starts_with($href, '/') && !str_starts_with($href, '//');
-        $esAncla       = str_starts_with($href, '#');
-        $esExterna     = (bool) preg_match('#^https?://[^\s]+$#i', $href);
-
-        if (!$esRutaInterna && !$esAncla && !$esExterna) {
+        // La regla de destinos vive en un solo sitio (`App\Core\LinkGuard`) para
+        // que la portada y el pie no acepten esquemas distintos con el tiempo.
+        if (!\App\Core\LinkGuard::isSafe($href, 200)) {
             return null;
         }
 

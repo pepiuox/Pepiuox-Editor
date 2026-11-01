@@ -163,6 +163,73 @@ final class AssetUploadService
      *
      * @return array{0:int,1:int}
      */
+    /**
+     * Imágenes ya subidas, en el formato que espera GrapesJS.
+     *
+     * ── Por qué vive aquí ───────────────────────────────────────────────
+     * El constructor de páginas tenía esta lógica privada y el del pie no tenía
+     * ninguna, así que en el pie no se podía elegir un logo ya subido. Se movió
+     * al servicio que ya es dueño de las subidas: una sola forma de recorrer
+     * `uploads/` y de construir la URL pública.
+     *
+     * Cada entrada lleva `src`, `name`, `type`, `width`, `height`, `size` y
+     * `uploaded_at`, ordenadas de la más reciente a la más antigua.
+     *
+     * @return list<array{src:string,name:string,type:string,width:int,height:int,size:int,uploaded_at:string}>
+     */
+    public function existing(): array
+    {
+        $raiz = rtrim($this->uploadsPath, '/\\');
+        if (!is_dir($raiz)) {
+            return [];
+        }
+
+        $permitidas = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+        $raizNormal = str_replace('\\', '/', $raiz);
+        $assets = [];
+
+        $iterador = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($raiz, \RecursiveDirectoryIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::SELF_FIRST
+        );
+
+        foreach ($iterador as $archivo) {
+            if ($archivo->isDir()) {
+                continue;
+            }
+
+            $ext = strtolower($archivo->getExtension());
+            if (!in_array($ext, $permitidas, true)) {
+                continue;
+            }
+
+            // getPathname() usa separadores nativos; sin normalizar, la URL salía
+            // como «uploads/C:\...» y las miniaturas se veían rotas.
+            $absoluta = str_replace('\\', '/', $archivo->getPathname());
+            $relativa = ltrim(substr($absoluta, strlen($raizNormal)), '/');
+            [$ancho, $alto] = $this->dimensionsOf($archivo->getPathname(), $ext);
+
+            $assets[] = [
+                'src'         => url('uploads/' . $relativa),
+                'name'        => $archivo->getFilename(),
+                'type'        => 'image',
+                'width'       => $ancho,
+                'height'      => $alto,
+                'size'        => $archivo->getSize(),
+                'uploaded_at' => date('Y-m-d H:i:s', $archivo->getMTime()),
+            ];
+        }
+
+        usort($assets, static fn (array $a, array $b): int => strtotime($b['uploaded_at']) <=> strtotime($a['uploaded_at']));
+
+        return $assets;
+    }
+
+    /**
+     * Calcula las dimensiones de una imagen.
+     *
+     * @return array{0:int,1:int}
+     */
     public function dimensionsOf(string $path, string $extension): array
     {
         if ($extension === 'svg') {

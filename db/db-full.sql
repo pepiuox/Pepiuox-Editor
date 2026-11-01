@@ -152,11 +152,13 @@ CREATE TABLE IF NOT EXISTS `api_applications` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 -- Volcando datos para la tabla web_editor_db.api_applications: ~3 rows (aproximadamente)
-INSERT INTO `api_applications` (`id`, `app_name`, `app_key`, `app_secret`, `api_key`, `api_secret`, `description`, `allowed_ips`, `rate_limit`, `permissions`, `status`, `expires_at`, `last_used_at`, `created_at`, `updated_at`) VALUES
-	(1, 'PePiuoX Maker', 'db1df82ce0c0304f88321a10de0969bc', 'faO9AEe1j00az2R/XJQNJ2c+gLAg5S+h2H4JAovEe0ezjG/FIpC6rZFDEHzEhVcb8GZhXFJV13xbabm6oRKGbXNEhlu8Qk7fb4FaCrjSQZd+4WeotjoRVjxdBHA=', 'pk_c267745c214b6b0a6df126541667a69b5fdb1df78ff3a81f', 'K6TaDXR4TVTpKuagHPFDv6gw1AvCf7nqPnvyttNBNSBurEzQDEl8Jlas8gZvsFI20mckb3JvqnJgKgTuMEz+23IMTgLVbJMyhRI30ysb3GOb5WC6z+HgTXe6D/DL4rY=', 'Aplicación para gestionar páginas', '["127.0.0.1","192.168.1.100"]', 200, '["read","write","delete"]', 'active', NULL, '2026-06-12 18:28:32', '2026-06-12 18:28:32', '2026-06-12 18:28:32'),
-	(2, 'PePiuoX Maker', '521be816eab84835016f0c036a6e6f72', 'ALRTslcy0u3edRSbz8vTGQGViWdY78yuO9iTCEI50bPQmfUNY9FYW2Bzz/WSuyvxUSWipnsYnT5WHbcyhgyFObWGd/HmeTfHEM2YFoNI/XMuqjYH0P3xB4gvL1s=', 'pk_f9af3daf263d0418eb79d6766eba82bfa8a8771e81c0cb92', 'yR7N3vUB4P/01fT0r6OsnPuXrGpoNGAF6+DD/G504k8Xee7PaYf8Lkny/hG0jy/z7m0dcUObMpuGo17uLuTchlzMObFl/xPSmSTRrakp8LiFCkJGk/SCW/9ntuWkq08=', 'Aplicación para gestionar páginas', '["127.0.0.1","192.168.1.100"]', 200, '["read","write","delete"]', 'active', NULL, '2026-06-12 18:32:24', '2026-06-12 18:32:24', '2026-06-12 18:32:24'),
-	(3, 'PePiuoX Maker', '48a4626fa518dc86652906a6e3118dc5', '8eZkxiuxMcPBon9i/9hBdBhCv4jNlapLrNB3t1BaMFNK/sJM6GMga3xt631gGEdXKJVE2yFbB45cUdgAXdkXU8A7zIY0Y+ZBquzl0tM0jrtSzn8RlVzzRSiR8tc=', 'pk_d39c9fe8afeac8231e4b29e2ecb8fb0d82d31ec1a7c7ae13', '+WSDaWhdGtmrXQ5Ja7ncfbdkU7yVyrBVw8et4fESDazxsNElibsZrGzrMcjQZA0IXlupcl+K6+yc6FiZ0kW3HqMpzOKg4ywsKqQcxHZy1zuLxeZyPvGP8BEKe76R+x0=', 'Aplicación para gestionar páginas', '["127.0.0.1","192.168.1.100"]', 200, '["read","write","delete"]', 'active', NULL, '2026-06-12 18:36:04', '2026-06-12 18:36:04', '2026-06-12 18:36:04');
-
+-- ═══════════════════════════════════════════════════════════════════
+-- Filas de `api_applications` retiradas del volcado de referencia.
+-- Contenían credenciales de API vivas (claves, secretos y tokens).
+-- La estructura de la tabla se conserva arriba. Para restaurar una copia
+-- completa, usa un respaldo real de `db/backup/` (no versionado).
+-- Deuda 16 en 02-DOCS/wiki/sdd/constitution.md
+-- ═══════════════════════════════════════════════════════════════════
 -- Volcando estructura para tabla web_editor_db.api_tokens
 CREATE TABLE IF NOT EXISTS `api_tokens` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -181,11 +183,13 @@ CREATE TABLE IF NOT EXISTS `api_tokens` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 -- Volcando datos para la tabla web_editor_db.api_tokens: ~3 rows (aproximadamente)
-INSERT INTO `api_tokens` (`id`, `application_id`, `token`, `refresh_token`, `token_type`, `ip_address`, `user_agent`, `scopes`, `expires_at`, `refresh_expires_at`, `revoked`, `created_at`) VALUES
-	(1, 1, 'DHVbStxmTgEQqkseNEgIGnz1FIPWfCt+cQekkNJPYIYQaWz/EvqUZgF5nW0P/HSOLsQLmoK9lDHCLI4EHs9MHZUVWVcs6QPw3n4zhv0F6WfvG0Pnzo/sYdQyxgk=', 'v1qlR+Pl4heozioHTzgq2dMt9HZj6HYLBKJ2DWrO8vqZP6DEtZPFZUTHJBctXynvxdP6ki5GFu1uLmG03k8rban6csyLWU+3BmB4gQDtCtaeddWdedD3HLsKNac=', 'bearer', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:152.0) Gecko/20100101 Firefox/152.0', '["read","write"]', '2026-06-12 22:28:32', '2026-06-13 00:28:32', 0, '2026-06-12 18:28:32'),
-	(2, 2, 'Zgfv3pi0W392vNB17G1pdkyZYzxgucIPbc6B95Czn4Yo0U9j26haSfNht0F79LplFZRw7yQ4FLE2mGFkbU9ME6CX3mKhIv8wmpQWrTrmLKsXrwQ64Nn3Jg3PzJs=', 'IiBEgbFPS8ZHeU3wZc0e8ZwgqvlzaGZP49/alrm//TGXWqyovvMUh3rs4TohUjGc2Kq0xpepHpDuQj01cvrVSDgMYsh+IIMCNuP4T/giP73597OMk6ffSUC66VI=', 'bearer', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:152.0) Gecko/20100101 Firefox/152.0', '["read","write"]', '2026-06-12 22:32:24', '2026-06-13 00:32:24', 0, '2026-06-12 18:32:24'),
-	(3, 3, 'dMddNIHpJYR0gkedwuLpQ30bzhF00XQrXEII42IbzH/odTpCOIoshfJzDQT1YUGYdi4ufiLxF+j/YrNoOthovFrbO5BXB45Mv33P07tfzYGA79ip1pTpZBrNN/U=', '3wOyfWUuyJq+XKUePP3sg02QxHHw0VfmYo9Jfz3tEdlLVnroda5iYtflB7nfNsfyIpug5Pix6fOgNGg4SVfs0ZMEyoFhSPN3Y6+yipciAXgtiWVIIhxYfjITbmw=', 'bearer', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:152.0) Gecko/20100101 Firefox/152.0', '["read","write"]', '2026-06-12 22:36:04', '2026-06-13 00:36:04', 0, '2026-06-12 18:36:04');
-
+-- ═══════════════════════════════════════════════════════════════════
+-- Filas de `api_tokens` retiradas del volcado de referencia.
+-- Contenían credenciales de API vivas (claves, secretos y tokens).
+-- La estructura de la tabla se conserva arriba. Para restaurar una copia
+-- completa, usa un respaldo real de `db/backup/` (no versionado).
+-- Deuda 16 en 02-DOCS/wiki/sdd/constitution.md
+-- ═══════════════════════════════════════════════════════════════════
 -- Volcando estructura para tabla web_editor_db.audit_logs
 CREATE TABLE IF NOT EXISTS `audit_logs` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
@@ -1494,9 +1498,9 @@ CREATE TABLE IF NOT EXISTS `users` (
 
 -- Volcando datos para la tabla web_editor_db.users: ~3 rows (aproximadamente)
 INSERT INTO `users` (`id`, `username`, `email`, `password_hash`, `full_name`, `bio`, `avatar`, `locale`, `theme`, `timezone`, `created_at`, `updated_at`, `is_active`, `role`, `role_id`, `permissions`, `is_banned`, `banned_reason`, `banned_by`, `banned_at`, `ban_expires_at`, `remember_token`, `remember_expires`, `recovery_token`, `recovery_expires`, `two_factor_enabled`, `two_factor_secret`, `last_login`, `login_count`, `last_ip`) VALUES
-	(1, 'pepiuox', 'pepiuox@yandex.com', '$2y$10$jP0N6ouj0kX3FWDThXC/V.25MKpQBr4O8JtMSFIeuZ4SoliQsp5my', 'jose mantilla', 'Artista multifacesito y desarrollador', NULL, 'es', 'dark', 'Europe/Madrid', '2025-12-19 23:37:50', '2026-08-30 04:59:21', 1, 'Super admin', NULL, '', 0, '', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, '2026-08-29 23:59:21', 90, '127.0.0.1'),
-	(2, 'manager', 'admin@webeditor.com', '$2y$10$SlcY7.ODeiQIo23vEqeHbeC/hXoPNexaMAAoXlHAuJOvrbqM1v4Ha', 'Administrador', 'manager', NULL, 'es', 'dark', 'Europe/Madrid', '2025-12-20 02:30:27', '2026-08-06 00:37:44', 1, 'Manager', NULL, '', 0, '', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, '2025-12-21 12:53:17', 1, NULL),
-	(3, 'admin', 'admin@local.test', '$2y$10$e0NRbQ7K5z1qVxJmXyOaQ.8FhT9vZ2wK3pL4mN5bV6cX7yZ8aB9cD0', 'Administrador', NULL, NULL, 'es', 'dark', 'Europe/Madrid', '2026-08-24 02:03:33', '2026-08-24 02:31:12', 1, 'Super admin', 1, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, 0, NULL);
+	(1, 'pepiuox', 'pepiuox@yandex.com', 'REEMPLAZADO-NO-ES-UNA-CONTRASENA-VALIDA', 'jose mantilla', 'Artista multifacesito y desarrollador', NULL, 'es', 'dark', 'Europe/Madrid', '2025-12-19 23:37:50', '2026-08-30 04:59:21', 1, 'Super admin', NULL, '', 0, '', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, '2026-08-29 23:59:21', 90, '127.0.0.1'),
+	(2, 'manager', 'admin@webeditor.com', 'REEMPLAZADO-NO-ES-UNA-CONTRASENA-VALIDA', 'Administrador', 'manager', NULL, 'es', 'dark', 'Europe/Madrid', '2025-12-20 02:30:27', '2026-08-06 00:37:44', 1, 'Manager', NULL, '', 0, '', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, '2025-12-21 12:53:17', 1, NULL),
+	(3, 'admin', 'admin@local.test', 'REEMPLAZADO-NO-ES-UNA-CONTRASENA-VALIDA', 'Administrador', NULL, NULL, 'es', 'dark', 'Europe/Madrid', '2026-08-24 02:03:33', '2026-08-24 02:31:12', 1, 'Super admin', 1, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, 0, NULL);
 
 -- Volcando estructura para tabla web_editor_db.users_permissions
 CREATE TABLE IF NOT EXISTS `users_permissions` (

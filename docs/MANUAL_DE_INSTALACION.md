@@ -1491,3 +1491,46 @@ permanentes.
 
 Si aplicaste la limitación anterior en una instalación tuya, no hay nada que deshacer: era un fallo del
 código, no de tu configuración.
+
+### 7. Respaldos y secretos: dos reglas
+
+**Los respaldos no se versionan.** Un volcado completo lleva los datos de las personas, sus hashes de
+contraseña y los secretos de las aplicaciones de API. `db/backup/` está en `.gitignore` por eso. Si
+alguna vez estuvo rastreado, se quita del índice sin borrarlo del disco:
+
+```bash
+git rm --cached -r db/backup    # deja de rastrearse; los archivos siguen ahí
+```
+
+**Los `.sql` que sí se versionan tienen que estar limpios.** Para comprobar y limpiar un volcado:
+
+```bash
+php 01-TOOLS/mantenimiento/sanitize-dump.php --dry-run db/db-full.sql
+php 01-TOOLS/mantenimiento/sanitize-dump.php --yes     db/db-full.sql
+```
+
+Sustituye los hashes bcrypt por un centinela inválido y retira las filas de `api_applications` y
+`api_tokens` (la estructura se conserva). Guarda el original en `storage/preview/` y **aborta si el
+número de tablas, vistas, disparadores o rutinas cambia**.
+
+**Retirar un secreto de un archivo no lo invalida.** Si estuvo publicado, hay que rotarlo en el servidor:
+
+```bash
+php 01-TOOLS/mantenimiento/rotate-api-tokens.php --dry-run
+php 01-TOOLS/mantenimiento/rotate-api-tokens.php --yes
+```
+
+Rota `token` y `refresh_token` de cada aplicación. Quien estuviera usando uno tendrá que generar otro en
+`/admin/api`. No rota `app_secret` ni `api_secret`: `App\Core\Security` usa una clave distinta por
+instancia, así que esos valores son texto cifrado que ya no se puede descifrar (hallazgo R-13).
+
+`tests/seguridad/check.php` falla si un `.sql` versionado vuelve a llevar hashes o filas de API.
+
+**Aviso al importar `db/db-full.sql`:** empieza con `CREATE DATABASE IF NOT EXISTS web_editor_db` y
+`USE web_editor_db`, así que **importarlo escribe en esa base**, no en la que tengas seleccionada. Para
+probarlo en una base aislada, quita esas dos líneas de una copia:
+
+```bash
+grep -v -E '^(CREATE DATABASE|USE `)' db/db-full.sql > /tmp/prueba.sql
+mysql -u <admin> -p <base_de_pruebas> < /tmp/prueba.sql
+```

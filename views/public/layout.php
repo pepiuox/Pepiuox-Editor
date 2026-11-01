@@ -793,8 +793,39 @@ $userInitial = strtoupper($userInitial !== '' ? $userInitial : 'U');
     </main>
 
     <!-- Footer -->
+    <?php
+    // Contenido del pie, editable desde Configuración → Pie de página.
+    // Los valores por defecto viven en el servicio, así que el pie se ve completo
+    // aunque nadie haya guardado nada todavía.
+    $footer = \App\Services\FooterContentService::all();
+
+    // Marcadores del copyright: se sustituyen al pintar para que el texto
+    // guardado siga siendo legible y no se quede con un año viejo.
+    $copyright = str_replace(
+        ['{year}', '{site}'],
+        [date('Y'), (string) $appName],
+        (string) ($footer['copyright'] ?? '')
+    );
+    ?>
     <footer class="footer">
         <div class="container">
+            <?php if (\App\Services\FooterContentService::usesBuilder()): ?>
+                <?php
+                // Pie compuesto con el constructor visual. Se pinta con el mismo
+                // saneador que las páginas (`PageRenderer`): el HTML viene del
+                // editor y no debe poder inyectar scripts a mano.
+                $pie = \App\Services\FooterContentService::builder();
+                echo (new \App\Services\PageRenderer())->buildPageHtml([
+                    'id'          => 0,
+                    'slug'        => 'footer',
+                    'title'       => 'Pie de página',
+                    'description' => '',
+                    'content_html'=> $pie['html'],
+                    'content_css' => $pie['css'],
+                    'content_js'  => $pie['js'],
+                ]);
+                ?>
+            <?php else: ?>
             <div class="row g-4">
                 <div class="col-lg-4">
                     <?php $logoFooter = public_logo('logo_footer', 'logo_desktop', 'logo_header'); ?>
@@ -806,33 +837,54 @@ $userInitial = strtoupper($userInitial !== '' ? $userInitial : 'U');
                             <?= e($appName) ?>
                         <?php endif; ?>
                     </h5>
-                    <p class="text-muted small">
-                        Plataforma de creación y gestión de contenido profesional.
-                    </p>
+                    <?php if (($footer['about'] ?? '') !== ''): ?>
+                        <p class="text-muted small"><?= e((string) $footer['about']) ?></p>
+                    <?php endif; ?>
                 </div>
-                <div class="col-lg-2 col-6">
-                    <h6 class="text-uppercase small fw-bold mb-3" style="color: var(--text-muted);">Navegación</h6>
-                    <ul class="list-unstyled small">
-                        <li><a href="<?= url('/') ?>">Inicio</a></li>
-                        <li><a href="<?= url('about') ?>">Acerca de</a></li>
-                    </ul>
-                </div>
-                <div class="col-lg-2 col-6">
-                    <h6 class="text-uppercase small fw-bold mb-3" style="color: var(--text-muted);">Legal</h6>
-                    <ul class="list-unstyled small">
-                        <li><a href="<?= url('privacy') ?>">Privacidad</a></li>
-                        <li><a href="<?= url('terms') ?>">Términos</a></li>
-                    </ul>
-                </div>
-                <div class="col-lg-4">
-                    <h6 class="text-uppercase small fw-bold mb-3" style="color: var(--text-muted);">Contacto</h6>
-                    <p class="small text-muted">info@pepiuox.com</p>
-                </div>
+
+                <?php foreach (($footer['columns'] ?? []) as $columna): ?>
+                    <div class="col-lg-2 col-6">
+                        <h6 class="text-uppercase small fw-bold mb-3" style="color: var(--text-muted);">
+                            <?= e((string) $columna['title']) ?>
+                        </h6>
+                        <ul class="list-unstyled small">
+                            <?php foreach ($columna['links'] as $enlace): ?>
+                                <?php
+                                // `LinkGuard` ya garantizó que el destino es una ruta interna o una URL
+                                // http(s). Las internas pasan por `url()` para que la instalación
+                                // funcione igual en la raíz del dominio o en un subdirectorio.
+                                $destino = (string) $enlace['href'];
+                                $destino = str_starts_with($destino, 'http')
+                                    ? $destino
+                                    : url(ltrim($destino, '/'));
+                                ?>
+                                <li><a href="<?= e($destino) ?>"><?= e((string) $enlace['label']) ?></a></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                <?php endforeach; ?>
+
+                <?php if (!empty($footer['show_contact'])): ?>
+                    <div class="col-lg-4">
+                        <h6 class="text-uppercase small fw-bold mb-3" style="color: var(--text-muted);">
+                            <?= e((string) $footer['contact_title']) ?>
+                        </h6>
+                        <?php if (($footer['contact_email'] ?? '') !== ''): ?>
+                            <p class="small text-muted mb-1">
+                                <a href="mailto:<?= e((string) $footer['contact_email']) ?>"><?= e((string) $footer['contact_email']) ?></a>
+                            </p>
+                        <?php endif; ?>
+                        <?php if (($footer['contact_note'] ?? '') !== ''): ?>
+                            <p class="small text-muted mb-0"><?= e((string) $footer['contact_note']) ?></p>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
             </div>
             <hr style="border-color: var(--border-color); margin: 2rem 0 1rem;">
-            <p class="text-center small text-muted mb-0">
-                &copy; <?= date('Y') ?> <?= e($appName) ?>. Todos los derechos reservados.
-            </p>
+            <?php if ($copyright !== ''): ?>
+                <p class="text-center small text-muted mb-0"><?= e($copyright) ?></p>
+            <?php endif; ?>
+            <?php endif; /* fin del pie por campos */ ?>
         </div>
     </footer>
 

@@ -97,3 +97,12 @@
 # Es un artefacto generado, no código: se regenera con una orden.
 storage/preview/
 
+# Respaldos de base de datos. NUNCA se versionan: un volcado completo lleva los
+# datos de las personas, los hashes de sus contraseñas y los secretos de las
+# aplicaciones de API. Se generan con mysqldump y se guardan fuera del
+# repositorio. Ver docs/MANUAL_DE_INSTALACION.md.
+db/backup/
+
+# Credenciales locales. Nunca se versionan: llevan la contraseña de la base de datos.
+.env
+01-TOOLS/mysql/.env

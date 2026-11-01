@@ -453,3 +453,182 @@ parametrizadas.
 **No queda ningún fallo funcional conocido en las rutas.** Lo que sigue abierto son dos decisiones del
 dueño sobre secretos en el volcado versionado, y tres endurecimientos de cabeceras (CSP, HSTS, SRI) que no
 se tocaron.
+
+---
+
+## Deudas 7 y 16 cerradas: secretos en los volcados (31 de octubre de 2026)
+
+### Qué había
+
+Tres volcados SQL versionados bajo `db/` llevaban, cada uno, los hashes bcrypt de las tres cuentas
+sembradas y las filas completas de `api_applications` y `api_tokens` con sus secretos y tokens vivos.
+Un cuarto elemento apareció por el camino: el commit `19fab1a` había incluido `db/backup/` con un
+volcado completo de 1,2 MB.
+
+### Qué se hizo
+
+| Acción | Detalle |
+|---|---|
+| Dejar de versionar respaldos | `git rm --cached -r db/backup` + regla en `.gitignore`. Los archivos siguen en disco; un volcado nunca debe rastrearse |
+| Sanear los tres volcados | `01-TOOLS/mantenimiento/sanitize-dump.php`: hashes sustituidos por un centinela inválido, filas de `api_applications` y `api_tokens` retiradas, estructura intacta |
+| Rotar los tokens vivos | `01-TOOLS/mantenimiento/rotate-api-tokens.php`: **3 rotados, 0 sin cambiar** |
+| Prueba de regresión | `tests/seguridad/check.php` falla si un `.sql` versionado vuelve a llevar hashes o filas de API, o si `db/backup/` deja de estar ignorado |
+
+La estructura se verificó en cada saneamiento: `CREATE TABLE`, vistas, disparadores y rutinas con el mismo
+número antes y después, y el script aborta si cambia. El volcado saneado se importó en una base aislada:
+52 tablas, 2 vistas, 4 disparadores, 5 rutinas, **0 hashes y 0 filas de API**.
+
+### Por qué no se rotaron `app_secret` ni `api_secret`
+
+`App\Core\Security` genera una **clave de cifrado nueva en cada instancia** (`$encryptionKey ?? $this->generateSecureKey()`).
+Esas columnas se cifraron con una clave que ya no existe, así que **no se pueden descifrar**: son texto
+cifrado inservible. Rotarlas produciría otro texto cifrado igual de inservible. Es el hallazgo R-13 de las
+especificaciones, y arreglarlo exige una clave estable en el entorno — otro cambio.
+
+### Dos incidentes durante el trabajo
+
+1. **Importé `db/db-full.sql` «en una base aislada» y el archivo apunta a la real.** Empieza con
+   `CREATE DATABASE IF NOT EXISTS web_editor_db` y `USE web_editor_db`, así que la importación cambió de
+   base sola. Abortó en el primer `INSERT` por clave duplicada, antes de llegar a los `DROP TABLE` (que
+   además son de las dos **vistas**, no de tablas con datos). Comprobado después: 52 tablas, 3 usuarios,
+   12 páginas, 2 vistas — sin cambios. La verificación se repitió sobre una copia sin esas dos líneas.
+   Queda documentado en el manual de instalación, porque es una trampa para cualquiera.
+2. **Un hash malformado esquivó el patrón.** Una de las tres cuentas tenía un hash de 61 caracteres en
+   lugar de 60; la expresión exigía exactamente 53 tras el prefijo. Lo detectó una comprobación de
+   verificación posterior (`$2%` sobre la base importada), no el saneador. Patrón corregido a `{20,60}` y
+   los tres volcados re-saneados.
+
+### Lo que sigue abierto
+
+- **El historial de git conserva los valores antiguos.** Borrarlos exige reescribir el historial
+  (`git filter-repo`) y forzar el push: es una operación destructiva que decide el dueño.
+- **Rotar las contraseñas de las tres cuentas** está en manos del dueño. El riesgo residual es un hash
+  bcrypt coste 12, caro de atacar pero no imposible.
+- Un `db/backup/` rastreado sigue apareciendo en el índice hasta que se confirme la eliminación ya
+  preparada (`git rm --cached`); el cambio está listo, sin confirmar.
+
+**Verificación global tras el cierre:** 6 baterías, **160 comprobaciones, 0 fallos**.
+
+---
+
+## Corrección: los bloques del constructor (31 de octubre de 2026)
+
+### El defecto
+
+El constructor del pie cargaba **todos** los ficheros de `public/assets/js/blocks/*.js`. Los editores de
+páginas y de plantillas excluían dos, con motivo escrito en su propio código:
+
+| Fichero | Por qué se excluye |
+|---|---|
+| `bs-blocks.js` | Duplica cinco ids de `blocks-bs.js` (`bs-navbar`, `bs-hero`, `bs-footer`, `bs-accordion`, `bs-alert`) con contenido distinto. GrapesJS se queda con el primero que registra y el resto se pisa |
+| `template.js` | Su único bloque lleva un `<script>` dentro del `content`, y ese contenido se ejecuta en el lienzo del editor |
+
+Resultado: en el pie había bloques duplicados, otros desaparecían y uno arrastraba código ejecutable. No
+era «un editor distinto»: era el mismo editor con una lista de bloques distinta.
+
+### La corrección, y por qué es estructural
+
+En vez de copiar las exclusiones al tercer editor —lo que habría dejado tres listas que se separan en el
+próximo cambio—, la regla se movió a **un solo sitio**: `editor_block_urls()` en
+`app/Helpers/functions.php`, con el motivo de cada exclusión y el orden alfabético documentado (el orden
+decide quién gana cuando dos ficheros registran el mismo id).
+
+Los **tres** editores la consumen ahora:
+
+| Editor | Antes | Ahora |
+|---|---|---|
+| Páginas | lista propia de 12 líneas | `editor_block_urls()` |
+| Plantillas | lista propia de 11 líneas | `editor_block_urls()` |
+| Pie de página | cargaba los 12 ficheros | `editor_block_urls()` |
+
+La lista resultante son **10 ficheros**, ordenados, sin los dos conflictivos.
+
+### Segundo defecto, del mismo origen
+
+El partial `editor-assets-head.php` emite Bootstrap 5.3.3 por defecto. El panel de administración ya carga
+Bootstrap 5.3.8, así que el constructor del pie duplicaba la hoja y peleaba con el diseño del panel. El
+builder de páginas ya lo desactivaba (`$editorIncludeBootstrap = false`); el del pie ahora también. **El
+lienzo sigue cargando su propio Bootstrap**, que es otra cosa.
+
+### Verificación
+
+`tests/paneles/menu.php` → **31 comprobaciones, 0 fallos**. Las nuevas comprueban que la lista excluye los
+dos ficheros, que está ordenada, y —lo que evita la reincidencia— que **los tres editores llaman al helper
+y que ninguno recorre la carpeta por su cuenta**. Si alguien vuelve a escribir una lista propia, la batería
+falla.
+
+Además: los activos que necesitan los bloques existen (`blocks-library.css`, `blocks-library.js`,
+`grapesjs-shared.js`), y las pruebas propias de la biblioteca de bloques siguen pasando
+(`install.test.js` y `normalize.test.js`, ambas exit 0).
+
+**Estado global: 181 comprobaciones, 0 fallos.**
+
+### Lo que no se pudo comprobar
+
+**El comportamiento interactivo en un navegador.** El navegador headless no arranca bajo el sandbox de esta
+sesión. Está verificado que la vista sirve el contenedor `#gjs`, GrapesJS, `EditorKit`, la biblioteca de
+bloques, la lista de 10 ficheros y los cuatro campos de guardado — pero que las tarjetas se arrastren al
+lienzo y que el guardado devuelva lo compuesto necesita una persona delante.
+
+---
+
+## La causa real: un `</script>` escrito dentro de un comentario (31 de octubre de 2026)
+
+### El fallo
+
+El constructor del pie no cargaba y **se veía código en la página**. La causa no era GrapesJS ni los
+bloques: era una línea de comentario mía dentro de un bloque `<script>`:
+
+```js
+// `JSON_HEX_TAG` evita que un `</script>` dentro de una ruta rompa la página.
+```
+
+Un `</script>` literal **cierra el bloque ahí mismo**, aunque esté dentro de un comentario JS: el parser
+de HTML no sabe de comentarios de JavaScript. Todo lo que venía después —la lista de bloques, la llamada
+que los carga y los manejadores de guardado— se imprimía como **texto visible**, y el editor nunca
+arrancaba. Es el síntoma exacto que describía el dueño.
+
+Hubo **dos** apariciones: una en la corrección anterior (con `<script>`, que también rompe el parser al
+entrar en el estado de «doble escapado») y esta con `</script>`.
+
+### Por qué las pruebas no lo vieron
+
+La prueba renderizaba la vista **suelta** con `View::partial`, no la página completa con el layout del
+panel. La corrupción aparece al componer el documento entero. La prueba daba verde y el navegador fallaba.
+
+### Corrección
+
+- Los dos comentarios se reescribieron sin etiquetas literales.
+- `tests/paneles/menu.php` ahora renderiza la **página completa** (`View::render`) y comprueba:
+  - que las etiquetas `<script>` están **balanceadas** (el detector que faltaba: fue lo que localizó el
+    fallo por número de línea),
+  - que ningún cuerpo de script contiene etiquetas de script.
+
+### Además: imágenes y subidas en el constructor del pie
+
+Se pedía «acceso a uploads para subir logos o contenido». Ahora el bloque «Imagen» abre el gestor de
+medios con:
+
+- **24 imágenes ya disponibles** en esta instalación, incluidos los tres logotipos de
+  `uploads/settings/logos/`.
+- Un **botón de subida** contra `POST /admin/settings/footer/builder/upload`, que usa el mismo
+  `AssetUploadService` que el constructor de páginas: valida extensión, tamaño y MIME real, y guarda
+  fuera del document root.
+- `GET /admin/settings/footer/builder/assets` para refrescar la lista.
+
+El escaneo de `uploads/` se movió a `AssetUploadService::existing()`: el constructor de páginas tenía su
+copia privada y el del pie no tenía ninguna, así que en el pie no se podía elegir un logo ya subido.
+
+### Verificación
+
+`tests/paneles/menu.php` → **37 comprobaciones, 0 fallos**, incluidas las dos nuevas de integridad del
+script y las del gestor de imágenes.
+
+**Estado global: 187 comprobaciones, 0 fallos.** Smoke: `/`, `/funciones`, `/admin/settings/footer`,
+`/admin/settings/footer/builder`, `/admin/settings/footer/builder/assets` y `/admin/pages/1/builder`
+responden; lint limpio en los 6 archivos tocados.
+
+### Lección que queda escrita
+
+**Una prueba que renderiza la vista suelta no prueba la pantalla.** El layout puede romper lo que la vista
+hace bien. Y dentro de un `<script>` no se escribe nunca un cierre de script, ni en un comentario.

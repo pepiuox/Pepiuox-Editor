@@ -50,18 +50,9 @@ $assetsUrl   = url('admin/pages/assets');
 $uploadUrl   = $isNew ? '' : url('admin/templates/' . $templateId . '/builder/upload');
 $listUrl     = url('admin/templates');
 
-// Los mismos bloques que el builder de páginas (lista descubierta en disco).
-$blockExcluded = ['bs-blocks.js', 'template.js'];
-$blockFiles = [];
-foreach (glob(ASSETS_PATH . '/js/blocks/*.js') ?: [] as $blockFile) {
-    $blockName = basename($blockFile);
-    if (in_array($blockName, $blockExcluded, true)) {
-        continue;
-    }
-    $blockFiles[] = $blockName;
-}
-sort($blockFiles);
-$blockUrls = array_map(static fn (string $name): string => asset('js/blocks/' . $name), $blockFiles);
+// Los mismos bloques que el builder de páginas: la lista y las exclusiones viven
+// en `editor_block_urls()` para que los tres editores no diverjan.
+$blockUrls = editor_block_urls();
 ?>
 <!DOCTYPE html>
 <html lang="es">

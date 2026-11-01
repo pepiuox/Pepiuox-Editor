@@ -289,6 +289,95 @@ comprobar(
 );
 
 // ─────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────
+echo "\n== Acceso a los editores desde el panel ==\n";
+
+// Los editores de contenido del sitio público deben estar en el menú lateral,
+// no solo dentro de Configuración: son elementos del sistema.
+$sidebar = (string) file_get_contents(VIEWS_PATH . '/partials/sidebar.php');
+
+comprobar(
+    'el menú enlaza al editor del pie',
+    str_contains($sidebar, "url('admin/settings/footer')"),
+    'el editor del pie no tiene entrada en el menú lateral'
+);
+comprobar(
+    'el menú enlaza al editor de la portada',
+    str_contains($sidebar, "url('admin/settings/landing')"),
+    'el editor de la portada no tiene entrada en el menú lateral'
+);
+// Comprobación por posiciones en lugar de una expresión regular: el bloque del
+// menú lleva etiquetas PHP y comillas por dentro, y una regex se vuelve frágil.
+$posGuardia = strpos($sidebar, "can('settings.manage')");
+$posEtiqueta = strpos($sidebar, 'Web pública');
+$posPie = strpos($sidebar, "url('admin/settings/footer')");
+
+comprobar(
+    'el bloque del menú está entre la guarda de permiso y el enlace al pie',
+    $posGuardia !== false && $posEtiqueta !== false && $posPie !== false
+        && $posGuardia < $posEtiqueta && $posEtiqueta < $posPie,
+    'las entradas del menú no están dentro de la guarda settings.manage'
+);
+comprobar(
+    'existe is_active_exact para no encender dos entradas a la vez',
+    function_exists('is_active_exact'),
+    'sin coincidencia exacta, «Configuración» se enciende también en sus subpáginas'
+);
+
+// ─────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────
+echo "\n== Deudas 7 y 16 · Volcados SQL sin secretos ==\n";
+
+/**
+ * Ningún `.sql` versionado bajo `db/` puede llevar hashes de contraseñas ni las
+ * filas de aplicaciones/tokens de API. `db/backup/` se excluye a propósito: un
+ * respaldo real SÍ contiene los datos, y por eso está ignorado por git.
+ */
+$sqlVersionados = array_merge(
+    glob(ROOT_PATH . '/db/*.sql') ?: [],
+    glob(ROOT_PATH . '/db/install/*.sql') ?: [],
+    glob(ROOT_PATH . '/db/migrations/*.sql') ?: []
+);
+
+comprobar('hay volcados SQL versionados que revisar', $sqlVersionados !== [], (string) count($sqlVersionados));
+
+$conHashes = [];
+$conApi = [];
+foreach ($sqlVersionados as $archivo) {
+    $contenido = (string) file_get_contents($archivo);
+    $nombre = basename($archivo);
+
+    // Longitud tolerante: un hash malformado de 61 caracteres también cuenta.
+    if (preg_match('/\'\$2[aby]\$\d\d\$[.\/A-Za-z0-9]{20,60}\'/', $contenido) === 1) {
+        $conHashes[] = $nombre;
+    }
+    if (preg_match('/INSERT INTO `api_(applications|tokens)`/i', $contenido) === 1) {
+        $conApi[] = $nombre;
+    }
+}
+
+comprobar('ningún volcado versionado lleva hashes de contraseñas', $conHashes === [], implode(', ', $conHashes));
+comprobar('ningún volcado versionado lleva filas de aplicaciones o tokens de API', $conApi === [], implode(', ', $conApi));
+
+$gitignore = (string) file_get_contents(ROOT_PATH . '/.gitignore');
+comprobar(
+    'db/backup/ está ignorado por git',
+    preg_match('/^\s*db\/backup\/?\s*$/m', $gitignore) === 1,
+    'un respaldo completo no puede versionarse: lleva datos, hashes y secretos'
+);
+
+comprobar(
+    'existe la herramienta de saneamiento de volcados',
+    is_file(ROOT_PATH . '/01-TOOLS/mantenimiento/sanitize-dump.php'),
+    'sin ella, el siguiente volcado vuelve a llevar secretos'
+);
+comprobar(
+    'existe la herramienta de rotación de tokens de API',
+    is_file(ROOT_PATH . '/01-TOOLS/mantenimiento/rotate-api-tokens.php'),
+    'quitar un secreto del archivo no lo invalida'
+);
+
+// ─────────────────────────────────────────────────────────────────────
 echo "\n" . str_repeat('-', 56) . "\n";
 printf("Comprobaciones: %d · Fallos: %d\n", $total, $fallos);
 exit($fallos === 0 ? 0 : 1);

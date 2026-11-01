@@ -44,11 +44,30 @@ class SettingService
         self::$cache = [];
     }
 
+    /**
+     * Claves que se guardan aquí pero **no** se cargan en bloque.
+     *
+     * Son los HTML del constructor del pie: pueden pesar decenas de kilobytes y
+     * `all()` se llama en cada petición pública (identidad del sitio, tema). Se
+     * leen solo cuando hacen falta, con `get()`, que consulta por clave.
+     */
+    private const CLAVES_PESADAS = [
+        'footer.builder_html',
+        'footer.builder_css',
+        'footer.builder_js',
+        'footer.builder_data',
+    ];
+
     public static function all(): array
     {
         $rows = Database::fetchAll("SELECT * FROM settings ORDER BY `group`, `key`");
         $out = [];
-        foreach ($rows as $r) $out[$r['group']][$r['key']] = self::cast($r['value'], $r['type']);
+        foreach ($rows as $r) {
+            if (in_array($r['group'] . '.' . $r['key'], self::CLAVES_PESADAS, true)) {
+                continue;
+            }
+            $out[$r['group']][$r['key']] = self::cast($r['value'], $r['type']);
+        }
         return $out;
     }
 

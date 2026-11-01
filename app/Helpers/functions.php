@@ -244,6 +244,60 @@ function is_active(string $path, string $class = 'active'): string {
     return str_starts_with($uri, $path) ? $class : '';
 }
 
+/**
+ * Igual que `is_active`, pero exige coincidencia exacta del camino.
+ *
+ * Para qué: `is_active('/admin/settings')` se cumple también en
+ * `/admin/settings/landing`, así que la entrada «Configuración» del menú se
+ * encendía junto a la de la portada. Con esta variante, cada pantalla enciende
+ * una sola entrada.
+ *
+ * @since 2026-10-31
+ */
+function is_active_exact(string $path, string $class = 'active'): string {
+    $uri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+    return rtrim($uri, '/') === rtrim($path, '/') ? $class : '';
+}
+
+/**
+ * URLs de los ficheros de bloques del constructor visual, en orden.
+ *
+ * ── Por qué existe ──────────────────────────────────────────────────
+ * Los tres editores visuales (páginas, plantillas y el pie de página) cargan los
+ * bloques desde `public/assets/js/blocks/*.js`. Antes cada uno construía su lista
+ * por su cuenta, así que el pie cargaba ficheros que los otros dos excluían y sus
+ * bloques no se comportaban igual. La regla vive aquí una sola vez.
+ *
+ * ── Exclusiones, con motivo ─────────────────────────────────────────
+ *   - `bs-blocks.js`: duplica cinco ids de `blocks-bs.js` (`bs-navbar`,
+ *     `bs-hero`, `bs-footer`, `bs-accordion`, `bs-alert`) con contenido distinto.
+ *     GrapesJS se queda con el primero que registra y el resto se pisa.
+ *   - `template.js`: su único bloque lleva un `<script>` dentro del `content`, y
+ *     ese contenido se ejecuta en el lienzo del editor.
+ *
+ * Los ficheros se ordenan alfabéticamente a propósito: el orden decide quién gana
+ * cuando dos registran el mismo id.
+ *
+ * @return list<string> URLs absolutas, listas para pasar a `EditorKit.loadBlockScripts`.
+ * @since 2026-10-31
+ */
+function editor_block_urls(): array {
+    $excluidos = ['bs-blocks.js', 'template.js'];
+    $nombres = [];
+
+    foreach (glob(ASSETS_PATH . '/js/blocks/*.js') ?: [] as $archivo) {
+        $nombre = basename($archivo);
+        if (in_array($nombre, $excluidos, true)) {
+            continue;
+        }
+        $nombres[] = $nombre;
+    }
+
+    sort($nombres);
+
+    return array_map(static fn (string $n): string => asset('js/blocks/' . $n), $nombres);
+}
+
 // ============================================
 // FUNCIONES DE PERMISOS Y AUTENTICACIÓN
 // ============================================

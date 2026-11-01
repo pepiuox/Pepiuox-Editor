@@ -381,6 +381,19 @@ $router->get('/admin/settings/landing/preview', [App\Controllers\SettingsControl
 $router->get('/admin/settings/landing', [App\Controllers\SettingsController::class, 'landing'], $auth);
 $router->post('/admin/settings/landing', [App\Controllers\SettingsController::class, 'saveLanding'], $auth);
 
+// Editor del pie de página. Misma pantalla propia que la portada: el pie son
+// columnas de enlaces con alta y baja de filas.
+$router->get('/admin/settings/footer', [App\Controllers\SettingsController::class, 'footer'], $auth);
+$router->post('/admin/settings/footer', [App\Controllers\SettingsController::class, 'saveFooter'], $auth);
+
+// El pie con el constructor visual: el mismo GrapesJS que las páginas.
+$router->get('/admin/settings/footer/builder', [App\Controllers\SettingsController::class, 'footerBuilder'], $auth);
+$router->post('/admin/settings/footer/builder', [App\Controllers\SettingsController::class, 'saveFooterBuilder'], $auth);
+
+// Subida de imágenes del pie. El LISTADO de lo ya subido no se duplica aquí:
+// se reutiliza /admin/pages/assets, que ya existe y devuelve lo mismo.
+$router->post('/admin/settings/footer/builder/upload', [App\Controllers\SettingsController::class, 'footerUpload'], $auth);
+
 // ── 3.17. Backups ────────────────────────────────────────────────
 $router->get('/admin/backups', [App\Controllers\BackupsController::class, 'index'], $auth);
 $router->post('/admin/backups/create', [App\Controllers\BackupsController::class, 'create'], $auth);

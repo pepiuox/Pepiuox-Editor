@@ -406,6 +406,141 @@ class SettingsController
     }
 
     /**
+     * `GET /admin/settings/footer` — editor del pie de página.
+     *
+     * Pantalla propia, igual que la portada y por la misma razón: el pie son
+     * columnas de enlaces con alta y baja de filas, no un grupo de campos suelto.
+     *
+     * @since 2026-10-31
+     */
+    public function footer(Request $req): void
+    {
+        $this->guardManage();
+
+        Response::render(View::render('settings.footer', [
+            'footer'   => \App\Services\FooterContentService::all(),
+            'maxCols'  => \App\Services\FooterContentService::MAX_COLUMNS,
+            'maxLinks' => \App\Services\FooterContentService::MAX_LINKS,
+        ]));
+    }
+
+    /**
+     * `POST /admin/settings/footer` — guarda el contenido del pie.
+     */
+    public function saveFooter(Request $req): void
+    {
+        $this->guardManage();
+        CSRF::guard();
+
+        $resultado = \App\Services\FooterContentService::save([
+            'about'         => (string) $req->post('about'),
+            'copyright'     => (string) $req->post('copyright'),
+            'show_contact'  => $req->post('show_contact'),
+            'contact_title' => (string) $req->post('contact_title'),
+            'contact_email' => (string) $req->post('contact_email'),
+            'contact_note'  => (string) $req->post('contact_note'),
+            'columns'       => $req->post('columns') ?? [],
+        ]);
+
+        AuditService::log(
+            Auth::id(),
+            'footer_saved',
+            'Contenido del pie guardado (' . $resultado['guardadas'] . ' claves)',
+            'settings'
+        );
+
+        Session::flash(
+            $resultado['errores'] === [] ? 'flash.success' : 'flash.error',
+            $resultado['errores'] === []
+                ? 'Pie de página guardado.'
+                : 'Se guardó lo válido. ' . implode(' ', $resultado['errores'])
+        );
+
+        if ($resultado['avisos'] !== []) {
+            Session::flash('flash.warning', implode(' ', $resultado['avisos']));
+        }
+
+        Response::redirect(url('admin/settings/footer'));
+    }
+
+    /**
+     * `GET /admin/settings/footer/builder` — pie con el constructor visual.
+     *
+     * El mismo GrapesJS de las páginas y las plantillas, cargado a través de
+     * `views/partials/editor-assets-*` y `EditorKit`. Se edita un lienzo que
+     * representa el pie; lo que se compone se guarda como HTML y el layout lo
+     * pinta tal cual (saneado por `PageRenderer`).
+     *
+     * @since 2026-10-31
+     */
+    public function footerBuilder(Request $req): void
+    {
+        $this->guardManage();
+
+        Response::render(View::render('settings.footer-builder', [
+            'builder'  => \App\Services\FooterContentService::builder(),
+            'assets'   => (new \App\Services\AssetUploadService())->existing(),
+            'uploadUrl' => url('admin/settings/footer/builder/upload'),
+        ]));
+    }
+
+    /**
+     * `POST /admin/settings/footer/builder` — guarda lo compuesto.
+     */
+    public function saveFooterBuilder(Request $req): void
+    {
+        $this->guardManage();
+        CSRF::guard();
+
+        $resultado = \App\Services\FooterContentService::saveBuilder([
+            'builder_html'    => (string) $req->post('content_html'),
+            'builder_css'     => (string) $req->post('content_css'),
+            'builder_js'      => (string) $req->post('content_js'),
+            'builder_data'    => (string) $req->post('grapesjs_data'),
+            'builder_enabled' => $req->post('builder_enabled'),
+        ]);
+
+        AuditService::log(Auth::id(), 'footer_builder_saved', 'Pie guardado con el constructor', 'settings');
+
+        Session::flash(
+            $resultado['ok'] ? 'flash.success' : 'flash.error',
+            $resultado['ok'] ? 'Pie guardado desde el constructor.' : implode(' ', $resultado['errores'])
+        );
+
+        Response::redirect(url('admin/settings/footer/builder'));
+    }
+
+    /**
+     * `POST /admin/settings/footer/builder/upload` — sube una imagen para el pie.
+     *
+     * Mismo servicio que usa el constructor de páginas (`AssetUploadService`): la
+     * validación de extensión, tamaño y MIME real es la misma, y el archivo se
+     * guarda fuera del document root.
+     *
+     * Para el LISTADO de imágenes ya subidas no hay endpoint propio: se reutiliza
+     * `GET /admin/pages/assets`, que ya existía y devuelve exactamente lo mismo.
+     * No se añade una acción nueva cuando hay una equivalente.
+     *
+     * @since 2026-10-31
+     */
+    public function footerUpload(Request $req): void
+    {
+        $this->guardManage();
+
+        $resultado = (new \App\Services\AssetUploadService())->store($_FILES['files'] ?? null);
+
+        if (!$resultado['received']) {
+            Response::json(['success' => false, 'errors' => $resultado['errors']]);
+        }
+
+        Response::json([
+            'success' => true,
+            'data'    => $resultado['uploaded'],
+            'errors'  => $resultado['errors'],
+        ]);
+    }
+
+    /**
      * Comprueba el permiso de gestión de configuración (`settings.manage`).
      *
      * Se comprueba en el controlador y no se delega en `PermissionMiddleware`
