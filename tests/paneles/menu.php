@@ -240,13 +240,13 @@ comprobar(
     'su contenido se ejecutaría en el editor'
 );
 comprobar(
-    'excluye blocks-bs.js (inyecta un setTimeout en el lienzo)',
-    !in_array('blocks-bs.js', array_map('basename', $bloques), true),
+    'excluye bootstrap-blocks-consolidated.js (inyecta un setTimeout en el lienzo)',
+    !in_array('bootstrap-blocks-consolidated.js', array_map('basename', $bloques), true),
     'su contenido se ejecutaría en el editor'
 );
 comprobar(
-    'bs-blocks.js ya no se excluye: se reescribió y se carga',
-    in_array('bs-blocks.js', array_map('basename', $bloques), true),
+    'blocks-bs5-unified.js se carga (fichero unificado)',
+    in_array('blocks-bs5-unified.js', array_map('basename', $bloques), true),
     'es el fichero unificado que sustituye a los antiguos'
 );
 comprobar('la lista está ordenada alfabéticamente', array_map('basename', $bloques) === (static function (array $a) {
@@ -288,8 +288,8 @@ echo "\n== Integración de los ficheros de bloques ==\n";
 // Cualquier otro repetido hace fallar la prueba: así una colisión nueva se ve en
 // la batería en lugar de aparecer como un bloque que se pisa en el panel.
 $colisionesAceptadas = [
-    'hero-split' => 'bs-blocks.js y grapesjs-presentations.js definen el mismo id; gana el último en cargar',
-    'hero-dark'  => 'bs-blocks.js y grapesjs-presentations.js definen el mismo id; gana el último en cargar',
+    'hero-split' => 'blocks-bs5-unified.js y grapesjs-presentations.js definen el mismo id; gana el último en cargar',
+    'hero-dark'  => 'blocks-bs5-unified.js y grapesjs-presentations.js definen el mismo id; gana el último en cargar',
 ];
 
 $registrados = [];
@@ -306,7 +306,7 @@ foreach ($bloques as $url) {
     }
 
     // Dos formas de registrar: directa y mediante un helper del propio fichero
-    // (bs-blocks.js usa addBlock('id', …)).
+    // (blocks-bs5-unified.js usa addBlock('id', …)).
     $ids = [];
     preg_match_all('/BlockManager\s*\.\s*add\s*\(\s*[\'"]([^\'"]+)[\'"]/', $codigo, $mDirecta);
     $ids = $mDirecta[1];
@@ -344,6 +344,25 @@ comprobar(
     implode(' · ', array_slice($repetidos, 0, 6))
 );
 
+// Una exclusión que apunta a un fichero inexistente deja de aplicarse sin avisar:
+// el fichero nuevo se cuela. Pasó al renombrar blocks-bs.js → el unificado se
+// cargaba con su <script> dentro y nadie se enteró.
+$fuenteHelper = (string) file_get_contents(APP_PATH . '/Helpers/functions.php');
+$huerfanas = [];
+if (preg_match('/\$excluidos = \[(.*?)\];/s', $fuenteHelper, $mExcl)) {
+    preg_match_all("/'([^']+\.js)'/", $mExcl[1], $mNombres);
+    foreach ($mNombres[1] as $excluido) {
+        if (!is_file(ROOT_PATH . '/public/assets/js/blocks/' . $excluido)) {
+            $huerfanas[] = $excluido;
+        }
+    }
+}
+comprobar(
+    'toda exclusión de bloques apunta a un fichero que existe',
+    $huerfanas === [],
+    implode(', ', $huerfanas) . ' no existen: la exclusión quedó huérfana y ese fichero se carga sin querer'
+);
+
 comprobar(
     'el catálogo de bloques es amplio',
     count($registrados) >= 200,
@@ -358,15 +377,15 @@ comprobar(
 );
 
 comprobar(
-    'blocks-bs.js sigue excluido porque inyecta código en el lienzo',
-    str_contains((string) file_get_contents(ROOT_PATH . '/public/assets/js/blocks/blocks-bs.js'), '<script')
-        && !in_array('blocks-bs.js', array_map('basename', $bloques), true),
+    'bootstrap-blocks-consolidated.js sigue excluido porque inyecta código en el lienzo',
+    str_contains((string) file_get_contents(ROOT_PATH . '/public/assets/js/blocks/bootstrap-blocks-consolidated.js'), '<script')
+        && !in_array('bootstrap-blocks-consolidated.js', array_map('basename', $bloques), true),
     'si se quitó el <script>, retira la exclusión'
 );
 
 comprobar(
-    'bs-blocks.js (unificado) sí se carga',
-    in_array('bs-blocks.js', array_map('basename', $bloques), true),
+    'blocks-bs5-unified.js (unificado) sí se carga',
+    in_array('blocks-bs5-unified.js', array_map('basename', $bloques), true),
     'el fichero unificado no se está sirviendo'
 );
 

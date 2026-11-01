@@ -282,12 +282,17 @@ function is_active_exact(string $path, string $class = 'active'): string {
  * @since 2026-10-31
  */
 function editor_block_urls(): array {
-    // Exclusiones, con el motivo al lado. `bs-blocks.js` ya NO está aquí: se
-    // reescribió como fichero unificado y sí se carga.
+    // Exclusiones, con el motivo al lado.
+    //
+    // OJO con los nombres: si un fichero se renombra y la lista sigue apuntando
+    // al nombre viejo, la exclusión deja de aplicarse EN SILENCIO y el fichero
+    // empieza a cargarse. Por eso `tests/paneles/menu.php` comprueba que cada
+    // nombre excluido exista de verdad en disco.
     $excluidos = [
         // Inyecta un <script> con setTimeout dentro del contenido de un bloque;
-        // ese código se ejecuta en el lienzo del editor.
-        'blocks-bs.js',
+        // ese código se ejecuta en el lienzo del editor. Es el mismo motivo por
+        // el que se excluyó template.js antes de que se borrara.
+        'bootstrap-blocks-consolidated.js',
     ];
     $nombres = [];
 

@@ -28,7 +28,7 @@
 'use strict';
 
 if (typeof gjsEditor === 'undefined' || !gjsEditor) {
-    console.warn('[blocks-bs5-unified] gjsEditor no existe todavía; fichero omitido.');
+    console.warn('[bs-hero-split] gjsEditor no existe todavía; fichero omitido.');
     return;
 }
 

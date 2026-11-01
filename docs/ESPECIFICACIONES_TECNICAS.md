@@ -1414,3 +1414,25 @@ Dos falsos positivos encontrados y corregidos en las herramientas de análisis:
 2. Un detector que busca helpers (`function x(){ … BlockManager.add … }`) captura también llamadas cuyo
    primer argumento es un fragmento HTML (`section('<h2 class="…">')`). Hay que filtrar a forma de slug
    (`/^[a-z0-9][a-z0-9._-]*$/i`) o se inventan colisiones inexistentes.
+
+### Tercera pasada: renombrado de ficheros (2026-11-01)
+
+El dueño renombró `bs-blocks.js` → **`blocks-bs5-unified.js`** y `blocks-bs.js` →
+**`bootstrap-blocks-consolidated.js`**. La lista de exclusión seguía nombrando `blocks-bs.js`.
+
+**Consecuencia real del renombrado:** la exclusión dejó de aplicarse **en silencio**, porque el nombre ya no
+existía. `bootstrap-blocks-consolidated.js` pasó a cargarse automáticamente, con su `<script>` con
+`setTimeout` dentro — el código que se ejecuta en el lienzo. El editor habría empezado a comportarse mal sin
+que ninguna prueba fallara, porque las pruebas comprobaban por nombre.
+
+**Corregido:** la exclusión apunta al nombre nuevo, y la batería incluye ahora una guarda que **lee la lista
+de exclusiones del propio helper y comprueba que cada fichero exista en disco**. Si alguien renombra un
+fichero excluido, la prueba falla en vez de dejar pasar el fichero.
+
+Estado tras la corrección: **13 ficheros servidos, 269 bloques distintos**, y las únicas colisiones son las
+dos declaradas (`hero-split`, `hero-dark` entre `blocks-bs5-unified.js` y `grapesjs-presentations.js`).
+`bootstrap-blocks-consolidated.js` queda fuera por su `<script>`.
+
+**Lección:** una lista de exclusión por nombre de fichero es frágil frente a renombrados. O se comprueba su
+existencia, o mejor se excluye por una marca dentro del fichero (por ejemplo, una cabecera que declare
+«este fichero inyecta script y no debe cargarse en el editor»).
