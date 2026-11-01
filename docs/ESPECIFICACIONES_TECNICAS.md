@@ -1380,3 +1380,37 @@ puede mostrar duplicados o perder el estilo de uno. Se excluyó `blocks-bs.js` e
 El primer extractor marcó **los 15 ficheros con error de sintaxis**. No era cierto: `execFileSync` con
 `stdio: 'pipe'` falla con EPERM en este entorno (el sandbox no permite capturar la salida de otro proceso por
 tubería). Con `stdio: 'ignore'` los 15 pasan.
+
+### Revisión tras los cambios del dueño (2026-11-01, segunda pasada)
+
+El dueño borró `template.js` y reescribió `bs-blocks.js` y `blocks-bs.js`. Resultado de reauditar:
+
+| Fichero | Antes | Ahora | Decisión |
+|---|---|---|---|
+| `template.js` | 1 bloque, excluido | **borrado** | Se retira de la lista de exclusiones |
+| `bs-blocks.js` | 10 bloques, duplicaba 5 ids | **reescrito**: 41,8 KB, 32 bloques con ids propios (`layout-*`, `nav-*`, `hero-*`, `content-*`, `forms-*`, `data-*`, `marketing-*`, `admin-*`, `footer-*`) | **Se carga** |
+| `blocks-bs.js` | idéntico a `blocks.js` | **reescrito**: 33,5 KB, 24 bloques, pero inyecta un `<script>` con `setTimeout` en el contenido de un bloque | **Sigue excluido** |
+
+**`bs-blocks.js` trae su propio guardia anti-duplicados** —`BlockManager.get(blockId)` antes de añadir—, así
+que no pisa a nadie por descuido. Choca en **dos ids** con `grapesjs-presentations.js` (`hero-split`,
+`hero-dark`): gana el que se carga último, que por orden alfabético es `grapesjs-presentations.js`.
+
+Esos dos choques están **declarados en la batería** (`$colisionesAceptadas`): cualquier colisión nueva hace
+fallar la prueba, y una aceptada tiene que estar escrita con su motivo. Así dejan de ser invisibles.
+
+**Por qué `blocks-bs.js` sigue excluido.** En su línea 95 mete
+`'<script>setTimeout(()=>{…querySelector(".sidebar")…})'` dentro del `content` de un bloque: ese código se
+ejecuta en el lienzo del editor. Es exactamente el motivo por el que se excluía `template.js`. El propio
+`bs-blocks.js` se declara sustituto de `template.js`, `bs-blocks.js` y `blocks-bs.js`.
+
+**Estado de la carga:** 13 ficheros servidos, **269 bloques distintos** (eran 239).
+
+### Cuidado con los detectores de ids
+
+Dos falsos positivos encontrados y corregidos en las herramientas de análisis:
+
+1. `execFileSync(…, { stdio: 'pipe' })` marca **todos** los ficheros como error de sintaxis: el sandbox no
+   permite capturar la salida de otro proceso por tubería (EPERM). Con `stdio: 'ignore'` pasan los 14.
+2. Un detector que busca helpers (`function x(){ … BlockManager.add … }`) captura también llamadas cuyo
+   primer argumento es un fragmento HTML (`section('<h2 class="…">')`). Hay que filtrar a forma de slug
+   (`/^[a-z0-9][a-z0-9._-]*$/i`) o se inventan colisiones inexistentes.

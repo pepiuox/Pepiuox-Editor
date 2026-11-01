@@ -282,7 +282,13 @@ function is_active_exact(string $path, string $class = 'active'): string {
  * @since 2026-10-31
  */
 function editor_block_urls(): array {
-    $excluidos = ['bs-blocks.js', 'template.js', 'blocks-bs.js'];
+    // Exclusiones, con el motivo al lado. `bs-blocks.js` ya NO está aquí: se
+    // reescribió como fichero unificado y sí se carga.
+    $excluidos = [
+        // Inyecta un <script> con setTimeout dentro del contenido de un bloque;
+        // ese código se ejecuta en el lienzo del editor.
+        'blocks-bs.js',
+    ];
     $nombres = [];
 
     foreach (glob(ASSETS_PATH . '/js/blocks/*.js') ?: [] as $archivo) {

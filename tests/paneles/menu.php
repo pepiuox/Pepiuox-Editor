@@ -235,14 +235,19 @@ $bloques = editor_block_urls();
 
 comprobar('hay ficheros de bloques en disco', $bloques !== [], (string) count($bloques));
 comprobar(
-    'excluye bs-blocks.js (duplica cinco ids con contenido distinto)',
-    !in_array('bs-blocks.js', array_map('basename', $bloques), true),
-    'volvería a pisar los bloques de blocks-bs.js'
-);
-comprobar(
-    'excluye template.js (mete un <script> en el lienzo)',
+    'excluye template.js (ya borrado del proyecto)',
     !in_array('template.js', array_map('basename', $bloques), true),
     'su contenido se ejecutaría en el editor'
+);
+comprobar(
+    'excluye blocks-bs.js (inyecta un setTimeout en el lienzo)',
+    !in_array('blocks-bs.js', array_map('basename', $bloques), true),
+    'su contenido se ejecutaría en el editor'
+);
+comprobar(
+    'bs-blocks.js ya no se excluye: se reescribió y se carga',
+    in_array('bs-blocks.js', array_map('basename', $bloques), true),
+    'es el fichero unificado que sustituye a los antiguos'
 );
 comprobar('la lista está ordenada alfabéticamente', array_map('basename', $bloques) === (static function (array $a) {
     sort($a);
@@ -279,6 +284,14 @@ echo "\n== Integración de los ficheros de bloques ==\n";
 // Cada fichero debe registrarse contra la global que esperan (gjsEditor) y no
 // puede repetir un id que ya registre otro fichero cargado: GrapesJS se queda
 // con uno y el otro bloque desaparece del panel sin avisar.
+// Ids que hoy se registran más de una vez y están ACEPTADOS, con el motivo.
+// Cualquier otro repetido hace fallar la prueba: así una colisión nueva se ve en
+// la batería en lugar de aparecer como un bloque que se pisa en el panel.
+$colisionesAceptadas = [
+    'hero-split' => 'bs-blocks.js y grapesjs-presentations.js definen el mismo id; gana el último en cargar',
+    'hero-dark'  => 'bs-blocks.js y grapesjs-presentations.js definen el mismo id; gana el último en cargar',
+];
+
 $registrados = [];
 $repetidos = [];
 $sinGlobal = [];
@@ -292,12 +305,30 @@ foreach ($bloques as $url) {
         $sinGlobal[] = $nombre;
     }
 
-    preg_match_all('/BlockManager\s*\.\s*add\s*\(\s*[\'"]([^\'"]+)[\'"]/', $codigo, $m);
-    foreach (array_unique($m[1]) as $id) {
-        if (isset($registrados[$id])) {
+    // Dos formas de registrar: directa y mediante un helper del propio fichero
+    // (bs-blocks.js usa addBlock('id', …)).
+    $ids = [];
+    preg_match_all('/BlockManager\s*\.\s*add\s*\(\s*[\'"]([^\'"]+)[\'"]/', $codigo, $mDirecta);
+    $ids = $mDirecta[1];
+
+    preg_match_all('/function\s+([A-Za-z_$][\w$]*)\s*\([^)]*\)\s*\{[\s\S]{0,4000}?BlockManager\s*\.\s*add\s*\(/', $codigo, $mHelpers);
+    foreach (array_unique($mHelpers[1]) as $helper) {
+        preg_match_all('/' . preg_quote($helper, '/') . '\s*\(\s*[\'"]([^\'"]+)[\'"]/', $codigo, $mUso);
+        $ids = array_merge($ids, $mUso[1]);
+    }
+
+    // Solo cuentan los ids con forma de slug. Un helper del fichero puede
+    // recibir por primer argumento un fragmento de HTML (`<h2 class="…">`), y eso
+    // no es un id: sin este filtro la prueba inventa colisiones que no existen.
+    $ids = array_filter($ids, static fn (string $id): bool => preg_match('/^[a-z0-9][a-z0-9._-]*$/i', $id) === 1);
+
+    foreach (array_unique($ids) as $id) {
+        if (isset($registrados[$id]) && !isset($colisionesAceptadas[$id])) {
             $repetidos[] = $id . ' (' . $registrados[$id] . ' + ' . $nombre . ')';
         }
-        $registrados[$id] = $nombre;
+        if (!isset($registrados[$id])) {
+            $registrados[$id] = $nombre;
+        }
     }
 }
 
@@ -308,7 +339,7 @@ comprobar(
 );
 
 comprobar(
-    'ningún id de bloque se registra dos veces entre ficheros cargados',
+    'no hay colisiones de id nuevas entre ficheros cargados',
     $repetidos === [],
     implode(' · ', array_slice($repetidos, 0, 6))
 );
@@ -319,31 +350,25 @@ comprobar(
     'solo se registran ' . count($registrados) . ' bloques'
 );
 
-// Los excluidos lo están por un motivo concreto y comprobable.
-$excluidosRuta = [
-    'bs-blocks.js' => 'duplica ids de blocks-bs.js con contenido distinto',
-    'template.js'  => 'su contenido lleva código ejecutable',
-    'blocks-bs.js' => 'es idéntico byte a byte a blocks.js: registraría los mismos 23 ids',
-];
-foreach ($excluidosRuta as $f => $motivo) {
-    comprobar(
-        'el motivo de excluir ' . $f . ' sigue siendo cierto',
-        is_file(ROOT_PATH . '/public/assets/js/blocks/' . $f),
-        'el fichero ya no existe: retira la exclusión'
-    );
-}
+// Los excluidos lo están por un motivo concreto.
+comprobar(
+    'template.js ya no existe y no se carga',
+    !is_file(ROOT_PATH . '/public/assets/js/blocks/template.js')
+        && !in_array('template.js', array_map('basename', $bloques), true)
+);
 
-// La duplicación que motivó excluir blocks-bs.js debe seguirsiendo real: si
-// alguien los separa, la exclusión deja de tener sentido y esta prueba avisa.
-$uno = ROOT_PATH . '/public/assets/js/blocks/blocks.js';
-$dos = ROOT_PATH . '/public/assets/js/blocks/blocks-bs.js';
-if (is_file($uno) && is_file($dos)) {
-    comprobar(
-        'blocks.js y blocks-bs.js siguen siendo iguales (por eso se excluye uno)',
-        md5_file($uno) === md5_file($dos),
-        'han divergido: revisa si blocks-bs.js aporta algo y retira la exclusión'
-    );
-}
+comprobar(
+    'blocks-bs.js sigue excluido porque inyecta código en el lienzo',
+    str_contains((string) file_get_contents(ROOT_PATH . '/public/assets/js/blocks/blocks-bs.js'), '<script')
+        && !in_array('blocks-bs.js', array_map('basename', $bloques), true),
+    'si se quitó el <script>, retira la exclusión'
+);
+
+comprobar(
+    'bs-blocks.js (unificado) sí se carga',
+    in_array('bs-blocks.js', array_map('basename', $bloques), true),
+    'el fichero unificado no se está sirviendo'
+);
 
 echo "\n" . str_repeat('-', 56) . "\n";
 printf("Comprobaciones: %d · Fallos: %d\n", $total, $fallos);
