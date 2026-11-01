@@ -13,10 +13,20 @@ load_env_file(__DIR__ . '/../01-TOOLS/mysql/.env');
 return [
     'app_name'      => 'PePiuoX Editor',
     'app_version'   => '1.0.0',
-    'app_url'       => 'http://localhost:170', // sin trailing slash ni /public
+    // URL pública del sitio, sin barra final y sin /public.
+    //
+    // Se toma de APP_URL (en 01-TOOLS/mysql/.env o en el entorno del proceso), y
+    // si no está se mantiene el valor de desarrollo. Así el dominio se cambia al
+    // desplegar sin tocar el código ni la base de datos. Es también la base del
+    // sitemap cuando no hay una guardada en «Sitemap» (ver SitemapService::baseUrl).
+    'app_url'       => (string) (env('APP_URL') ?: 'http://localhost:170'),
     'timezone'      => 'Europe/Madrid',
     'locale'        => 'es_ES',
-    'debug'         => true, // false en producción
+    // Modo depuración: APP_DEBUG=false en producción. Si no se define, queda en
+    // true para no cambiar el comportamiento de desarrollo.
+    'debug'         => env('APP_DEBUG') === null
+        ? true
+        : (bool) filter_var((string) env('APP_DEBUG'), FILTER_VALIDATE_BOOLEAN),
     'log_errors'    => true,
 
     'session' => [
@@ -24,7 +34,12 @@ return [
         'lifetime'  => 7200,     // 2h
         'path'      => '/',
         'domain'    => '',
-        'secure'    => false,    // true si usas HTTPS
+        // Cookie Secure: se activa sola cuando la petición llega por HTTPS. En
+        // producción con TLS es obligatoria; en local por http, una cookie Secure
+        // no se enviaría nunca y la sesión no funcionaría.
+        'secure'    => env('SESSION_SECURE') !== null
+            ? (bool) filter_var((string) env('SESSION_SECURE'), FILTER_VALIDATE_BOOLEAN)
+            : (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
         'httponly'   => true,
         'samesite'  => 'Lax',
     ],

@@ -632,3 +632,62 @@ responden; lint limpio en los 6 archivos tocados.
 
 **Una prueba que renderiza la vista suelta no prueba la pantalla.** El layout puede romper lo que la vista
 hace bien. Y dentro de un `<script>` no se escribe nunca un cierre de script, ni en un comentario.
+
+---
+
+## Preparación para publicar (2026-11-01)
+
+### CRON_TOKEN
+
+Generado con 32 bytes aleatorios y escrito en `01-TOOLS/mysql/.env` (ignorado por git). Verificación de los
+seis endpoints:
+
+| Endpoint | Sin token | Token incorrecto | Token correcto |
+|---|---|---|---|
+| `/cron/backup` | 401 | 401 | **200** |
+| `/cron/process-expired-bans` | 401 | 401 | 200 |
+| `/cron/cleanup-rate-limits` | 401 | 401 | 200 |
+| `/cron/security-digest` | 401 | 401 | 200 |
+| `/cron/cleanup-trusted-devices` | 401 | 401 | 200 |
+| `/cron/cleanup-collaboration` | 401 | 401 | 200 |
+
+**Dos defectos reales encontrados al probarlo:**
+
+1. **`BackupService::runScheduled()` no existía.** `BackupsController::cron()` lo invocaba y el endpoint
+   respondía **500 con token válido**. Mismo tipo de fallo que el `RateLimiter::cleanup()` anterior: un
+   endpoint que llama a un método que no está. Implementado: copia completa, marcada como no manual.
+2. **La copia fallaba con «SHOW VIEW command denied».** `SHOW TABLES` devuelve también las vistas, y
+   `SHOW CREATE TABLE` sobre una vista exige el privilegio `SHOW VIEW`, que la cuenta de la aplicación no
+   tiene —ni debe tener—. Ahora se filtran las tablas base (`SHOW FULL TABLES … BASE TABLE`) y las vistas se
+   listan como comentario en el volcado: son esquema, no datos, y se recrean con las migraciones.
+
+Resultado tras corregir: **200**, ZIP de 5,16 MB en `storage/backups`, fila `completed` con `is_manual=0`.
+
+### Dominio
+
+`app_url` estaba **fijo en el código** (`http://localhost:170`). Ahora se lee de `APP_URL` y mantiene ese
+valor solo como respaldo de desarrollo. El orden de resolución del sitemap queda:
+
+1. ajuste guardado en el panel,
+2. `APP_URL` del entorno,
+3. `BASE_URL` de la petición.
+
+Verificado en ambos modos: sin la variable sigue en `http://localhost:170` con su aviso de localhost; con
+`APP_URL=https://ejemplo.com` devuelve ese dominio y el aviso desaparece.
+
+### Dos ajustes que impedían publicar con seguridad
+
+| Ajuste | Antes | Ahora |
+|---|---|---|
+| `debug` | `true` fijo | `APP_DEBUG`, por defecto `true` en desarrollo |
+| `session.secure` | `false` fijo | automático según HTTPS, con `SESSION_SECURE` para forzar |
+
+Verificado: con `APP_DEBUG=false` y HTTPS en la petición, la sesión pasa a `secure=true` y las trazas se
+apagan.
+
+### Checklist
+
+`docs/CHECKLIST_PUBLICACION.md`: nueve bloques con el comando de comprobación y el resultado esperado de cada
+paso, marcando **✅ lo verificado aquí** y **⬜ lo que depende del servidor** (TLS, permisos, cron del
+sistema, importación de la base). Incluye los avisos que importan: el token viaja en la URL y queda en los
+logs; `db/db-full.sql` no debe importarse en producción; el historial de git conserva secretos antiguos.

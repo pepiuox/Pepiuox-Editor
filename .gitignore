@@ -97,6 +97,17 @@
 # Es un artefacto generado, no código: se regenera con una orden.
 storage/preview/
 
+# Todo lo que la aplicación GENERA en storage/. Nunca se versiona:
+#   backups/  volcados completos: datos personales, hashes y secretos de API
+#   logs/     registros con correos, IPs y errores
+#   cache/    caché de páginas
+#   versions/ versiones de páginas
+# Se recrean solos; el código que los produce sí está versionado.
+storage/backups/
+storage/logs/
+storage/cache/
+storage/versions/
+
 # Respaldos de base de datos. NUNCA se versionan: un volcado completo lleva los
 # datos de las personas, los hashes de sus contraseñas y los secretos de las
 # aplicaciones de API. Se generan con mysqldump y se guardan fuera del
