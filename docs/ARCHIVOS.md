@@ -167,6 +167,7 @@ dueño, sin documentar como ruta soportada**) · `assets/{css,js,js/blocks}`.
 | `bootstrap/seed-pages.php` | Siembra `/funciones`, `/seguridad`, `/como-funciona` |
 | `mantenimiento/sanitize-dump.php` | Quita hashes y filas de API de un volcado |
 | `mantenimiento/rotate-api-tokens.php` | Rota los tokens de API filtrados |
+| `despliegue/verificar.php` | Comprueba y prepara la publicación (entorno, permisos, configuración, base de datos, cron) |
 | `mysql/` | `.env` (ignorado), `.env.example`, `test_connection.php` |
 | `diagnostics/` | Cementerio de scripts retirados. **No se reutiliza** |
 

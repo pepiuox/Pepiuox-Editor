@@ -372,6 +372,11 @@ comprobar(
     'sin ella, el siguiente volcado vuelve a llevar secretos'
 );
 comprobar(
+    'existe la verificación de publicación',
+    is_file(ROOT_PATH . '/01-TOOLS/despliegue/verificar.php'),
+    'sin ella no hay comprobación previa al despliegue'
+);
+comprobar(
     'existe la herramienta de rotación de tokens de API',
     is_file(ROOT_PATH . '/01-TOOLS/mantenimiento/rotate-api-tokens.php'),
     'quitar un secreto del archivo no lo invalida'

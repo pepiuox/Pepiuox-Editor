@@ -8,6 +8,36 @@ Marca cada casilla solo cuando la comprobación dé el resultado esperado.
 
 ---
 
+---
+
+## 0. Atajo: un solo comando
+
+La mayor parte de este checklist está automatizada. **Sin argumentos solo comprueba**; con `--fix` prepara
+lo que es seguro preparar.
+
+```bash
+# Comprobar (no escribe nada)
+php 01-TOOLS/despliegue/verificar.php
+
+# Preparar: dominio, APP_DEBUG, SESSION_SECURE y CRON_TOKEN si faltan
+php 01-TOOLS/despliegue/verificar.php --fix --yes --url=https://tu-dominio.com
+```
+
+Comprueba, en este orden: entorno (PHP, extensiones), archivos y permisos (prueba de escritura **real**,
+no `is_writable`), configuración de producción, base de datos (conexión, mínimo privilegio, tablas,
+migración del catálogo, Super Admin) y tareas programadas contra el dominio real.
+
+Con `--fix` escribe en `01-TOOLS/mysql/.env` **solo claves que falten**, y nunca sobrescribe una existente:
+es idempotente, ejecutarlo dos veces no cambia nada. No importa la base de datos, no crea usuarios y no
+aplica migraciones: eso sigue siendo una decisión aparte.
+
+Códigos de salida: `0` listo, `1` hay fallos, `2` falta un requisito para comprobar.
+
+Lo que el script **no** puede hacer por ti: emitir el certificado TLS, programar el cron del sistema y
+abrir los puertos. Eso es del servidor.
+
+---
+
 ## 1. Requisitos del servidor
 
 | Requisito | Mínimo | Comprobación | Estado aquí |
