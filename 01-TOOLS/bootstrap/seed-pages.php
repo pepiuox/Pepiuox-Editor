@@ -69,6 +69,7 @@ $dryRun   = in_array('dry-run', $flags, true);
 $si       = in_array('yes', $flags, true);
 $update   = in_array('update', $flags, true);
 $conInicio = in_array('inicio', $flags, true);
+$soloInicio = in_array('only-inicio', $flags, true);
 
 // ── Contenido ────────────────────────────────────────────────────────
 // Cada afirmación corresponde a algo que la plataforma hace. Los límites
@@ -892,6 +893,12 @@ say($dryRun ? "MODO SIMULACIÓN: no se escribe nada.\n" : "\n");
 $creadas = 0;
 $actualizadas = 0;
 $saltadas = 0;
+
+// Con --only-inicio se omite el resto y solo se crea la portada: una instalación
+// que arranca con una única página de presentación.
+if ($soloInicio) {
+    $paginas = [];
+}
 
 foreach ($paginas as $slug => $pagina) {
     $existe = $pdo->prepare('SELECT id FROM pages WHERE slug = ? LIMIT 1');

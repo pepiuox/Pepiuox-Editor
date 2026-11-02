@@ -118,3 +118,6 @@ db/backup/
 .env
 01-TOOLS/mysql/.env
 AGENTS.md
+
+# Paquete de instalación generado: se reconstruye, no se versiona.
+pepiuox-editor-clean.zip
