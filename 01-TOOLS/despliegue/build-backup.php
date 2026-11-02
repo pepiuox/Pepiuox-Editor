@@ -36,6 +36,10 @@
  *   --yes       confirma el borrado y la reconstrucción de `backup/`
  *   --sin-db    solo los archivos; no toca la base de datos
  *   --dominio=  dominio del sitio (por defecto https://pepiuox.net)
+ *   --desde-base=  construye el SQL a partir de esa base existente
+ *   --destino=  nombre de la carpeta del paquete (por defecto `backup`). Sirve
+ *               cuando `backup/` está bloqueada por otro proceso: se construye
+ *               en otra carpeta y se renombra cuando quede libre.
  *
  * ── Seguridad ───────────────────────────────────────────────────────
  * Solo CLI. No copia nunca `01-TOOLS/mysql/.env`, `.env`, `db/backup/`, los
@@ -85,6 +89,7 @@ $si       = in_array('--yes', $args, true);
 $sinDb    = in_array('--sin-db', $args, true);
 $dominio  = 'https://pepiuox.net';
 $desdeBase = null;
+$destinoNombre = 'backup';
 
 foreach ($args as $a) {
     if (str_starts_with($a, '--dominio=')) {
@@ -92,6 +97,9 @@ foreach ($args as $a) {
     }
     if (str_starts_with($a, '--desde-base=')) {
         $desdeBase = trim(substr($a, 13));
+    }
+    if (str_starts_with($a, '--destino=')) {
+        $destinoNombre = trim(substr($a, 10));
     }
 }
 
@@ -111,7 +119,7 @@ if ($raiz === false) {
     oops('No se pudo resolver la raíz del proyecto.');
     exit(1);
 }
-$paqueteReal = $raiz . DIRECTORY_SEPARATOR . 'backup';
+$paqueteReal = $raiz . DIRECTORY_SEPARATOR . ($destinoNombre === 'backup' ? 'backup' : $destinoNombre);
 
 // ── Lista blanca: lo que SÍ viaja al servidor ────────────────────────
 //
@@ -213,11 +221,33 @@ if ($faltan !== []) {
 }
 say('Lista blanca: ' . count($arboles) . ' carpetas y ' . count($sueltos) . ' archivos sueltos, todos presentes.');
 
-// El borrado es la única operación destructiva del script. Se comprueba que el
-// destino resuelto sea exactamente <raíz>/backup y nada más.
+// El borrado es la única operación destructiva del script. `--destino=` permite
+// cambiar el nombre de la carpeta —útil cuando `backup/` está bloqueada por otro
+// proceso—, así que la comprobación tiene que seguir siendo estricta: un solo
+// segmento de ruta, dentro de la raíz, y nunca el nombre de una carpeta del
+// proyecto que se borraría con el paquete.
+$protegidos = [
+    'app', 'config', 'views', 'public', 'db', 'docs', '01-TOOLS', '02-DOCS',
+    'storage', 'uploads', 'tests', 'private', 'nbproject', '.git', '.rsc',
+    '.dsh', '.opencode', 'automation-projects',
+];
+
+$nombreValido = $destinoNombre !== ''
+    && $destinoNombre !== '.'
+    && $destinoNombre !== '..'
+    && !str_contains($destinoNombre, '/')
+    && !str_contains($destinoNombre, '\\')
+    && !in_array($destinoNombre, $protegidos, true);
+
+if (!$nombreValido) {
+    oops('--destino= no puede ser «' . $destinoNombre . '»: un solo nombre de carpeta, '
+        . 'distinto de las del proyecto.');
+    exit(1);
+}
+
 $padre = realpath(dirname($paqueteReal)) ?: '';
-if ($padre !== $raiz || basename($paqueteReal) !== 'backup') {
-    oops('El destino no resuelve a <raíz>/backup: se aborta por seguridad.');
+if ($padre !== $raiz || basename($paqueteReal) !== $destinoNombre) {
+    oops('El destino no resuelve a <raíz>/' . $destinoNombre . ': se aborta por seguridad.');
     exit(1);
 }
 say('Destino: ' . $paqueteReal);
