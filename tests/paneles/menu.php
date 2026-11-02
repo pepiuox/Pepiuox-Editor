@@ -559,6 +559,11 @@ comprobar(
 );
 
 comprobar(
+    'el aside plegado no se desplaza fuera de la pantalla',
+    preg_match('/\.sidebar\.collapsed\s*\{[^}]*transform:\s*none/is', $cssSinComentarios) === 1,
+    'sin transform:none ocupa 70px pero no se ve: franja vacía a la izquierda'
+);
+comprobar(
     'el ítem activo del menú lleva marca visual propia',
     preg_match('/\.sidebar \.nav-link\.active::before/', $cssSinComentarios) === 1,
     'la señal de dónde estás es la barra de acento'

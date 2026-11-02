@@ -2780,7 +2780,14 @@ code {
    El JS añade `.collapsed` al aside. Antes se traducía fuera de la
    pantalla; ahora se queda como columna de iconos: menos saltos y el
    contenido no se recoloca de golpe. */
-.sidebar.collapsed { width: var(--sidebar-icon-width); }
+/* `transform: none` es imprescindible: la regla anterior movía el aside fuera de
+   la pantalla con translateX(-100%). Al añadirle un ancho de 70 px, el resultado
+   era una franja vacía a la izquierda: ocupaba sitio pero no se veía.
+   Las dos cosas a la vez dejan el menú invisible y el contenido desplazado. */
+.sidebar.collapsed {
+    width: var(--sidebar-icon-width);
+    transform: none !important;
+}
 
 .sidebar.collapsed .brand-info,
 .sidebar.collapsed .brand-text,
