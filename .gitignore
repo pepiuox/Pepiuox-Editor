@@ -97,6 +97,9 @@
 # Es un artefacto generado, no código: se regenera con una orden.
 storage/preview/
 
+# Copia para instalación en servidor
+backup/
+
 # Todo lo que la aplicación GENERA en storage/. Nunca se versiona:
 #   backups/  volcados completos: datos personales, hashes y secretos de API
 #   logs/     registros con correos, IPs y errores
