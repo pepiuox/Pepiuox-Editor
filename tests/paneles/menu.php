@@ -457,19 +457,19 @@ $css = (string) file_get_contents(ROOT_PATH . '/public/assets/css/maker.css');
 // desaparece cuando la cabecera sale de la vista.
 comprobar(
     'el botón de plegar está fijado a la ventana',
-    preg_match('/\.topbar \.btn-toggle-sidebar\s*\{[^}]*position:\s*fixed/is', $css) === 1,
+    preg_match('/(?<![.\w])\.btn-toggle-sidebar\s*\{[^}]*position:\s*fixed/is', $css) === 1,
     'sin position:fixed vuelve a desaparecer con la topbar'
 );
 
 comprobar(
     'pegado al borde derecho del sidebar cuando está visible',
-    preg_match('/\.topbar \.btn-toggle-sidebar\s*\{[^}]*left:\s*calc\(var\(--sidebar-width\)/is', $css) === 1,
+    preg_match('/(?<![.\w])\.btn-toggle-sidebar\s*\{[^}]*left:\s*calc\(var\(--sidebar-width\)/is', $css) === 1,
     'no queda al lado del sidebar'
 );
 
 comprobar(
     'al plegarlo pasa al borde izquierdo de la pantalla',
-    preg_match('/body\.sidebar-collapsed \.topbar \.btn-toggle-sidebar\s*\{[^}]*left:\s*0\.5rem/is', $css) === 1,
+    preg_match('/body\.sidebar-collapsed \.btn-toggle-sidebar\s*\{[^}]*left:\s*0\.5rem/is', $css) === 1,
     'con el sidebar plegado el botón quedaría fuera de alcance'
 );
 
@@ -512,6 +512,36 @@ comprobar(
     'maker.css solo usa sidebar-collapsed sobre body',
     preg_match('/(?<!body)\.sidebar-collapsed/', $css) === 0,
     'un selector suelto en maker.css también alcanzaría al body'
+);
+
+// El botón NO puede vivir dentro de la topbar: esa topbar lleva
+// backdrop-filter, que convierte al elemento en contenedor de los descendientes
+// position:fixed. Dentro, el `left` se medía desde la topbar y el botón flotaba
+// sobre el título, delante de él.
+$topbarPhp = (string) file_get_contents(VIEWS_PATH . '/partials/topbar.php');
+$posBoton = strpos($topbarPhp, 'id="toggleSidebar"');
+
+// La cabecera real empieza la línea. El comentario que explica el cambio la
+// menciona antes, y un strpos simple se quedaría con esa mención.
+preg_match('/^<header class="topbar">/m', $topbarPhp, $mHeader, PREG_OFFSET_CAPTURE);
+$posHeader = $mHeader[0][1] ?? false;
+
+comprobar(
+    'el botón de plegar se emite antes del <header>',
+    $posBoton !== false && $posHeader !== false && $posBoton < $posHeader,
+    'dentro de la topbar, el position:fixed se mide contra ella (backdrop-filter)'
+);
+
+comprobar(
+    'la hoja no usa el prefijo .topbar para el botón',
+    preg_match('/\.topbar \.btn-toggle-sidebar/', $css) === 0,
+    'ese prefijo dejaría de aplicarse ahora que el botón está fuera'
+);
+
+comprobar(
+    'la anchura de la hoja coincide con la del sidebar real',
+    preg_match('/--sidebar-width:\s*280px/', $css) === 1,
+    'con 260 px, el contenido se metía 20 px bajo el menú de 280 px'
 );
 echo "\n" . str_repeat('-', 56) . "\n";
 printf("Comprobaciones: %d · Fallos: %d\n", $total, $fallos);

@@ -21,12 +21,19 @@ try {
 $currentLangData = current(array_filter($langs, fn($l) => $l['code'] === $currentLang)) ?: ['flag' => '🌐', 'native_name' => 'Idioma'];
 ?>
 
+<!-- Botón para plegar el sidebar.
+     Va FUERA de <header class="topbar"> a propósito: la topbar lleva
+     `backdrop-filter: blur()`, y esa propiedad convierte al elemento en contenedor
+     de los descendientes `position: fixed`. Dentro de la topbar, el `left` del
+     botón se medía desde ella y no desde la pantalla, y acababa flotando sobre el
+     título. Como hijo directo de .main, el `position: fixed` se mide contra la
+     ventana y queda pegado al borde derecho del menú. -->
+<button class="btn-toggle-sidebar" id="toggleSidebar" aria-label="Mostrar u ocultar el menú" title="Mostrar u ocultar el menú">
+  <i class="bi bi-list"></i>
+</button>
+
 <header class="topbar">
   <div class="topbar-left">
-    <!-- Botón Toggle Sidebar (ahora visible en desktop y móvil) -->
-    <button class="btn-toggle-sidebar" id="toggleSidebar" aria-label="Toggle sidebar" title="Toggle sidebar">
-      <i class="bi bi-list"></i>
-    </button>
     <h1 class="topbar-title"><?= e($pageTitle ?? 'Dashboard') ?></h1>
   </div>
   

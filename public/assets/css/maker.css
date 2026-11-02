@@ -59,7 +59,7 @@
     --radius-full:  9999px;
 
     /* ── Layout ───────────────────────────────────────────────────── */
-    --sidebar-width: 260px;
+    --sidebar-width: 280px; /* debe coincidir con .sidebar { width } de sidebar.php */
     --topbar-height: 60px;
 
     /* ── Tipografía ───────────────────────────────────────────────── */
@@ -554,8 +554,6 @@ body.sidebar-collapsed .main-content {
     display: flex;
     align-items: center;
     gap: 1rem;
-    /* Hueco para el botón flotante de plegar, que ya no ocupa sitio en el flujo. */
-    padding-left: 2.75rem;
 }
 
 .topbar-right {
@@ -571,7 +569,7 @@ body.sidebar-collapsed .main-content {
     margin: 0;
 }
 
-.topbar .btn-toggle-sidebar {
+.btn-toggle-sidebar {
     /* Botón FLOTANTE y siempre visible.
        Antes vivía en el flujo de la topbar: cuando la topbar quedaba fuera de la
        vista, el botón desaparecía con ella. Fijado a la ventana queda pegado al
@@ -598,12 +596,12 @@ body.sidebar-collapsed .main-content {
 }
 
 /* Con el sidebar plegado, el botón pasa a ser lo primero de la pantalla. */
-body.sidebar-collapsed .topbar .btn-toggle-sidebar {
+body.sidebar-collapsed .btn-toggle-sidebar {
     left: 0.5rem;
 }
 
-.topbar .btn-toggle-sidebar:hover,
-.topbar .btn-toggle-sidebar:focus-visible {
+.btn-toggle-sidebar:hover,
+.btn-toggle-sidebar:focus-visible {
     color: var(--accent);
     border-color: var(--accent);
     outline: none;
