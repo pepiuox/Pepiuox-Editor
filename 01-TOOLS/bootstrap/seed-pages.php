@@ -505,18 +505,47 @@ foreach ($paginas as $slug => $pagina) {
 }
 
 // ── Página de inicio ─────────────────────────────────────────────────
-if ($conInicio) {
-    $inicio = $pdo->query('SELECT id, slug FROM pages WHERE startpage = 1 ORDER BY id ASC LIMIT 1')->fetch(PDO::FETCH_ASSOC);
+//
+// La portada del sitio es una PÁGINA MÁS: se crea aquí y luego se edita con el
+// constructor visual, igual que cualquier otra. No hay un editor aparte para
+// ella. `pages.user_id` es obligatorio, así que no puede sembrarse en
+// `initial_database.sql` (allí todavía no existe ningún usuario): este es el
+// primer momento en que hay un autor al que atribuirla.
+$inicio = $pdo->query('SELECT id, slug FROM pages WHERE startpage = 1 ORDER BY id ASC LIMIT 1')->fetch(PDO::FETCH_ASSOC);
 
-    if (!$inicio) {
-        oops('  ! No hay ninguna página marcada como inicio: no se toca ninguna. Márcala en Páginas y repite.');
-    } elseif (!$dryRun) {
-        $upd = $pdo->prepare('UPDATE pages SET content_html = ?, updated_at = NOW() WHERE id = ?');
-        $upd->execute([$inicioHtml, (int) $inicio['id']]);
-        say('  ~ contenido de la página de inicio («' . $inicio['slug'] . '», #' . $inicio['id'] . ') reescrito');
+if (!$inicio) {
+    if ($autorId <= 0) {
+        oops('  ! No hay ningún usuario al que atribuir la página de inicio.');
+        oops('    Crea el primer administrador y repite: php 01-TOOLS/bootstrap/create-admin.php --generate');
+    } elseif ($dryRun) {
+        say('  + página de inicio «inicio» se crearía y quedaría marcada como portada');
+        $creadas++;
     } else {
-        say('  ~ se reescribiría el contenido de la página de inicio («' . $inicio['slug'] . '», #' . $inicio['id'] . ')');
+        $insInicio = $pdo->prepare(
+            'INSERT INTO pages (user_id, template_id, menu_id, parent_id, title, slug, description, h1,
+                                content_html, startpage, is_published, status)
+             VALUES (?, NULL, NULL, NULL, ?, ?, ?, NULL, ?, 1, 1, ?)'
+        );
+        $insInicio->execute([
+            $autorId,
+            'Inicio',
+            'inicio',
+            'Página de bienvenida de la instalación.',
+            $inicioHtml,
+            'published',
+        ]);
+        $idInicio = (int) $pdo->lastInsertId();
+        say('  + página de inicio «inicio» creada (#' . $idInicio . '), marcada como portada');
+        say('      edítala en Páginas → su título → Constructor, como cualquier otra');
+        $creadas++;
+        $inicio = ['id' => $idInicio, 'slug' => 'inicio'];
     }
+} elseif ($conInicio && !$dryRun) {
+    $upd = $pdo->prepare('UPDATE pages SET content_html = ?, updated_at = NOW() WHERE id = ?');
+    $upd->execute([$inicioHtml, (int) $inicio['id']]);
+    say('  ~ contenido de la página de inicio («' . $inicio['slug'] . '», #' . $inicio['id'] . ') reescrito');
+} elseif ($conInicio && $dryRun) {
+    say('  ~ se reescribiría el contenido de la página de inicio («' . $inicio['slug'] . '», #' . $inicio['id'] . ')');
 }
 
 say('');

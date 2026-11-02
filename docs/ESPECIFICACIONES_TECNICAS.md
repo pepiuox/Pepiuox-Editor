@@ -1623,3 +1623,29 @@ cierra de verdad.
 
 Cada uno era un defecto real y **ninguno era el último**: el fallo tenía cuatro capas. Lo que faltó desde
 el principio fue revisar la **cascada de CSS**, porque el síntoma parecía de JavaScript.
+
+---
+
+## 15. La portada se edita con el constructor
+
+`PublicController::home()` resuelve `/` en tres pasos:
+
+1. si `landing.enabled` está activo, la portada comercial (campos estructurados);
+2. si no, la **página publicada con `startpage = 1`**, renderizada por `PageRenderer` con su
+   `content_html`, `content_css` y `content_js` —es decir, **contenido del constructor**;
+3. si tampoco hay, un mensaje de bienvenida mínimo.
+
+Es decir: la portada **ya era** una página más; lo que faltaba es que existiera al instalar. La sembraba
+nadie, y una instalación nueva arrancaba con el mensaje de bienvenida en vez de una página editable.
+
+**Cambio:** `01-TOOLS/bootstrap/seed-pages.php` crea la página `inicio` (`startpage = 1`, publicada) cuando no
+hay ninguna marcada como tal, usando el mismo contenido de bienvenida que ya existía para `--inicio`. No puede
+hacerse en `db/install/initial_database.sql` porque `pages.user_id` es obligatorio y en ese momento todavía no
+hay usuarios: el primer punto con autor es después de `create-admin.php`.
+
+Verificado sobre una instalación limpia en base aislada: `create-admin --generate` → `seed-pages --yes` crea
+`funciones`, `seguridad`, `como-funciona` y **`inicio` (#24)** con `startpage=1`, `is_published=1` y 1 684
+bytes de HTML con `<h1>`; `PageRenderer::getHomePage()` la devuelve y su contenido aparece al renderizar.
+
+El contenido sembrado es apto para el constructor: Bootstrap 5, sin `<style>` en el contenido (el saneador lo
+elimina al publicar) y sin `<script>`.

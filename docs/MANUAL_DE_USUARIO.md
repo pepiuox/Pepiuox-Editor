@@ -1335,3 +1335,19 @@ pulsa **Volver al pie por campos** y entonces bórralo.
 
 **Volver al pie por campos** — desactiva el diseño y el sitio muestra otra vez el pie de columnas, con todo
 lo que tuviera. Nada se pierde.
+
+### J. La portada es una página más
+
+La página de bienvenida que se crea al instalar **no tiene un editor propio**: es una página normal, marcada
+como inicio.
+
+- `Páginas` → **Inicio** → **Constructor**: se edita con GrapesJS y CodeMirror igual que cualquier otra.
+- Se le puede añadir CSS y JavaScript propios desde el editor de código, y publicar o dejar en borrador como
+  el resto.
+- La marca de «inicio» es la que decide qué se muestra en `/`. Solo puede haber una: si marcas otra, esa pasa
+  a ser la portada.
+- Si borras la página de inicio, `/` muestra un mensaje de bienvenida mínimo en vez de un error.
+
+**La portada comercial** (`Configuración → Editar la portada`) es otra cosa: una landing con campos
+estructurados que solo se muestra si la activas. Mientras esté desactivada, manda la página marcada como
+inicio. No hace falta activarla para tener portada.

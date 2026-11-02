@@ -3,62 +3,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>http://localhost:170/</loc>
-    <lastmod>2026-10-31</lastmod>
+    <lastmod>2026-11-01</lastmod>
     <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>http://localhost:170/abancay</loc>
-    <lastmod>2026-10-25</lastmod>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>http://localhost:170/como-funciona</loc>
-    <lastmod>2026-10-31</lastmod>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>http://localhost:170/demo-web</loc>
-    <lastmod>2026-08-24</lastmod>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>http://localhost:170/desarrollo</loc>
-    <lastmod>2026-11-01</lastmod>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>http://localhost:170/funciones</loc>
-    <lastmod>2026-10-31</lastmod>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>http://localhost:170/portafolio</loc>
-    <lastmod>2026-11-01</lastmod>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>http://localhost:170/proyectos</loc>
-    <lastmod>2026-11-01</lastmod>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>http://localhost:170/quienes-somos</loc>
-    <lastmod>2026-11-01</lastmod>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>http://localhost:170/seguridad</loc>
-    <lastmod>2026-10-31</lastmod>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>http://localhost:170/viajes</loc>
-    <lastmod>2026-10-25</lastmod>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>http://localhost:170/vistas</loc>
-    <lastmod>2026-10-25</lastmod>
-    <priority>0.8</priority>
   </url>
 </urlset>

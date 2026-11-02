@@ -134,7 +134,7 @@ Genera una contraseña aleatoria y la imprime **una sola vez**. El script pide c
 destino: escribe su nombre. (Existe por un incidente real: una ejecución sin `DB_NAME` escribió en la base
 equivocada.)
 
-⬜ **3.5 Sembrar las páginas del sistema** (opcional, solo en una instalación nueva):
+⬜ **3.5 Sembrar las páginas del sistema y la portada** (instalación nueva). Crea `/funciones`, `/seguridad`, `/como-funciona` y **la página de inicio** —marcada como portada y editable luego con el constructor—:
 
 ```bash
 php 01-TOOLS/bootstrap/seed-pages.php
