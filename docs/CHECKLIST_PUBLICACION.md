@@ -255,6 +255,24 @@ aplicación no las emite porque no siempre está detrás de TLS.
 
 ⬜ **7.2 Rotar la contraseña del panel** si el hash estuvo publicado alguna vez en el repositorio (deuda 7).
 
+
+⬜ **7.3 Rotar las contraseñas del panel** antes de abrir al público (deuda 7: los hashes
+estuvieron publicados en el repositorio).
+
+```bash
+# Ver las cuentas y qué algoritmo usan
+php 01-TOOLS/mantenimiento/rotate-passwords.php --list
+
+# Rotar todas (genera contraseñas de 20 caracteres, argon2id si está disponible)
+php 01-TOOLS/mantenimiento/rotate-passwords.php --all --yes
+
+# Anotar las contraseñas del archivo y borrarlo
+php 01-TOOLS/mantenimiento/rotate-passwords.php --cleanup
+```
+
+Las contraseñas nuevas **no se imprimen por pantalla**: se escriben en
+`storage/backups/passwords-<fecha>.txt`, fuera del repositorio. Rotar también anula los
+`remember_token`, así que ninguna sesión recordada sigue viva con la contraseña anterior.
 ---
 
 ## 8. Verificación funcional tras publicar

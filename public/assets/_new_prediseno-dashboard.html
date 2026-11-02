@@ -1,0 +1,1571 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PePiuoX - Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --sidebar-width: 260px;
+            --sidebar-collapsed-width: 70px;
+            --bg-dark: #0d1117;
+            --bg-sidebar: #161b22;
+            --bg-card: #1c2333;
+            --bg-card-hover: #21293a;
+            --accent-color: #00d4aa;
+            --accent-color-rgb: 0, 212, 170;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --border-color: #30363d;
+            --topbar-height: 60px;
+            --transition-speed: 0.3s;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+
+        /* ===== SIDEBAR ===== */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: var(--sidebar-width);
+            height: 100vh;
+            background-color: var(--bg-sidebar);
+            border-right: 1px solid var(--border-color);
+            z-index: 1040;
+            transition: all var(--transition-speed) ease;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .sidebar.collapsed {
+            width: var(--sidebar-collapsed-width);
+        }
+
+        .sidebar.collapsed .brand-text,
+        .sidebar.collapsed .menu-section-title,
+        .sidebar.collapsed .nav-link span,
+        .sidebar.collapsed .arrow,
+        .sidebar.collapsed .user-info,
+        .sidebar.collapsed .submenu,
+        .sidebar.collapsed .sub-submenu {
+            display: none;
+        }
+
+        .sidebar.collapsed .nav-link {
+            justify-content: center;
+            padding: 12px 0;
+        }
+
+        .sidebar.collapsed .nav-link i:first-child {
+            margin-right: 0;
+            font-size: 1.3rem;
+        }
+
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border-color);
+            min-height: var(--topbar-height);
+        }
+
+        .sidebar-brand .brand-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent-color), #00b894);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: #fff;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .sidebar.collapsed .sidebar-brand {
+            justify-content: center;
+            padding: 15px 10px;
+        }
+
+        .sidebar.collapsed .sidebar-brand .brand-icon {
+            margin-right: 0;
+        }
+
+        .sidebar-brand .brand-text h5 {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--accent-color);
+        }
+
+        .sidebar-brand .brand-text small {
+            color: var(--text-secondary);
+            font-size: 0.7rem;
+        }
+
+        .sidebar-menu {
+            padding: 15px 0;
+            flex: 1;
+        }
+
+        .menu-section-title {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            padding: 10px 20px 5px;
+            letter-spacing: 1px;
+        }
+
+        .sidebar-menu .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 10px 20px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+            font-size: 0.9rem;
+            position: relative;
+        }
+
+        .sidebar-menu .nav-link:hover {
+            color: var(--text-primary);
+            background-color: rgba(var(--accent-color-rgb), 0.05);
+        }
+
+        .sidebar-menu .nav-link.active {
+            color: var(--accent-color);
+            background-color: rgba(var(--accent-color-rgb), 0.1);
+            border-left-color: var(--accent-color);
+        }
+
+        .sidebar-menu .nav-link i {
+            width: 24px;
+            font-size: 1.1rem;
+            margin-right: 10px;
+            text-align: center;
+        }
+
+        .sidebar-menu .nav-link .arrow {
+            margin-left: auto;
+            transition: transform 0.3s ease;
+            font-size: 0.8rem;
+        }
+
+        .sidebar-menu .nav-link .arrow.rotated {
+            transform: rotate(90deg);
+        }
+
+        /* Submenu */
+        .submenu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            background-color: rgba(0, 0, 0, 0.15);
+        }
+
+        .submenu.show {
+            max-height: 500px;
+        }
+
+        .submenu .nav-link {
+            padding-left: 54px;
+            font-size: 0.85rem;
+        }
+
+        /* Sub-submenu */
+        .sub-submenu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .sub-submenu.show {
+            max-height: 300px;
+        }
+
+        .sub-submenu .nav-link {
+            padding-left: 74px;
+            font-size: 0.82rem;
+        }
+
+        /* Sidebar User Profile */
+        .sidebar-user {
+            padding: 15px 20px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .sidebar.collapsed .sidebar-user {
+            justify-content: center;
+            padding: 15px 10px;
+        }
+
+        .sidebar-user .user-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-color), #00b894);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .sidebar-user .user-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .sidebar-user .user-info .user-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .sidebar-user .user-info .user-role {
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+        }
+
+        /* ===== TOPBAR ===== */
+        .topbar {
+            position: fixed;
+            top: 0;
+            left: var(--sidebar-width);
+            right: 0;
+            height: var(--topbar-height);
+            background-color: var(--bg-sidebar);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            z-index: 1030;
+            transition: left var(--transition-speed) ease;
+        }
+
+        .sidebar.collapsed ~ .topbar {
+            left: var(--sidebar-collapsed-width);
+        }
+
+        .topbar .toggle-btn {
+            background: none;
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            width: 38px;
+            height: 38px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.2s ease;
+            margin-right: 15px;
+        }
+
+        .topbar .toggle-btn:hover {
+            background-color: rgba(var(--accent-color-rgb), 0.1);
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+        }
+
+        .topbar .page-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .topbar-actions {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .topbar-actions .action-btn {
+            width: 38px;
+            height: 38px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: none;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            font-size: 1.1rem;
+        }
+
+        .topbar-actions .action-btn:hover {
+            color: var(--accent-color);
+            border-color: var(--accent-color);
+            background-color: rgba(var(--accent-color-rgb), 0.1);
+        }
+
+        .topbar-actions .action-btn .badge-dot {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 8px;
+            height: 8px;
+            background-color: #ff4757;
+            border-radius: 50%;
+        }
+
+        .topbar-actions .btn-logout {
+            background-color: #ff4757;
+            border-color: #ff4757;
+            color: #fff;
+            width: auto;
+            padding: 0 15px;
+            font-size: 0.85rem;
+            gap: 5px;
+        }
+
+        .topbar-actions .btn-logout:hover {
+            background-color: #ff6b7a;
+            border-color: #ff6b7a;
+            color: #fff;
+        }
+
+        /* ===== MAIN CONTENT ===== */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            margin-top: var(--topbar-height);
+            padding: 25px;
+            min-height: calc(100vh - var(--topbar-height));
+            transition: margin-left var(--transition-speed) ease;
+        }
+
+        .sidebar.collapsed ~ .main-content {
+            margin-left: var(--sidebar-collapsed-width);
+        }
+
+        /* ===== STAT CARDS ===== */
+        .stat-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-color), #00b894);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .stat-card .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            background-color: rgba(var(--accent-color-rgb), 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            color: var(--accent-color);
+            margin-bottom: 15px;
+        }
+
+        .stat-card .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 5px;
+        }
+
+        .stat-card .stat-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            letter-spacing: 1px;
+        }
+
+        .stat-card .stat-detail {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            margin-top: 8px;
+        }
+
+        /* ===== CONTENT CARDS ===== */
+        .content-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .content-card .card-header {
+            background-color: transparent;
+            border-bottom: 1px solid var(--border-color);
+            padding: 18px 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .content-card .card-header .header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card .card-header h5 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .content-card .card-header i {
+            color: var(--accent-color);
+            font-size: 1.2rem;
+        }
+
+        .content-card .card-header .btn-link {
+            color: var(--accent-color);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .content-card .card-header .btn-link:hover {
+            text-decoration: underline;
+        }
+
+        .content-card .card-body {
+            padding: 0;
+        }
+
+        /* ===== TABLE ===== */
+        .table-dark-custom {
+            margin: 0;
+            color: var(--text-primary);
+        }
+
+        .table-dark-custom thead th {
+            background-color: rgba(0, 0, 0, 0.2);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 20px;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .table-dark-custom tbody td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.9rem;
+            vertical-align: middle;
+        }
+
+        .table-dark-custom tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .table-dark-custom tbody tr {
+            transition: background-color 0.2s ease;
+        }
+
+        .table-dark-custom tbody tr:hover {
+            background-color: rgba(var(--accent-color-rgb), 0.03);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-badge.published {
+            background-color: rgba(var(--accent-color-rgb), 0.15);
+            color: var(--accent-color);
+        }
+
+        .status-badge.draft {
+            background-color: rgba(255, 193, 7, 0.15);
+            color: #ffc107;
+        }
+
+        /* ===== ACTIVITY TIMELINE ===== */
+        .activity-timeline {
+            padding: 20px 25px;
+            position: relative;
+        }
+
+        .activity-timeline::before {
+            content: '';
+            position: absolute;
+            left: 34px;
+            top: 20px;
+            bottom: 20px;
+            width: 2px;
+            background-color: var(--border-color);
+        }
+
+        .activity-item {
+            position: relative;
+            padding-left: 40px;
+            padding-bottom: 25px;
+            transition: transform 0.2s ease;
+        }
+
+        .activity-item:hover {
+            transform: translateX(5px);
+        }
+
+        .activity-item:last-child {
+            padding-bottom: 0;
+        }
+
+        .activity-item .timeline-dot {
+            position: absolute;
+            left: 28px;
+            top: 4px;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background-color: var(--bg-card);
+            border: 3px solid var(--accent-color);
+            z-index: 1;
+        }
+
+        .activity-item .activity-time {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .activity-item .activity-title {
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 3px;
+        }
+
+        .activity-item .activity-desc {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+        }
+
+        /* ===== TOGGLE SWITCH ===== */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 22px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #555;
+            border-radius: 22px;
+            transition: 0.3s;
+        }
+
+        .toggle-slider::before {
+            content: '';
+            position: absolute;
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+
+        .toggle-switch input:checked + .toggle-slider {
+            background-color: var(--accent-color);
+        }
+
+        .toggle-switch input:checked + .toggle-slider::before {
+            transform: translateX(22px);
+        }
+
+        /* ===== NOTIFICATIONS DROPDOWN ===== */
+        .notifications-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            width: 320px;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+            margin-top: 10px;
+            display: none;
+            z-index: 1050;
+        }
+
+        .notifications-dropdown.show {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .notifications-dropdown .dropdown-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+        }
+
+        .notifications-dropdown .notification-item {
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border-color);
+            transition: background-color 0.2s ease;
+        }
+
+        .notifications-dropdown .notification-item:hover {
+            background-color: rgba(var(--accent-color-rgb), 0.05);
+        }
+
+        .notifications-dropdown .notification-item:last-child {
+            border-bottom: none;
+        }
+
+        /* ===== SEARCH MODAL ===== */
+        .search-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 1060;
+            align-items: flex-start;
+            justify-content: center;
+            padding-top: 100px;
+        }
+
+        .search-modal.show {
+            display: flex;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { 
+opacity: 0; 
+}
+            to { 
+opacity: 1; 
+}
+        }
+
+        .search-modal .search-box {
+            width: 100%;
+            max-width: 600px;
+            background-color: var(--bg-card);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .search-modal .search-input {
+            width: 100%;
+            padding: 12px 15px;
+            background-color: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        .search-modal .search-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        /* ===== OVERLAY ===== */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1035;
+        }
+
+        .sidebar-overlay.show {
+            display: block;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 991.98px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.mobile-show {
+                transform: translateX(0);
+            }
+
+            .sidebar.collapsed {
+                width: var(--sidebar-width);
+            }
+
+            .sidebar.collapsed .brand-text,
+            .sidebar.collapsed .menu-section-title,
+            .sidebar.collapsed .nav-link span,
+            .sidebar.collapsed .arrow,
+            .sidebar.collapsed .user-info,
+            .sidebar.collapsed .submenu,
+            .sidebar.collapsed .sub-submenu {
+                display: block;
+            }
+
+            .sidebar.collapsed .nav-link {
+                justify-content: flex-start;
+                padding: 10px 20px;
+            }
+
+            .sidebar.collapsed .nav-link i:first-child {
+                margin-right: 10px;
+                font-size: 1.1rem;
+            }
+
+            .sidebar.collapsed .sidebar-brand {
+                justify-content: flex-start;
+                padding: 15px 20px;
+            }
+
+            .sidebar.collapsed .sidebar-brand .brand-icon {
+                margin-right: 12px;
+            }
+
+            .sidebar.collapsed .sidebar-user {
+                justify-content: flex-start;
+                padding: 15px 20px;
+            }
+
+            .topbar {
+                left: 0;
+            }
+
+            .sidebar.collapsed ~ .topbar {
+                left: 0;
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .sidebar.collapsed ~ .main-content {
+                margin-left: 0;
+            }
+        }
+
+        @media (max-width: 767.98px) {
+            .main-content {
+                padding: 15px;
+            }
+
+            .stat-card {
+                padding: 18px;
+            }
+
+            .stat-card .stat-number {
+                font-size: 1.6rem;
+            }
+
+            .table-dark-custom thead th,
+            .table-dark-custom tbody td {
+                padding: 10px 12px;
+                font-size: 0.82rem;
+            }
+
+            .activity-timeline {
+                padding: 15px;
+            }
+
+            .activity-timeline::before {
+                left: 24px;
+            }
+
+            .activity-item {
+                padding-left: 35px;
+            }
+
+            .activity-item .timeline-dot {
+                left: 18px;
+            }
+
+            .topbar-actions .action-btn:not(.btn-logout) {
+                width: 34px;
+                height: 34px;
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            .stat-card .stat-icon {
+                width: 40px;
+                height: 40px;
+                font-size: 1.1rem;
+            }
+
+            .table-responsive-custom {
+                overflow-x: auto;
+            }
+
+            .table-dark-custom {
+                min-width: 500px;
+            }
+
+            .notifications-dropdown {
+                width: 280px;
+            }
+        }
+
+        /* Scrollbar */
+        .sidebar::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background-color: var(--border-color);
+            border-radius: 10px;
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-in {
+            opacity: 0;
+            animation: fadeInUp 0.4s ease forwards;
+        }
+
+        .animate-in:nth-child(1) { 
+animation-delay: 0.05s; 
+}
+        .animate-in:nth-child(2) { 
+animation-delay: 0.1s; 
+}
+        .animate-in:nth-child(3) { 
+animation-delay: 0.15s; 
+}
+        .animate-in:nth-child(4) { 
+animation-delay: 0.2s; 
+}
+
+        /* Tooltip */
+        .sidebar.collapsed .nav-link {
+            position: relative;
+        }
+
+        .sidebar.collapsed .nav-link::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            left: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: var(--bg-card);
+            color: var(--text-primary);
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            margin-left: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        .sidebar.collapsed .nav-link:hover::after {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar Overlay (mobile) -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <!-- Brand -->
+        <div class="sidebar-brand">
+            <div class="brand-icon">
+                <i class="bi bi-code-slash"></i>
+            </div>
+            <div class="brand-text">
+                <h5>PePiuoX</h5>
+                <small>Maker v1.0.0</small>
+            </div>
+        </div>
+
+        <!-- Menu -->
+        <nav class="sidebar-menu">
+            <!-- PRINCIPAL -->
+            <div class="menu-section-title">Principal</div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link active" href="#" data-tooltip="Dashboard">
+                        <i class="bi bi-grid-1x2"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+            </ul>
+
+            <!-- CONTENIDO -->
+            <div class="menu-section-title">Contenido</div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="#" data-tooltip="Páginas">
+                        <i class="bi bi-file-earmark-text"></i>
+                        <span>Páginas</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" data-tooltip="Templates">
+                        <i class="bi bi-layout-text-window"></i>
+                        <span>Templates</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" data-tooltip="Menús">
+                        <i class="bi bi-list"></i>
+                        <span>Menús</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" data-tooltip="Archivos">
+                        <i class="bi bi-folder"></i>
+                        <span>Archivos</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link has-submenu" href="#" data-target="submenu-seo" data-tooltip="SEO">
+                        <i class="bi bi-search"></i>
+                        <span>SEO</span>
+                        <i class="bi bi-chevron-right arrow"></i>
+                    </a>
+                    <ul class="submenu" id="submenu-seo">
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">Configuración SEO</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link has-submenu" href="#" data-target="submenu-seo-meta">
+                                <span>Meta Tags</span>
+                                <i class="bi bi-chevron-right arrow"></i>
+                            </a>
+                            <ul class="sub-submenu" id="submenu-seo-meta">
+                                <li class="nav-item">
+                                    <a class="nav-link" href="#">Global</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="#">Por página</a>
+                                </li>
+                            </ul>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">Sitemap</a>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+
+            <!-- USUARIOS -->
+            <div class="menu-section-title">Usuarios</div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="#" data-tooltip="Usuarios">
+                        <i class="bi bi-people"></i>
+                        <span>Usuarios</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" data-tooltip="Baneados">
+                        <i class="bi bi-person-x"></i>
+                        <span>Baneados</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link has-submenu" href="#" data-target="submenu-roles" data-tooltip="Roles">
+                        <i class="bi bi-shield-lock"></i>
+                        <span>Roles y permisos</span>
+                        <i class="bi bi-chevron-right arrow"></i>
+                    </a>
+                    <ul class="submenu" id="submenu-roles">
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">Roles</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">Permisos</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">Asignaciones</a>
+                        </li>
+                    </ul>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" data-tooltip="2FA">
+                        <i class="bi bi-shield-check"></i>
+                        <span>2FA</span>
+                        <span class="ms-auto">
+                            <span class="badge-off" style="background-color:#ffc107;color:#000;padding:2px 8px;border-radius:10px;font-size:0.7rem;font-weight:700;">OFF</span>
+                        </span>
+                    </a>
+                </li>
+            </ul>
+
+            <!-- ADMINISTRACIÓN -->
+            <div class="menu-section-title">Administración</div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="#" data-tooltip="Configuración">
+                        <i class="bi bi-gear"></i>
+                        <span>Configuración</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" data-tooltip="Copias">
+                        <i class="bi bi-clipboard-data"></i>
+                        <span>Copias</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" data-tooltip="Auditoría">
+                        <i class="bi bi-journal-text"></i>
+                        <span>Auditoría</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- User Profile -->
+        <div class="sidebar-user">
+            <div class="user-avatar">J</div>
+            <div class="user-info">
+                <div class="user-name">jose mantilla</div>
+                <div class="user-role">Super admin</div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Topbar -->
+    <header class="topbar" id="topbar">
+        <button class="toggle-btn" id="sidebarToggle" title="Toggle Sidebar">
+            <i class="bi bi-list"></i>
+        </button>
+        <h4 class="page-title">Dashboard</h4>
+
+        <div class="topbar-actions">
+            <button class="action-btn" id="searchBtn" title="Buscar (Ctrl+K)">
+                <i class="bi bi-search"></i>
+            </button>
+            <button class="action-btn" title="Idioma">
+                <i class="bi bi-globe"></i>
+            </button>
+            <div class="position-relative">
+                <button class="action-btn" id="notificationsBtn" title="Notificaciones">
+                    <i class="bi bi-bell"></i>
+                    <span class="badge-dot"></span>
+                </button>
+                <div class="notifications-dropdown" id="notificationsDropdown">
+                    <div class="dropdown-header">Notificaciones</div>
+                    <div class="notification-item">
+                        <small class="text-muted">Hace 5 minutos</small>
+                        <div class="mt-1">Nuevo usuario registrado</div>
+                    </div>
+                    <div class="notification-item">
+                        <small class="text-muted">Hace 1 hora</small>
+                        <div class="mt-1">Página publicada exitosamente</div>
+                    </div>
+                    <div class="notification-item">
+                        <small class="text-muted">Hace 3 horas</small>
+                        <div class="mt-1">Actualización de sistema disponible</div>
+                    </div>
+                </div>
+            </div>
+            <button class="icon-btn" title="Ver el sitio">
+                <i class="bi bi-box-arrow-up-right"></i>
+            </button>
+            <button class="action-btn" id="fullscreenBtn" title="Pantalla completa">
+                <i class="bi bi-arrows-fullscreen"></i>
+            </button>
+            <button class="action-btn btn-logout" title="Cerrar sesión">
+                <i class="bi bi-box-arrow-right"></i>
+                <span class="d-none d-md-inline">Salir</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Search Modal -->
+    <div class="search-modal" id="searchModal">
+        <div class="search-box">
+            <input type="text" class="search-input" placeholder="Buscar en el dashboard..." id="searchInput">
+            <div class="mt-3" id="searchResults"></div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main-content" id="mainContent">
+        <!-- Resumen Section -->
+        <div class="mb-4">
+            <h2 class="mb-2">Resumen</h2>
+            <p class="text-secondary">Estado del sitio y últimos movimientos.</p>
+        </div>
+
+        <!-- Stat Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-xl-3 col-md-6 animate-in">
+                <div class="stat-card" data-bs-toggle="tooltip" title="Ver detalles de usuarios">
+                    <div class="stat-icon">
+                        <i class="bi bi-people"></i>
+                    </div>
+                    <div class="stat-number">3</div>
+                    <div class="stat-label">Usuarios</div>
+                    <div class="stat-detail">2 activos · 1 baneado</div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6 animate-in">
+                <div class="stat-card" data-bs-toggle="tooltip" title="Ver todas las páginas">
+                    <div class="stat-icon">
+                        <i class="bi bi-file-earmark"></i>
+                    </div>
+                    <div class="stat-number">12</div>
+                    <div class="stat-label">Páginas</div>
+                    <div class="stat-detail">3 en el menú principal</div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6 animate-in">
+                <div class="stat-card" data-bs-toggle="tooltip" title="Ver páginas publicadas">
+                    <div class="stat-icon">
+                        <i class="bi bi-check-circle"></i>
+                    </div>
+                    <div class="stat-number">12</div>
+                    <div class="stat-label">Publicadas</div>
+                    <div class="stat-detail">Última hoy</div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6 animate-in">
+                <div class="stat-card" data-bs-toggle="tooltip" title="Ver borradores">
+                    <div class="stat-icon">
+                        <i class="bi bi-pencil-square"></i>
+                    </div>
+                    <div class="stat-number">0</div>
+                    <div class="stat-label">Borradores</div>
+                    <div class="stat-detail">Nada pendiente</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content Row -->
+        <div class="row g-4">
+            <!-- Recent Pages -->
+            <div class="col-xl-8 animate-in">
+                <div class="content-card">
+                    <div class="card-header">
+                        <div class="header-left">
+                            <i class="bi bi-clock"></i>
+                            <h5>Páginas recientes</h5>
+                        </div>
+                        <a href="#" class="btn-link">Ver todas</a>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive-custom">
+                            <table class="table table-dark-custom">
+                                <thead>
+                                    <tr>
+                                        <th>Título</th>
+                                        <th>Autor</th>
+                                        <th>Estado</th>
+                                        <th>Actualizada</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Desarrollo</td>
+                                        <td>pepiuox</td>
+                                        <td><span class="status-badge published">Publicada</span></td>
+                                        <td>01/11 01:58</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Portafolio</td>
+                                        <td>pepiuox</td>
+                                        <td><span class="status-badge published">Publicada</span></td>
+                                        <td>01/11 01:41</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Proyectos</td>
+                                        <td>pepiuox</td>
+                                        <td><span class="status-badge published">Publicada</span></td>
+                                        <td>01/11 01:04</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Quiénes somos</td>
+                                        <td>pepiuox</td>
+                                        <td><span class="status-badge published">Publicada</span></td>
+                                        <td>01/11 00:34</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Inicio</td>
+                                        <td>pepiuox</td>
+                                        <td><span class="status-badge published">Publicada</span></td>
+                                        <td>31/10 20:39</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="col-xl-4 animate-in">
+                <div class="content-card">
+                    <div class="card-header">
+                        <div class="header-left">
+                            <i class="bi bi-activity"></i>
+                            <h5>Actividad reciente</h5>
+                        </div>
+                        <a href="#" class="btn-link">Todo</a>
+                    </div>
+                    <div class="card-body">
+                        <div class="activity-timeline">
+                            <div class="activity-item">
+                                <div class="timeline-dot"></div>
+                                <div class="activity-time">25/10 · 13:16</div>
+                                <div class="activity-title">Sistema · user_deleted</div>
+                                <div class="activity-desc">Usuario eliminado: zz_files_admin</div>
+                            </div>
+                            <div class="activity-item">
+                                <div class="timeline-dot"></div>
+                                <div class="activity-time">25/10 · 13:14</div>
+                                <div class="activity-title">Sistema · user_created</div>
+                                <div class="activity-desc">Usuario creado: zz_files_admin</div>
+                            </div>
+                            <div class="activity-item">
+                                <div class="timeline-dot"></div>
+                                <div class="activity-time">25/10 · 12:50</div>
+                                <div class="activity-title">Sistema · user_deleted</div>
+                                <div class="activity-desc">Usuario eliminado: zz_dnd_admin</div>
+                            </div>
+                            <div class="activity-item">
+                                <div class="timeline-dot"></div>
+                                <div class="activity-time">25/10 · 12:49</div>
+                                <div class="activity-title">Sistema · user_created</div>
+                                <div class="activity-desc">Usuario creado: zz_dnd_admin</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.getElementById('sidebar');
+            const topbar = document.getElementById('topbar');
+            const mainContent = document.getElementById('mainContent');
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const sidebarOverlay = document.getElementById('sidebarOverlay');
+            const searchBtn = document.getElementById('searchBtn');
+            const searchModal = document.getElementById('searchModal');
+            const searchInput = document.getElementById('searchInput');
+            const searchResults = document.getElementById('searchResults');
+            const notificationsBtn = document.getElementById('notificationsBtn');
+            const notificationsDropdown = document.getElementById('notificationsDropdown');
+            const fullscreenBtn = document.getElementById('fullscreenBtn');
+
+            // Check if mobile
+            function isMobile() {
+                return window.innerWidth < 992;
+            }
+
+            // Toggle sidebar
+            sidebarToggle.addEventListener('click', function() {
+                if (isMobile()) {
+                    // Mobile: slide in/out
+                    sidebar.classList.toggle('mobile-show');
+                    sidebarOverlay.classList.toggle('show');
+                } else {
+                    // Desktop: collapse/expand
+                    sidebar.classList.toggle('collapsed');
+                }
+            });
+
+            // Close sidebar on overlay click (mobile)
+            sidebarOverlay.addEventListener('click', function() {
+                sidebar.classList.remove('mobile-show');
+                sidebarOverlay.classList.remove('show');
+            });
+
+            // Handle window resize
+            window.addEventListener('resize', function() {
+                if (!isMobile()) {
+                    sidebar.classList.remove('mobile-show');
+                    sidebarOverlay.classList.remove('show');
+                }
+            });
+
+            // Multi-level submenu toggle
+            document.querySelectorAll('.nav-link.has-submenu').forEach(function(link) {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+
+                    const targetId = this.getAttribute('data-target');
+                    const submenu = document.getElementById(targetId);
+                    const arrow = this.querySelector('.arrow');
+
+                    // Toggle current submenu
+                    submenu.classList.toggle('show');
+                    if (arrow) {
+                        arrow.classList.toggle('rotated');
+                    }
+
+                    // Close other submenus at the same level
+                    const parentList = this.closest('ul');
+                    parentList.querySelectorAll('.submenu.show, .sub-submenu.show').forEach(function(otherSubmenu) {
+                        if (otherSubmenu !== submenu) {
+                            otherSubmenu.classList.remove('show');
+                            const otherArrow = otherSubmenu.previousElementSibling?.querySelector('.arrow');
+                            if (otherArrow) {
+                                otherArrow.classList.remove('rotated');
+                            }
+                        }
+                    });
+                });
+            });
+
+            // Active link handling
+            document.querySelectorAll('.sidebar-menu .nav-link:not(.has-submenu)').forEach(function(link) {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+
+                    // Remove active from all
+                    document.querySelectorAll('.sidebar-menu .nav-link').forEach(function(l) {
+                        l.classList.remove('active');
+                    });
+                    // Add active to clicked
+                    this.classList.add('active');
+
+                    // Close mobile sidebar
+                    if (isMobile()) {
+                        sidebar.classList.remove('mobile-show');
+                        sidebarOverlay.classList.remove('show');
+                    }
+                });
+            });
+
+            // Search modal
+            searchBtn.addEventListener('click', function() {
+                searchModal.classList.add('show');
+                setTimeout(() => searchInput.focus(), 100);
+            });
+
+            searchModal.addEventListener('click', function(e) {
+                if (e.target === searchModal) {
+                    searchModal.classList.remove('show');
+                    searchInput.value = '';
+                    searchResults.innerHTML = '';
+                }
+            });
+
+            searchInput.addEventListener('input', function() {
+                const query = this.value.toLowerCase();
+                if (query.length < 2) {
+                    searchResults.innerHTML = '';
+                    return;
+                }
+
+                // Simulated search results
+                const menuItems = [
+                    { name: 'Dashboard', icon: 'bi-grid-1x2' },
+                    { name: 'Páginas', icon: 'bi-file-earmark-text' },
+                    { name: 'Templates', icon: 'bi-layout-text-window' },
+                    { name: 'Menús', icon: 'bi-list' },
+                    { name: 'Archivos', icon: 'bi-folder' },
+                    { name: 'SEO', icon: 'bi-search' },
+                    { name: 'Usuarios', icon: 'bi-people' },
+                    { name: 'Baneados', icon: 'bi-person-x' },
+                    { name: 'Roles y permisos', icon: 'bi-shield-lock' },
+                    { name: 'Configuración', icon: 'bi-gear' }
+                ];
+
+                const filtered = menuItems.filter(item => item.name.toLowerCase().includes(query));
+
+                if (filtered.length > 0) {
+                    searchResults.innerHTML = filtered.map(item => `
+                        <div class="p-2 border-bottom border-secondary" style="cursor: pointer;">
+                            <i class="bi ${item.icon} me-2"></i>
+                            ${item.name}
+                        </div>
+                    `).join('');
+                } else {
+                    searchResults.innerHTML = '<div class="p-3 text-center text-secondary">No se encontraron resultados</div>';
+                }
+            });
+
+            // Keyboard shortcut for search
+            document.addEventListener('keydown', function(e) {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                    e.preventDefault();
+                    searchModal.classList.add('show');
+                    setTimeout(() => searchInput.focus(), 100);
+                }
+                if (e.key === 'Escape') {
+                    searchModal.classList.remove('show');
+                    searchInput.value = '';
+                    searchResults.innerHTML = '';
+                }
+            });
+
+            // Notifications dropdown
+            notificationsBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                notificationsDropdown.classList.toggle('show');
+            });
+
+            document.addEventListener('click', function() {
+                notificationsDropdown.classList.remove('show');
+            });
+
+            notificationsDropdown.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+
+            // Fullscreen toggle
+            fullscreenBtn.addEventListener('click', function() {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen().catch(err => {
+                        console.log('Fullscreen error:', err);
+                    });
+                } else {
+                    document.exitFullscreen();
+                }
+            });
+
+            // Initialize Bootstrap tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+
+            // Animate stat numbers on load
+            function animateValue(element, start, end, duration) {
+                let startTimestamp = null;
+                const step = (timestamp) => {
+                    if (!startTimestamp) startTimestamp = timestamp;
+                    const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                    element.textContent = Math.floor(progress * (end - start) + start);
+                    if (progress < 1) {
+                        window.requestAnimationFrame(step);
+                    }
+                };
+                window.requestAnimationFrame(step);
+            }
+
+            document.querySelectorAll('.stat-number').forEach(function(stat) {
+                const finalValue = parseInt(stat.textContent);
+                stat.textContent = '0';
+                animateValue(stat, 0, finalValue, 1000);
+            });
+
+            // Add click handlers to stat cards
+            document.querySelectorAll('.stat-card').forEach(function(card) {
+                card.addEventListener('click', function() {
+                    const label = this.querySelector('.stat-label').textContent;
+                    console.log('Clicked on:', label);
+                    // Here you can add navigation or modal logic
+                });
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comparar diseños del panel · PePiuoX</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0d12; --panel:#111820; --panel2:#161f29; --line:rgba(255,255,255,.08);
+    --text:#e8eef5; --dim:#93a3b4; --faint:#6b7d8f; --accent:#00d4aa;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:14px}
+  .bar{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:5;flex-wrap:wrap}
+  .bar h1{font-size:15px;margin:0;font-weight:700;letter-spacing:-.01em}
+  .bar .hint{color:var(--faint);font-size:12px}
+  .tabs{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
+  .tab{border:1px solid var(--line);background:var(--panel2);color:var(--dim);padding:7px 13px;border-radius:9px;cursor:pointer;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:7px}
+  .tab:hover{color:var(--text)}
+  .tab.on{background:rgba(0,212,170,.12);border-color:rgba(0,212,170,.4);color:var(--accent)}
+  .tab small{font-weight:500;opacity:.75;font-size:11px}
+  .open-link{color:var(--dim);text-decoration:none;font-size:12.5px;border-bottom:1px dotted var(--faint)}
+  .open-link:hover{color:var(--accent)}
+
+  .wrap{display:none;grid-template-columns:300px 1fr;gap:0;min-height:calc(100vh - 58px)}
+  .wrap.on{display:grid}
+  .side{padding:18px 18px 30px;border-right:1px solid var(--line);background:var(--panel);overflow-y:auto;max-height:calc(100vh - 58px)}
+  .side h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--faint);margin:0 0 10px}
+  .side dl{margin:0 0 18px;display:grid;grid-template-columns:auto 1fr;gap:6px 10px;font-size:12.5px}
+  .side dt{color:var(--faint)}
+  .side dd{margin:0;color:var(--dim)}
+  .side ul{margin:0 0 16px;padding-left:16px;font-size:12.5px;color:var(--dim);line-height:1.6}
+  .side .pro::before{content:"✔ ";color:var(--accent)}
+  .side .con::before{content:"✘ ";color:#f87171}
+  .verdict{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--panel2);font-size:12.5px;color:var(--dim)}
+  .verdict strong{color:var(--text);display:block;margin-bottom:5px;font-size:12.5px}
+  iframe{width:100%;height:calc(100vh - 58px);border:0;display:block;background:#0b0f14}
+  .note{padding:10px 20px;background:rgba(250,204,21,.08);border-bottom:1px solid rgba(250,204,21,.2);font-size:12.5px;color:#facc15}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <h1>Comparar diseños del panel</h1>
+  <span class="hint">Elige uno y dime cuál adoptamos</span>
+  <div class="tabs">
+    <button class="tab" data-k="a"><i class="bi bi-display"></i> A · Panel actual <small>referencia</small></button>
+    <button class="tab" data-k="b"><i class="bi bi-palette"></i> B · Superficies limpias <small>20,9 KB</small></button>
+    <button class="tab on" data-k="c"><i class="bi bi-stars"></i> C · Completo <small>51,8 KB</small></button>
+  </div>
+</div>
+
+<div class="note">
+  Comparación visual. <strong>A</strong> carga el panel real con tu sesión; <strong>B</strong> y <strong>C</strong>
+  son maquetas estáticas. Nada de esto está aplicado al panel todavía.
+</div>
+
+<!-- ═══════════ A · PANEL ACTUAL ═══════════ -->
+<section class="wrap" id="w-a">
+  <aside class="side">
+    <h2>A · Panel actual</h2>
+    <dl>
+      <dt>Fondo</dt><dd>#0d1117</dd>
+      <dt>Sidebar</dt><dd>#161b22 · 280 px</dd>
+      <dt>Tarjeta</dt><dd>#1c2333</dd>
+      <dt>Acento</dt><dd>#00d4aa</dd>
+      <dt>Bordes</dt><dd>#30363d (gris fijo)</dd>
+    </dl>
+    <ul>
+      <li class="pro">Es lo que funciona hoy</li>
+      <li class="pro">Jerarquía de métricas ya resuelta</li>
+      <li class="con">Tres superficies casi iguales: todo se funde</li>
+      <li class="con">Bordes que no se adaptan al fondo</li>
+      <li class="con">Radios y espaciados mezclados</li>
+      <li class="con">Cabecera y menú sin acentos de estado</li>
+    </ul>
+    <div class="verdict"><strong>Papel</strong>Punto de partida. Sirve para comparar, no como destino.</div>
+    <p><a class="open-link" href="/admin" target="_blank" rel="noopener">Abrir el panel real ↗</a></p>
+  </aside>
+  <iframe data-src="/admin" title="Panel actual"></iframe>
+</section>
+
+<!-- ═══════════ B · SUPERFICIES LIMPIAS ═══════════ -->
+<section class="wrap" id="w-b">
+  <aside class="side">
+    <h2>B · Superficies limpias</h2>
+    <dl>
+      <dt>Fondo</dt><dd>#0b0f14</dd>
+      <dt>Sidebar</dt><dd>#10161e · 264 px</dd>
+      <dt>Tarjeta</dt><dd>#151d27 · #1a2430</dd>
+      <dt>Acento</dt><dd>#00d4aa (uno solo)</dd>
+      <dt>Bordes</dt><dd>rgba(255,255,255,.07)</dd>
+      <dt>Radios</dt><dd>14 px / 10 px</dd>
+    </dl>
+    <ul>
+      <li class="pro">Escala de superficies legible de un vistazo</li>
+      <li class="pro">Barra de acento en el ítem activo del menú</li>
+      <li class="pro">Cifras tabulares, notas secundarias</li>
+      <li class="pro">Tabla y línea de tiempo con ritmo claro</li>
+      <li class="con">Sin JavaScript: no pliega el menú</li>
+      <li class="con">Solo pantalla de dashboard</li>
+    </ul>
+    <div class="verdict"><strong>Fortaleza</strong>Sistema visual más limpio sobre la misma estructura. Es el que menos riesgo tiene.</div>
+    <p><a class="open-link" href="/assets/_prediseno-dashboard.html" target="_blank" rel="noopener">Abrir suelto ↗</a></p>
+  </aside>
+  <iframe data-src="/assets/_prediseno-dashboard.html" title="Prediseño B"></iframe>
+</section>
+
+<!-- ═══════════ C · COMPLETO ═══════════ -->
+<section class="wrap on" id="w-c">
+  <aside class="side">
+    <h2>C · Completo</h2>
+    <dl>
+      <dt>Fondo</dt><dd>#0d1117</dd>
+      <dt>Sidebar</dt><dd>#161b22 · 260 px · 70 plegado</dd>
+      <dt>Tarjeta</dt><dd>#1c2333</dd>
+      <dt>Acento</dt><dd>#00d4aa</dd>
+      <dt>Bordes</dt><dd>#30363d</dd>
+      <dt>Tamaño</dt><dd>51,8 KB · 1 571 líneas</dd>
+    </dl>
+    <ul>
+      <li class="pro">Menú plegable con estado en 70 px</li>
+      <li class="pro">Cajón y overlay en móvil</li>
+      <li class="pro">Submenús, buscador modal, tooltips</li>
+      <li class="pro">Componentes nuevos: timeline, tabla, badges</li>
+      <li class="con">Mismos colores que hoy: no cambia el tono</li>
+      <li class="con">51,8 KB de HTML para una sola pantalla</li>
+      <li class="con">JS propio que puede chocar con app.js</li>
+    </ul>
+    <div class="verdict"><strong>Fortaleza</strong>Es el más completo en comportamiento y el más cercano a lo que ya hay. El riesgo está en integrar su JavaScript con el actual.</div>
+    <p><a class="open-link" href="/assets/_new_prediseno-dashboard.html" target="_blank" rel="noopener">Abrir suelto ↗</a></p>
+  </aside>
+  <iframe data-src="/assets/_new_prediseno-dashboard.html" title="Prediseño C"></iframe>
+</section>
+
+<script>
+  const tabs = Array.from(document.querySelectorAll('.tab'));
+  const wraps = { a: document.getElementById('w-a'), b: document.getElementById('w-b'), c: document.getElementById('w-c') };
+
+  function show(key) {
+    tabs.forEach(t => t.classList.toggle('on', t.dataset.k === key));
+    Object.entries(wraps).forEach(([k, w]) => w.classList.toggle('on', k === key));
+
+    // El iframe se carga la primera vez que se muestra: no descargar los tres.
+    const frame = wraps[key].querySelector('iframe');
+    if (frame && !frame.src && frame.dataset.src) frame.src = frame.dataset.src;
+  }
+
+  tabs.forEach(t => t.addEventListener('click', () => show(t.dataset.k)));
+  show('c');
+</script>
+
+</body>
+</html>
