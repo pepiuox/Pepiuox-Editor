@@ -486,6 +486,33 @@ comprobar(
     preg_match('/^\.main\s*\{[^}]*overflow:\s*visible/ims', $css) === 1,
     'un ancestro con overflow:hidden anula el position:sticky de la topbar'
 );
+
+// ─────────────────────────────────────────────────────────────────────
+echo "\n== Choque de la clase sidebar-collapsed ==\n";
+
+// El JS pone `sidebar-collapsed` en el <body>. Si el parcial del sidebar define
+// `.sidebar-collapsed { width: 72px }` sin ámbito, esa regla alcanza al BODY y
+// la página entera se encoge a 72 px: es lo que ocurría al plegar el menú.
+$sidebarPhp = (string) file_get_contents(VIEWS_PATH . '/partials/sidebar.php');
+
+preg_match_all('/(?<![\w.])\.sidebar-collapsed/', $sidebarPhp, $sueltos);
+comprobar(
+    'ninguna regla .sidebar-collapsed del partial se escapa al body',
+    $sueltos[0] === [],
+    'quedan ' . count($sueltos[0]) . ' selectores sin ámbito: encogerían el <body>'
+);
+
+comprobar(
+    'las reglas del menú plegado están acotadas al aside',
+    str_contains($sidebarPhp, '.sidebar.sidebar-collapsed'),
+    'el modificador debe exigir también la clase .sidebar'
+);
+
+comprobar(
+    'maker.css solo usa sidebar-collapsed sobre body',
+    preg_match('/(?<!body)\.sidebar-collapsed/', $css) === 0,
+    'un selector suelto en maker.css también alcanzaría al body'
+);
 echo "\n" . str_repeat('-', 56) . "\n";
 printf("Comprobaciones: %d · Fallos: %d\n", $total, $fallos);
 exit($fallos === 0 ? 0 : 1);

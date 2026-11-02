@@ -1751,3 +1751,38 @@ tocar el marcado ni el JavaScript: `app.js` ya alternaba `body.sidebar-collapsed
 
 **211 comprobaciones en total, 0 fallos.** Smoke: `/`, `/admin`, `/admin/settings` y `/admin/templates`
 responden.
+
+### 17.4 Choque de la clase `sidebar-collapsed` (el contenido desaparecía al plegar)
+
+Al pulsar el botón de plegar, el contenido se encogía a una franja de ~72 px en el borde izquierdo.
+
+**Causa:** `views/partials/sidebar.php` trae su propio bloque `<style>`, con:
+
+```css
+.sidebar-collapsed { width: 72px; }   /* ← selector de clase, sin ámbito */
+```
+
+El JavaScript añade `sidebar-collapsed` **al `<body>`**:
+
+```js
+body.classList.toggle('sidebar-collapsed');
+```
+
+Y esa regla, al ser un selector de clase suelto, **también alcanza al `<body>`**: el body entero pasaba a
+medir 72 px y todo el contenido se comprimía dentro. La clase significaba dos cosas distintas —«menú en modo
+icono» para el `<aside>` y «menú plegado» para el `<body>`— con el mismo nombre.
+
+**Arreglo (solo CSS):** las 18 reglas del parcial se acotan al `<aside>`, que lleva ambas clases:
+
+```css
+.sidebar.sidebar-collapsed { width: 72px; }
+.sidebar.sidebar-collapsed .nav-link span { … }
+```
+
+`body.sidebar-collapsed …` de `maker.css` sigue intacto porque apunta al body de forma explícita.
+
+**Guarda añadida** a `tests/paneles/menu.php`: ninguna regla `.sidebar-collapsed` del parcial puede quedar sin
+ámbito, debe existir la forma acotada, y en `maker.css` el selector solo puede aparecer precedido de `body`.
+
+**Lección:** un nombre de clase usado en dos elementos con significados distintos es una trampa silenciosa; el
+síntoma aparece lejos del sitio donde está la causa.

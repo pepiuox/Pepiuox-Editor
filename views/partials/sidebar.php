@@ -285,52 +285,52 @@ if (isset($current['id'])) {
 }
 
 /* Colapsado */
-.sidebar-collapsed {
+.sidebar.sidebar-collapsed {
   width: 72px;
 }
 
-.sidebar-collapsed .brand-info,
-.sidebar-collapsed .nav-label,
-.sidebar-collapsed .nav-link span,
-.sidebar-collapsed .nav-link .arrow,
-.sidebar-collapsed .sidebar-footer-link span,
-.sidebar-collapsed .user-info,
-.sidebar-collapsed .nav-badge,
-.sidebar-collapsed .submenu {
+.sidebar.sidebar-collapsed .brand-info,
+.sidebar.sidebar-collapsed .nav-label,
+.sidebar.sidebar-collapsed .nav-link span,
+.sidebar.sidebar-collapsed .nav-link .arrow,
+.sidebar.sidebar-collapsed .sidebar-footer-link span,
+.sidebar.sidebar-collapsed .user-info,
+.sidebar.sidebar-collapsed .nav-badge,
+.sidebar.sidebar-collapsed .submenu {
   display: none !important;
 }
 
-.sidebar-collapsed .nav-link {
+.sidebar.sidebar-collapsed .nav-link {
   justify-content: center;
   padding: 0.75rem;
 }
 
-.sidebar-collapsed .nav-link i {
+.sidebar.sidebar-collapsed .nav-link i {
   font-size: 1.4rem;
   margin: 0 !important;
 }
 
-.sidebar-collapsed .sidebar-brand {
+.sidebar.sidebar-collapsed .sidebar-brand {
   justify-content: center;
 }
 
-.sidebar-collapsed .avatar {
+.sidebar.sidebar-collapsed .avatar {
   width: 36px;
   height: 36px;
   font-size: 0.85rem;
 }
 
-.sidebar-collapsed .user-chip {
+.sidebar.sidebar-collapsed .user-chip {
   justify-content: center;
   padding: 0.5rem;
 }
 
-.sidebar-collapsed .sidebar-footer-link {
+.sidebar.sidebar-collapsed .sidebar-footer-link {
   justify-content: center;
   padding: 0.5rem;
 }
 
-.sidebar-collapsed .sidebar-footer-link i {
+.sidebar.sidebar-collapsed .sidebar-footer-link i {
   font-size: 1.2rem;
   margin: 0 !important;
 }
@@ -611,11 +611,11 @@ if (isset($current['id'])) {
     transform: translateX(0);
   }
 
-  .sidebar.sidebar-collapsed ~ .topbar {
+  .sidebar.sidebar.sidebar-collapsed ~ .topbar {
     margin-left: 72px;
   }
 
-  .sidebar.sidebar-collapsed ~ .main-content {
+  .sidebar.sidebar.sidebar-collapsed ~ .main-content {
     margin-left: 72px;
   }
 }
