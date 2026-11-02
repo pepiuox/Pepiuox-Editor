@@ -534,6 +534,35 @@ comprobar(
     'un selector suelto en maker.css también alcanzaría al body'
 );
 
+
+// ─────────────────────────────────────────────────────────────────────
+echo "\n== Rediseño híbrido: plegado en modo icono ==\n";
+
+// El aside se queda como columna de iconos de 70 px en vez de salir de la
+// pantalla, y el contenido acompaña con ese mismo ancho.
+comprobar(
+    'existe el ancho de icono (70 px)',
+    preg_match('/--sidebar-icon-width:\s*70px/', $cssSinComentarios) === 1,
+    'sin este token el modo icono no tiene medida'
+);
+
+comprobar(
+    'el aside plegado conserva ancho en vez de desplazarse',
+    preg_match('/\.sidebar\.collapsed\s*\{[^}]*width:\s*var\(--sidebar-icon-width\)/is', $cssSinComentarios) === 1,
+    'si se traduce fuera, el contenido se recoloca de golpe'
+);
+
+comprobar(
+    'al plegar, el contenido se ajusta al ancho de icono',
+    preg_match('/body\.sidebar-collapsed \.main\s*\{[^}]*margin-left:\s*var\(--sidebar-icon-width\)/is', $cssSinComentarios) === 1,
+    'con margin 0 el contenido se metería bajo el menú'
+);
+
+comprobar(
+    'el ítem activo del menú lleva marca visual propia',
+    preg_match('/\.sidebar \.nav-link\.active::before/', $cssSinComentarios) === 1,
+    'la señal de dónde estás es la barra de acento'
+);
 echo "\n" . str_repeat('-', 56) . "\n";
 printf("Comprobaciones: %d · Fallos: %d\n", $total, $fallos);
 exit($fallos === 0 ? 0 : 1);

@@ -519,6 +519,7 @@ hr {
 }
 
 body.sidebar-collapsed .main {
+    /* Sobrescrito al final del archivo: el menú plegado ocupa 70 px. */
     margin-left: 0;
 }
 
@@ -2671,4 +2672,262 @@ code {
         box-shadow: none !important;
         border: 1px solid #dee2e6 !important;
     }
+}
+/* ================================================================
+   REDISEÑO HÍBRIDO · 2026-11-02
+   ----------------------------------------------------------------
+   Aspecto de la maqueta B sobre el comportamiento de C.
+
+   · Superficies con escala deliberada: fondo < sidebar < tarjeta.
+   · Bordes por transparencia: se adaptan a cualquier superficie.
+   · Dos radios y nada más: 14 px tarjetas, 10 px controles.
+   · Un solo acento, con barra lateral en el ítem activo.
+   · Plegado en modo icono (70 px), sin tocar el JavaScript: app.js ya
+     alterna .collapsed en el aside y .sidebar-collapsed en el body.
+
+   Va al final del archivo a propósito: sobrescribe los tokens y los
+   componentes anteriores sin borrarlos, así que revertir es quitar este
+   bloque. Respaldo del original en storage/backups/rediseno-20261101_2349/.
+   ================================================================ */
+
+:root {
+    --bg-principal: #0b0f14;
+    --bg-deep:      #0b0f14;
+    --bg-sidebar:   #10161e;
+    --bg-card:      #151d27;
+    --bg-card-2:    #1a2430;
+    --bg-hover:     #1a2430;
+    --bg-input:     #0d131a;
+
+    --text-primary:   #e8eef5;
+    --text-secondary: #d3dde6;
+    --text-muted:     #94a3b3;
+    --text-dim:       #6b7d8f;
+
+    --border:       rgba(255, 255, 255, .07);
+    --border-light: rgba(255, 255, 255, .05);
+    --border-hover: rgba(255, 255, 255, .16);
+
+    --radius:    14px;
+    --radius-sm: 10px;
+    --sidebar-icon-width: 70px;
+}
+
+/* ── Superficies · sidebar ─────────────────────────────────────── */
+.sidebar {
+    background: var(--bg-sidebar);
+    border-right: 1px solid var(--border);
+    transition: width var(--transition-slow), transform var(--transition-slow);
+}
+
+.sidebar-brand, .sidebar-header {
+    border-bottom: 1px solid var(--border);
+    padding: 16px 16px 14px;
+}
+
+.sidebar-nav { padding: 10px 10px 14px; }
+
+.nav-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 16px 10px 6px;
+}
+
+.sidebar .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 9px 11px;
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font-size: 13.5px;
+    font-weight: 500;
+    position: relative;
+    transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.sidebar .nav-link i { font-size: 16px; opacity: .92; }
+.sidebar .nav-link:hover { background: rgba(255, 255, 255, .04); color: var(--text-primary); }
+
+.sidebar .nav-link.active {
+    background: rgba(var(--accent-rgb), .12);
+    color: var(--accent);
+    font-weight: 600;
+}
+
+/* Barra de acento del ítem activo: la señal visual que faltaba. */
+.sidebar .nav-link.active::before {
+    content: "";
+    position: absolute;
+    left: -10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 20px;
+    border-radius: 0 3px 3px 0;
+    background: var(--accent);
+}
+
+.sidebar-footer, .sidebar-user {
+    border-top: 1px solid var(--border);
+    background: var(--bg-card);
+}
+
+/* ── Plegado en MODO ICONO (70 px) ─────────────────────────────
+   El JS añade `.collapsed` al aside. Antes se traducía fuera de la
+   pantalla; ahora se queda como columna de iconos: menos saltos y el
+   contenido no se recoloca de golpe. */
+.sidebar.collapsed { width: var(--sidebar-icon-width); }
+
+.sidebar.collapsed .brand-info,
+.sidebar.collapsed .brand-text,
+.sidebar.collapsed .nav-label,
+.sidebar.collapsed .nav-link span,
+.sidebar.collapsed .nav-link .arrow,
+.sidebar.collapsed .nav-badge,
+.sidebar.collapsed .user-info,
+.sidebar.collapsed .submenu { display: none !important; }
+
+.sidebar.collapsed .nav-link { justify-content: center; padding: 10px 0; }
+.sidebar.collapsed .nav-link i { font-size: 18px; }
+.sidebar.collapsed .sidebar-brand { justify-content: center; padding: 14px 8px; }
+.sidebar.collapsed .sidebar-user { justify-content: center; }
+.sidebar.collapsed .nav-link.active::before { display: none; }
+
+/* El contenido acompaña al ancho real del menú. */
+body.sidebar-collapsed .main { margin-left: var(--sidebar-icon-width); }
+
+/* ── Topbar ─────────────────────────────────────────────────────── */
+.topbar {
+    background: var(--bg-sidebar);
+    border-bottom: 1px solid var(--border);
+    height: 58px;
+    padding: 0 20px;
+    gap: 12px;
+}
+
+.topbar-title { font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
+.topbar .btn-toggle-sidebar { color: var(--text-muted); border-radius: var(--radius-sm); }
+.topbar .btn-toggle-sidebar:hover { background: rgba(255, 255, 255, .05); border-color: var(--border); color: var(--text-primary); }
+
+/* ── Contenido ──────────────────────────────────────────────────── */
+.main-content { padding: 26px 28px 40px; }
+
+.card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+.card-header {
+    background: var(--bg-card-2);
+    border-bottom: 1px solid var(--border);
+    padding: 13px 16px;
+    font-weight: 600;
+}
+
+.card-header h3, .card-header h2 { font-size: 13.5px; font-weight: 600; margin: 0; }
+.card-header i { color: var(--accent); }
+
+/* ── Métricas ───────────────────────────────────────────────────── */
+.stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card::after {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), transparent 70%);
+    opacity: .55;
+}
+
+.stat-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-sm);
+    display: grid;
+    place-items: center;
+    background: rgba(var(--accent-rgb), .12);
+    color: var(--accent);
+    font-size: 16px;
+}
+
+.stat-value, .stat-number {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -.03em;
+    line-height: 1;
+    margin-top: 10px;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-primary);
+}
+
+.stat-label {
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-top: 4px;
+}
+
+/* ── Tablas ─────────────────────────────────────────────────────── */
+.table { margin-bottom: 0; color: var(--text-muted); }
+
+.table > thead th {
+    background: var(--bg-card-2);
+    color: var(--text-dim);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    padding: 10px 16px;
+    white-space: nowrap;
+}
+
+.table > tbody > tr > td {
+    background: transparent;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    padding: 11px 16px;
+    font-size: 13px;
+}
+
+.table > tbody > tr:last-child > td { border-bottom: none; }
+.table > tbody > tr:hover > td { background: rgba(255, 255, 255, .025); }
+
+/* ── Badges de estado ───────────────────────────────────────────── */
+.badge-published, .badge.bg-success {
+    background: rgba(var(--accent-rgb), .12) !important;
+    color: var(--accent) !important;
+    border: 1px solid rgba(var(--accent-rgb), .35);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 999px;
+}
+
+/* ── Responsive: el plegado no aplica a mano en móvil ───────────── */
+@media (max-width: 768px) {
+    body.sidebar-collapsed .main { margin-left: 0; }
+    .topbar { height: 54px; padding: 0 14px; }
+    .main-content { padding: 16px 14px 28px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sidebar, .sidebar .nav-link, .stat-card { transition: none; }
 }

@@ -1812,3 +1812,53 @@ topbar y antes del selector de idioma; `.main` lleva el desplazamiento y `.main-
 > **Nota de método:** las comprobaciones de CSS se hacen **sin comentarios** (`preg_replace('#/\*.*?\*/#s')`).
 > Un comentario que dice «Sin position:fixed…» hacía fallar la prueba que busca `position: fixed`. Es la
 > tercera vez en la sesión que una búsqueda de texto encuentra la mención en lugar de la declaración.
+
+---
+
+## 18. Rediseño híbrido del panel (2026-11-02)
+
+Se compararon tres opciones antes de tocar nada: el panel actual (A), una maqueta con sistema de superficies
+nuevo (B) y una maqueta con comportamiento completo (C). Se adoptó el **híbrido: el aspecto de B sobre el
+comportamiento de C**.
+
+### Qué se tomó de cada una
+
+| De C (comportamiento) | De B (aspecto) |
+|---|---|
+| Plegado en **modo icono** de 70 px, no salida de pantalla | Escala de superficies: fondo `#0b0f14` < sidebar `#10161e` < tarjeta `#151d27` |
+| El contenido acompaña al ancho real del menú | Bordes por transparencia `rgba(255,255,255,.07)` |
+| Responsive: en móvil el margen vuelve a 0 | Dos radios: 14 px tarjetas, 10 px controles |
+| — | Un solo acento, con **barra lateral** en el ítem activo |
+| — | Cifras tabulares y etiquetas en versalitas |
+
+### Cómo se hizo, y por qué así
+
+**Un bloque de 258 líneas al final de `maker.css`**, no un reemplazo. Sobrescribe tokens y componentes por
+cascada, de modo que:
+
+- revertir es borrar ese bloque, sin reconstruir nada;
+- el respaldo del original está en `storage/backups/rediseno-20261101_2349/`;
+- no se tocó ni el marcado ni el JavaScript.
+
+**El plegado no necesitó JavaScript nuevo.** `app.js` ya alterna `.collapsed` en el aside y
+`sidebar-collapsed` en el body. Bastaba cambiar el significado en CSS:
+
+```css
+.sidebar.collapsed { width: var(--sidebar-icon-width); }        /* antes: translateX(-100%) */
+body.sidebar-collapsed .main { margin-left: var(--sidebar-icon-width); }  /* antes: 0 */
+```
+
+Con eso se obtiene el modo icono de C sin duplicar el toggle ni arriesgar dos manejadores peleando por la
+misma clase.
+
+### Guardas
+
+`tests/paneles/menu.php` → **65 comprobaciones**, cuatro nuevas: existe el token de ancho de icono, el aside
+plegado conserva ancho, el contenido se ajusta a ese ancho y el ítem activo tiene marca visual propia.
+
+**224 comprobaciones en total, 0 fallos.** Smoke: `/`, `/admin`, `/admin/settings` y `maker.css` responden.
+
+### Pendiente de tu revisión
+
+El rediseño está aplicado **solo en el aspecto**; falta verlo en el navegador con tus datos y decidir si los
+detalles (tamaño de cifra, densidad de filas, radios) se quedan así.
