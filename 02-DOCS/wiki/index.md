@@ -43,6 +43,8 @@ con lo que quedó sin cubrir dicho en voz alta. De la más nueva a la más vieja
 
 | Documento | Qué es | Actualizado |
 |-----------|--------|-------------|
+| [`ftd/paquete-de-produccion-y-por-que-no-se-instalaba.md`](ftd/paquete-de-produccion-y-por-que-no-se-instalaba.md) | El paquete de producción se genera con una orden y se lleva el sitio montado. Y el motivo real de que no instalara: `USE` incrustado, `DEFINER` y disparadores envueltos. De 35 tablas a 53. | 2026-11-02 |
+| [`ftd/2fa-activacion-descarga-y-copiado.md`](ftd/2fa-activacion-descarga-y-copiado.md) | Tres fallos de 2FA: transacción anidada al activar, la descarga que devolvía 302 y el copiado que decía que sí sin copiar. Reproducidos por HTTP y corregidos. | 2026-11-02 |
 | [`ftd/sitemap-por-menu-en-uso.md`](ftd/sitemap-por-menu-en-uso.md) | El sitemap pasa a generarse desde el panel y a contener solo lo que el menú en uso expone. De 9 URLs a 5, medido. | 2026-10-31 |
 | [`ftd/portada-comercial-y-paquete-instalable.md`](ftd/portada-comercial-y-paquete-instalable.md) | Portada comercial editable, paquete de instalación limpia, respaldo verificado por restauración y los hallazgos de seguridad que salieron al documentarlo. | 2026-10-31 |
 | [`ftd/inventario-tecnico-plataforma.md`](ftd/inventario-tecnico-plataforma.md) | Inventario verificado: stack real, 27 módulos, contenido editable, portada, residuos muertos y riesgos. | 2026-10-31 |
