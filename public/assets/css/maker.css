@@ -178,12 +178,21 @@ hr {
     min-height: 100vh;
     width: 100%;
     overflow: hidden;
+    /* El desplazamiento del sidebar va AQUÍ, no en .main-content.
+       El sidebar es `position: fixed`, así que queda fuera del flujo flex: si el
+       margen solo lo llevara .main-content, la TOPBAR —que vive dentro de .main—
+       empezaría en x=0 y quedaría tapada por el sidebar, que tiene más z-index.
+       Con el margen en .main, la topbar arranca justo a la derecha del sidebar y el
+       botón de plegar queda en su borde derecho; al plegarlo, en el borde izquierdo
+       de la pantalla. */
+    margin-left: var(--sidebar-width);
     transition: margin-left var(--transition-slow);
 }
 
 .main-content {
     flex: 1;
-    margin-left: var(--sidebar-width);
+    /* Sin margen: ya lo aplica .main. Dejarlo aquí duplicaría el desplazamiento. */
+    margin-left: 0;
     padding: 1.5rem 2rem;
     min-height: 100vh;
     background: var(--bg-principal);
@@ -507,6 +516,10 @@ hr {
 /* ── Sidebar Estados ── */
 .sidebar.collapsed {
     transform: translateX(-100%);
+}
+
+body.sidebar-collapsed .main {
+    margin-left: 0;
 }
 
 body.sidebar-collapsed .main-content {
@@ -2547,6 +2560,8 @@ code {
     }
     .sidebar.active { transform: translateX(0); }
     .sidebar-close-btn { display: grid; place-items: center; }
+
+    .main { margin-left: 0; }
 
     .main-content {
         margin-left: 0;

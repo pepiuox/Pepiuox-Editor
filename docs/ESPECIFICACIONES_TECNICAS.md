@@ -1677,3 +1677,77 @@ ajeno. Cada entrada del catálogo declara de qué familia toma el patrón.
 
 **Cómo se añade un tema:** una entrada más en `01-TOOLS/bootstrap/themes/catalogo.php` (`name`, `description`,
 `inspiration`, `html`, `css`). El sembrador no cambia y es idempotente (busca por nombre; `--update` reescribe).
+
+---
+
+## 17. Temas de color del sitio y arreglo de la cabecera del panel
+
+### 17.1 Once temas de color (`Configuración → Temas`)
+
+La pestaña `#tab-themes` ya existía y ya sabía rellenar los 16 colores de la pestaña **Colores**; lo que
+faltaba era surtido. De **4 a 11 temas**, elegidos por familia de color y no por gusto:
+
+| Tema | Familia | Para qué |
+|---|---|---|
+| Claro · Oscuro · Minimalista · Corporativo | base | los cuatro que ya estaban |
+| **Bosque** | verdes profundos + ámbar | contenido largo, tono natural |
+| **Océano** | azul profundo + turquesa | servicios y formación: confianza |
+| **Atardecer** | terracota y ámbar sobre crema | hostelería, artesanía |
+| **Nocturno ámbar** | oscuro cálido + ámbar | lectura nocturna, menos fatiga |
+| **Pizarra** | grises neutros + celeste | el fondo no compite con el contenido |
+| **Papel** | crema y tinta + granate | editorial, textos que se leen despacio |
+| **Ciruela** | violeta profundo + magenta | marcas creativas, portafolios |
+
+**Criterio de diseño aplicado a los siete nuevos:**
+
+1. un solo acento saturado por tema; el resto, neutros de la misma familia;
+2. fondos de sección a menos de un 8 % de diferencia de luminosidad respecto al fondo, para que el salto
+   entre bloques no canse;
+3. **texto, texto atenuado y enlaces ≥ 4.5:1** sobre el fondo y sobre el fondo de sección (WCAG AA).
+
+Los ratios medidos van de **5.93:1** (enlaces de Pizarra) a **18.88:1** (Minimalista): todos superan AA con
+margen. Lo comprueba la batería, no una revisión a ojo.
+
+### 17.2 La cabecera del panel quedaba tapada por el sidebar
+
+`views/layouts/admin.php` monta:
+
+```html
+<div class="wrapper">
+  <aside class="sidebar">…</aside>   <!-- position: fixed -->
+  <div class="main">
+    <header class="topbar">…</header>
+    <main class="main-content">…</main>
+  </div>
+</div>
+```
+
+El desplazamiento del sidebar estaba en **`.main-content`**, pero la topbar vive en **`.main`**, que ocupaba
+el 100 % del ancho y por tanto empezaba en `x = 0`. Como el sidebar es `position: fixed` con `z-index: 1040`
+y la topbar tiene `1030`, el primer tramo de la cabecera —el botón de plegar y el título— quedaba **debajo**.
+
+**Arreglo, solo CSS:**
+
+```css
+.main { margin-left: var(--sidebar-width); }        /* antes estaba en .main-content */
+.main-content { margin-left: 0; }                   /* ya lo aplica .main */
+body.sidebar-collapsed .main { margin-left: 0; }    /* el JS ya alterna esta clase */
+@media (max-width: 768px) { .main { margin-left: 0; } }  /* en móvil el sidebar es un cajón */
+```
+
+**Efecto secundario buscado:** al estar el margen en `.main`, el botón de plegar queda **en el borde derecho
+del sidebar** cuando está visible, y **en el borde izquierdo de la pantalla** cuando se pliega. No hubo que
+tocar el marcado ni el JavaScript: `app.js` ya alternaba `body.sidebar-collapsed`.
+
+### 17.3 Verificación
+
+`tests/seguridad/check.php` → **43 comprobaciones**, tres nuevas sobre temas:
+
+| Comprobación | |
+|---|---|
+| Hay al menos siete temas | ✅ 11 |
+| Cada tema define los 16 colores con formato `#rrggbb` | ✅ |
+| Texto, atenuado y enlaces cumplen AA en todos | ✅ |
+
+**211 comprobaciones en total, 0 fallos.** Smoke: `/`, `/admin`, `/admin/settings` y `/admin/templates`
+responden.

@@ -1378,3 +1378,25 @@ php 01-TOOLS/bootstrap/seed-themes.php --yes     # crear los que falten
 
 Los temas toman **patrones** de sitios muy visitados —ritmo, jerarquía, familia de color—, no su identidad:
 ni logotipos, ni marcas, ni textos de terceros.
+
+### L. Elegir los colores del sitio
+
+`Configuración → Temas` ofrece **once combinaciones de color** listas. Al elegir una, se rellenan los 16
+colores de la pestaña **Colores**; después puedes ajustar cualquiera de ellos a mano.
+
+| Tema | Cuándo tiene sentido |
+|---|---|
+| Claro, Oscuro, Minimalista, Corporativo | los de siempre |
+| Bosque | web natural, contenido largo |
+| Océano | servicios, formación, confianza |
+| Atardecer | hostelería, artesanía, tono cálido |
+| Nocturno ámbar | lectura de noche, contraste alto |
+| Pizarra | cuando el contenido es lo único que debe destacar |
+| Papel | blog o revista, tono editorial |
+| Ciruela | marcas creativas, portafolios |
+
+Lo que se guarda son **los colores**, no el nombre del tema: si cambias uno a mano, la tarjeta pasa a
+«Personalizado». Eso es lo esperado.
+
+El botón para **plegar el menú lateral** está en el borde derecho del menú; al plegarlo, aparece en el borde
+izquierdo de la pantalla.

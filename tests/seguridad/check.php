@@ -425,6 +425,82 @@ comprobar(
     str_contains($conBoton, '<button') && str_contains($conBoton, 'data-bs-toggle'),
     $conBoton
 );
+
+// ─────────────────────────────────────────────────────────────────────
+echo "\n== Temas de color: contraste WCAG AA ==\n";
+
+/** Luminancia relativa según WCAG 2.1. */
+$lum = static function (string $hex): float {
+    $hex = ltrim($hex, '#');
+    $f = static fn (float $c): float => $c <= 0.03928 ? $c / 12.92 : (($c + 0.055) / 1.055) ** 2.4;
+    return 0.2126 * $f(hexdec(substr($hex, 0, 2)) / 255)
+        + 0.7152 * $f(hexdec(substr($hex, 2, 2)) / 255)
+        + 0.0722 * $f(hexdec(substr($hex, 4, 2)) / 255);
+};
+
+$contraste = static function (string $a, string $b) use ($lum): float {
+    $la = $lum($a);
+    $lb = $lum($b);
+    return (max($la, $lb) + 0.05) / (min($la, $lb) + 0.05);
+};
+
+$presets = \App\Services\PublicThemeService::THEME_PRESETS;
+
+// Las 16 claves que un preset debe rellenar. `defaults()` lista algunas más (las
+// variantes `*_text`), que no forman parte del preset.
+$clavesPreset = [
+    'color_primary', 'color_secondary', 'color_accent', 'color_background', 'color_section_bg',
+    'color_text', 'color_text_muted', 'color_link', 'color_button', 'color_border',
+    'color_header_bg', 'color_footer_bg', 'color_sidebar_bg', 'color_menu_bg',
+    'color_multinivel_bg', 'color_menu_hover',
+];
+
+comprobar(
+    'hay al menos siete temas para elegir',
+    count($presets) >= 7,
+    'solo hay ' . count($presets)
+);
+
+$incompletos = [];
+$sinContraste = [];
+
+foreach ($presets as $id => $preset) {
+    $c = $preset['colors'];
+
+    foreach ($clavesPreset as $clave) {
+        if (!isset($c[$clave]) || preg_match('/^#[0-9a-f]{6}$/i', (string) $c[$clave]) !== 1) {
+            $incompletos[] = $id . '.' . $clave;
+        }
+    }
+    if (!isset($c['color_text'], $c['color_background'])) {
+        continue;
+    }
+
+    // AA para texto normal: 4.5:1 sobre el fondo, sobre el fondo de sección y en
+    // los enlaces (un enlace que no se distingue es un fallo de accesibilidad).
+    foreach (['color_text', 'color_text_muted', 'color_link'] as $rol) {
+        if (isset($c[$rol]) && $contraste($c[$rol], $c['color_background']) < 4.5) {
+            $sinContraste[] = $id . '.' . $rol . ' ' . round($contraste($c[$rol], $c['color_background']), 2) . ':1';
+        }
+    }
+    if (isset($c['color_section_bg'], $c['color_text'])
+        && $contraste($c['color_text'], $c['color_section_bg']) < 4.5) {
+        $sinContraste[] = $id . '.texto/sección ' . round($contraste($c['color_text'], $c['color_section_bg']), 2) . ':1';
+    }
+}
+
+comprobar(
+    'cada tema define los 16 colores con formato #rrggbb',
+    $incompletos === [],
+    implode(', ', array_slice($incompletos, 0, 6))
+);
+
+comprobar(
+    'texto, atenuado y enlaces cumplen AA (4.5:1) en todos los temas',
+    $sinContraste === [],
+    implode(' · ', array_slice($sinContraste, 0, 6))
+);
+
 echo "\n" . str_repeat('-', 56) . "\n";
 printf("Comprobaciones: %d · Fallos: %d\n", $total, $fallos);
 exit($fallos === 0 ? 0 : 1);
