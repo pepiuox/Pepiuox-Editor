@@ -71,6 +71,19 @@ class Database
     public static function rollback(): void{ self::connection()->rollBack(); }
 
     /**
+     * Indica si la conexión tiene una transacción abierta.
+     *
+     * Lo necesitan los servicios que pueden ser llamados desde dentro de la
+     * transacción de otro: quien abre una transacción es quien debe cerrarla, y
+     * un `begin()` sobre otra ya abierta no se anida: PDO responde
+     * «There is already an active transaction» (SQLSTATE 25001).
+     */
+    public static function inTransaction(): bool
+    {
+        return self::connection()->inTransaction();
+    }
+
+    /**
      * Revierte solo si hay una transacción abierta.
      *
      * Sirve para los `catch` de bloques que validan antes de abrir la
@@ -79,9 +92,8 @@ class Database
      */
     public static function rollbackIfActive(): void
     {
-        $pdo = self::connection();
-        if ($pdo->inTransaction()) {
-            $pdo->rollBack();
+        if (self::inTransaction()) {
+            self::rollback();
         }
     }
 }

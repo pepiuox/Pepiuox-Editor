@@ -30,13 +30,34 @@ class TwoFactorRecoveryService
     /**
      * Genera códigos de recuperación para un usuario.
      * Invalida los códigos anteriores.
-     * 
+     *
+     * ── Transacción ─────────────────────────────────────────────────
+     * Si quien llama ya tiene una transacción abierta, este método se suma a
+     * ella y **no la cierra**: la abre él, la termina él.
+     *
+     * Antes abría siempre la suya. Llamado desde `TwoFactorController::verify()`
+     * —que ya tenía una abierta— PDO respondía «There is already an active
+     * transaction» y la activación de 2FA fallaba entera. El `begin()` estaba
+     * además fuera del `try`, así que la excepción se escapaba sin que este
+     * método la registrara.
+     *
+     * Cuando participa en la transacción de quien llama y algo falla, el error
+     * **se relanza** en vez de devolver una lista vacía: solo quien abrió la
+     * transacción puede revertir todo el trabajo que contiene, y tragárselo
+     * dejaría una activación a medias confirmada por el llamador.
+     *
      * @return array Códigos en texto plano (SOLO se devuelven aquí, nunca se guardan así)
+     * @throws \Throwable Si participa en la transacción del llamador y el trabajo falla.
      */
     public static function generateForUser(int $userId): array
     {
-        Database::begin();
+        $propia = !Database::inTransaction();
+
         try {
+            if ($propia) {
+                Database::begin();
+            }
+
             // Invalidar códigos anteriores (no borrar, mantener auditoría)
             Database::execute(
                 "UPDATE two_factor_recovery_codes 
@@ -59,7 +80,9 @@ class TwoFactorRecoveryService
                 );
             }
 
-            Database::commit();
+            if ($propia) {
+                Database::commit();
+            }
 
             // Registrar en auditoría
             AuditService::log(
@@ -71,9 +94,15 @@ class TwoFactorRecoveryService
 
             return $plainCodes;
         } catch (\Throwable $e) {
-            Database::rollback();
             error_log('[2FA Recovery] Error generando códigos: ' . $e->getMessage());
-            return [];
+
+            if ($propia) {
+                Database::rollbackIfActive();
+                return [];
+            }
+
+            // La transacción es del llamador: él decide. Se relanza.
+            throw $e;
         }
     }
 

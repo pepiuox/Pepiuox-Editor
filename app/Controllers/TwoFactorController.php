@@ -7,6 +7,63 @@ use App\Services\{TotpService, AuditService, TwoFactorRecoveryService};
 class TwoFactorController
 {
     /**
+     * Minutos que los códigos recién generados siguen disponibles en la sesión.
+     *
+     * La página promete dos acciones —descargar el TXT y copiar la lista— además
+     * de mostrarlos. Para que la descarga funcione, los códigos tienen que
+     * sobrevivir al renderizado de la página; si no, el enlace de descarga llega
+     * a un `downloadCodes()` que ya no encuentra nada y devuelve un 302.
+     *
+     * Diez minutos son de sobra para guardarlos y acotan lo que un código en
+     * claro vive en la sesión del servidor.
+     */
+    private const MINUTOS_CODIGOS = 10;
+
+    /**
+     * Devuelve los códigos recién generados si siguen vigentes; si no, null.
+     *
+     * No los borra: se muestran en la página y siguen disponibles para la
+     * descarga. Los borra `downloadCodes()` al entregar el archivo, o esta misma
+     * función cuando caducan.
+     *
+     * @return list<string>|null Códigos en texto plano, o null si no hay o caducaron.
+     */
+    private static function codigosRecientes(): ?array
+    {
+        $codigos = Session::get('2fa_new_recovery_codes');
+        $generados = (int) Session::get('2fa_new_recovery_codes_at', 0);
+
+        if (!is_array($codigos) || $codigos === [] || $generados === 0) {
+            return null;
+        }
+
+        if (time() - $generados > self::MINUTOS_CODIGOS * 60) {
+            self::olvidarCodigos();
+            return null;
+        }
+
+        return array_values(array_map('strval', $codigos));
+    }
+
+    /**
+     * Guarda los códigos recién generados para mostrarlos y descargarlos.
+     *
+     * @param list<string> $codigos Códigos en texto plano.
+     */
+    private static function recordarCodigos(array $codigos): void
+    {
+        Session::set('2fa_new_recovery_codes', $codigos);
+        Session::set('2fa_new_recovery_codes_at', time());
+    }
+
+    /** Retira de la sesión los códigos mostrados. */
+    private static function olvidarCodigos(): void
+    {
+        Session::delete('2fa_new_recovery_codes');
+        Session::delete('2fa_new_recovery_codes_at');
+    }
+
+    /**
      * Muestra la página de configuración 2FA.
      * Si ya está activo, muestra el estado y opción de regenerar códigos.
      */
@@ -69,8 +126,8 @@ class TwoFactorController
             // Limpiar secreto de sesión
             Session::delete('2fa_secret');
 
-            // Guardar códigos en sesión temporal para mostrarlos UNA vez
-            Session::set('2fa_new_recovery_codes', $recoveryCodes);
+            // Guardar códigos en sesión temporal para mostrarlos y descargarlos
+            self::recordarCodigos($recoveryCodes);
 
             AuditService::log(Auth::id(), '2fa_enabled', '2FA activado', 'security', (int)$user['id']);
             
@@ -78,22 +135,31 @@ class TwoFactorController
             Response::redirect(url('admin/2fa/recovery-success'));
 
         } catch (\Throwable $e) {
-            Database::rollback();
+            // `rollbackIfActive()` y no `rollback()`: si el fallo ocurrió
+            // después de cerrar la transacción, un rollback a secas lanzaría
+            // «There is no active transaction» dentro del propio catch y
+            // sustituiría el error real por uno que no dice nada.
+            Database::rollbackIfActive();
             Session::flash('flash.error', 'Error al activar 2FA: ' . $e->getMessage());
             Response::redirect(url('admin/2fa'));
         }
     }
 
     /**
-     * Muestra los códigos de recuperación recién generados (UNA SOLA VEZ).
+     * Muestra los códigos de recuperación recién generados.
+     *
+     * No los retira de la sesión: la propia página ofrece descargarlos y
+     * copiarlos, y borrarlos aquí dejaba el enlace de descarga sin datos.
+     * Caducan solos a los `MINUTOS_CODIGOS` minutos y `downloadCodes()` los
+     * elimina al entregar el archivo.
      */
     public function recoverySuccess(Request $req): void
     {
-        $codes = Session::get('2fa_new_recovery_codes');
-        
-        // Si no hay códigos en sesión, redirigir
-        if (!$codes || !is_array($codes)) {
-            Session::flash('flash.info', 'Tus códigos de recuperación ya fueron mostrados. Puedes regenerarlos desde tu perfil.');
+        $codes = self::codigosRecientes();
+
+        // Si no hay códigos vigentes en sesión, redirigir
+        if ($codes === null) {
+            Session::flash('flash.info', 'Los códigos ya no están disponibles. Puedes regenerarlos desde tu perfil.');
             Response::redirect(url('admin/2fa'));
         }
 
@@ -102,9 +168,6 @@ class TwoFactorController
             fn($c) => TwoFactorRecoveryService::formatCode($c),
             $codes
         );
-
-        // Eliminar de sesión DESPUÉS de pasarlos a la vista
-        Session::delete('2fa_new_recovery_codes');
 
         Response::render(View::render('2fa.recovery-success', compact('formattedCodes')));
     }
@@ -137,8 +200,8 @@ class TwoFactorController
             Response::redirect(url('admin/2fa'));
         }
 
-        // Guardar en sesión para mostrar UNA vez
-        Session::set('2fa_new_recovery_codes', $codes);
+        // Guardar en sesión para poder mostrarlos y descargarlos
+        self::recordarCodigos($codes);
         
         Session::flash('flash.success', 'Códigos regenerados. Guárdalos en un lugar seguro.');
         Response::redirect(url('admin/2fa/recovery-success'));
@@ -149,10 +212,10 @@ class TwoFactorController
      */
     public function downloadCodes(Request $req): void
     {
-        $codes = Session::get('2fa_new_recovery_codes');
+        $codes = self::codigosRecientes();
         
-        if (!$codes || !is_array($codes)) {
-            Session::flash('flash.error', 'No hay códigos disponibles para descargar.');
+        if ($codes === null) {
+            Session::flash('flash.error', 'Los códigos ya no están disponibles para descargar. Regéneralos desde tu perfil.');
             Response::redirect(url('admin/2fa'));
         }
 
@@ -180,12 +243,15 @@ class TwoFactorController
         $content .= "───────────────────────────────────────────────────────────\n";
         $content .= "\nTotal de códigos: " . count($codes) . "\n";
 
-        // Eliminar de sesión tras descargar
-        Session::delete('2fa_new_recovery_codes');
+        // La descarga es el acto de guardarlos: a partir de aquí ya no se
+        // vuelven a mostrar en esta sesión.
+        self::olvidarCodigos();
 
         header('Content-Type: text/plain; charset=utf-8');
         header('Content-Disposition: attachment; filename="codigos-recuperacion-2fa.txt"');
         header('Content-Length: ' . strlen($content));
+        header('X-Content-Type-Options: nosniff');
+        header('Cache-Control: no-store, no-cache, must-revalidate');
         echo $content;
         exit;
     }
@@ -214,7 +280,7 @@ class TwoFactorController
             AuditService::log(Auth::id(), '2fa_disabled', '2FA desactivado', 'security', (int)$user['id']);
             Session::flash('flash.success', '2FA desactivado correctamente.');
         } catch (\Throwable $e) {
-            Database::rollback();
+            Database::rollbackIfActive();
             Session::flash('flash.error', 'Error al desactivar 2FA.');
         }
 
