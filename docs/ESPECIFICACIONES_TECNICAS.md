@@ -1786,3 +1786,29 @@ icono» para el `<aside>` y «menú plegado» para el `<body>`— con el mismo n
 
 **Lección:** un nombre de clase usado en dos elementos con significados distintos es una trampa silenciosa; el
 síntoma aparece lejos del sitio donde está la causa.
+
+### 17.5 El botón de plegar pasa al flujo de la topbar
+
+El botón flotante no era buena solución: `backdrop-filter` en `.topbar` convierte a la topbar en contenedor de
+los descendientes `position: fixed`, así que cualquier coordenada del botón se medía **desde ella** y acababa
+flotando sobre el título o sobre el contenido.
+
+**Solución final, sin coordenadas de pantalla:** el botón vive **dentro de `.topbar-right`, como primer
+elemento y a la izquierda del selector de idioma**, con `display: inline-flex` y sin `position`. Al estar en el
+flujo, no hay nada que medir mal y no puede tapar nada.
+
+Orden en el HTML servido, verificado: `<header class="topbar">` → `<div class="topbar-right">` → **botón** →
+selector de idioma.
+
+También se restauró el modelo de caja original: `.main` vuelve a `overflow: hidden` y `.main-content` a su
+`margin-left: 0` con `overflow-y: auto`, que es como el contenido se veía fiel.
+
+Y `--sidebar-width` pasa de 260 px a **280 px**, para coincidir con `.sidebar { width: 280px }`: con 260, el
+contenido se metía 20 px bajo el menú.
+
+**Guardas en `tests/paneles/menu.php`:** el botón no puede volver a `position: fixed`; debe estar dentro de la
+topbar y antes del selector de idioma; `.main` lleva el desplazamiento y `.main-content` no lo duplica.
+
+> **Nota de método:** las comprobaciones de CSS se hacen **sin comentarios** (`preg_replace('#/\*.*?\*/#s')`).
+> Un comentario que dice «Sin position:fixed…» hacía fallar la prueba que busca `position: fixed`. Es la
+> tercera vez en la sesión que una búsqueda de texto encuentra la mención en lugar de la declaración.

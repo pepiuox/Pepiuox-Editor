@@ -21,16 +21,7 @@ try {
 $currentLangData = current(array_filter($langs, fn($l) => $l['code'] === $currentLang)) ?: ['flag' => '🌐', 'native_name' => 'Idioma'];
 ?>
 
-<!-- Botón para plegar el sidebar.
-     Va FUERA de <header class="topbar"> a propósito: la topbar lleva
-     `backdrop-filter: blur()`, y esa propiedad convierte al elemento en contenedor
-     de los descendientes `position: fixed`. Dentro de la topbar, el `left` del
-     botón se medía desde ella y no desde la pantalla, y acababa flotando sobre el
-     título. Como hijo directo de .main, el `position: fixed` se mide contra la
-     ventana y queda pegado al borde derecho del menú. -->
-<button class="btn-toggle-sidebar" id="toggleSidebar" aria-label="Mostrar u ocultar el menú" title="Mostrar u ocultar el menú">
-  <i class="bi bi-list"></i>
-</button>
+
 
 <header class="topbar">
   <div class="topbar-left">
@@ -38,6 +29,12 @@ $currentLangData = current(array_filter($langs, fn($l) => $l['code'] === $curren
   </div>
   
   <div class="topbar-right">
+    <!-- Plegar el menú lateral. Va aquí, en el flujo de la topbar y a la izquierda
+         del selector de idioma: sin position:fixed no hay forma de que flote sobre
+         el título ni de que el `backdrop-filter` de la topbar cambie su referencia. -->
+    <button class="btn-toggle-sidebar" id="toggleSidebar" aria-label="Mostrar u ocultar el menú" title="Mostrar u ocultar el menú">
+      <i class="bi bi-list"></i>
+    </button>
     <!-- Selector de Idioma -->
     <?php if (!empty($langs)): ?>
     <div class="dropdown" id="langDropdown">
