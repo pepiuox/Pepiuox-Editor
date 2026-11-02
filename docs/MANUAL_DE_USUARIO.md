@@ -1351,3 +1351,30 @@ como inicio.
 **La portada comercial** (`Configuración → Editar la portada`) es otra cosa: una landing con campos
 estructurados que solo se muestra si la activas. Mientras esté desactivada, manda la página marcada como
 inicio. No hace falta activarla para tener portada.
+
+### K. Temas de diseño para empezar con estilo
+
+Al instalar vienen cuatro **temas** listos, cada uno con su propia maqueta y su propia hoja de estilos:
+
+| Tema | Para qué |
+|---|---|
+| **Claridad (producto SaaS)** | Presentar un producto o servicio. Fondo claro, aire, acento violeta |
+| **Editorial (publicación)** | Blog, revista o web de contenidos. Serif, fondo crema, líneas finas |
+| **Técnico oscuro (desarrolladores)** | Documentación y herramientas. Fondo casi negro, monoespaciada, acentos fríos |
+| **Marca (naranja y verde)** | La paleta propia de la plataforma |
+
+**Cómo se usan.** `Páginas → Nueva página` → al elegir plantilla aparecen como «Claridad», «Editorial»… Se
+crea la página con ese tema y se edita con el constructor: cambiar textos, colores, orden o borrar secciones.
+
+**Para que un tema sea la portada**, marca esa página como inicio en sus ajustes.
+
+**Añadir más temas** no requiere tocar pantallas: se añaden al catálogo
+(`01-TOOLS/bootstrap/themes/catalogo.php`) y se siembran con:
+
+```bash
+php 01-TOOLS/bootstrap/seed-themes.php --list    # ver los disponibles
+php 01-TOOLS/bootstrap/seed-themes.php --yes     # crear los que falten
+```
+
+Los temas toman **patrones** de sitios muy visitados —ritmo, jerarquía, familia de color—, no su identidad:
+ni logotipos, ni marcas, ni textos de terceros.

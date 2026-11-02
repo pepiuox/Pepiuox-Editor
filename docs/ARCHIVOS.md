@@ -164,7 +164,9 @@ dueño, sin documentar como ruta soportada**) · `assets/{css,js,js/blocks}`.
 | Ruta | Qué hace |
 |---|---|
 | `bootstrap/create-admin.php` | Crea el primer Super Admin con contraseña generada |
-| `bootstrap/seed-pages.php` | Siembra `/funciones`, `/seguridad`, `/como-funciona` |
+| `bootstrap/seed-pages.php` | Siembra /funciones, /seguridad, /como-funciona y la **portada** |
+| `bootstrap/seed-themes.php` | Siembra los temas de diseño como plantillas (--list, --only) |
+| `bootstrap/themes/catalogo.php` | Catálogo de temas: HTML y CSS de cada uno |
 | `mantenimiento/sanitize-dump.php` | Quita hashes y filas de API de un volcado |
 | `mantenimiento/rotate-api-tokens.php` | Rota los tokens de API filtrados |
 | `despliegue/verificar.php` | Comprueba y prepara la publicación (entorno, permisos, configuración, base de datos, cron) |

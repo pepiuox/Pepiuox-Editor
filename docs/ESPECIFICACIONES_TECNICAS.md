@@ -1649,3 +1649,31 @@ bytes de HTML con `<h1>`; `PageRenderer::getHomePage()` la devuelve y su conteni
 
 El contenido sembrado es apto para el constructor: Bootstrap 5, sin `<style>` en el contenido (el saneador lo
 elimina al publicar) y sin `<script>`.
+
+---
+
+## 16. Temas de diseño (plantillas del sistema)
+
+Cuatro temas sembrados como **plantillas del sistema** (`templates.is_system_template = 1`), no como páginas:
+el panel ya las ofrece en «Nueva página → elegir plantilla», así que la variedad no exige ninguna pantalla
+nueva ni otro modelo de datos.
+
+| Id | Tema | HTML | CSS | Patrón de referencia |
+|---|---|---:|---:|---|
+| 17 | Claridad (producto SaaS) | 2 385 B | 2 351 B | páginas de producto: hero centrado, aire, tarjetas de borde fino |
+| 18 | Editorial (publicación) | 1 848 B | 1 758 B | publicaciones digitales: serif, reglas en vez de tarjetas, capitular |
+| 19 | Técnico oscuro | 1 973 B | 2 543 B | webs de herramientas: bloque de terminal, rejilla de 1 px |
+| 20 | Marca (naranja y verde) | 2 009 B | 2 289 B | sistema propio de la plataforma |
+
+**Reglas que cumplen los cuatro**, verificadas renderizando cada uno:
+
+- un solo `<style>` en la salida (el de `content_css`) y **cero** `<script>`;
+- la maqueta usa la rejilla de Bootstrap 5.3 (`container`, `row`, `col-*`) y sus utilidades;
+- colores como variables CSS acotadas a la clase contenedora del tema (`--th-*`, `--m-*`).
+
+**Sobre las referencias:** se toman patrones —ritmo vertical, jerarquía tipográfica, densidad, familia de
+color, forma de los componentes—, nunca identidad de terceros: ni logotipos, ni marcas, ni textos, ni código
+ajeno. Cada entrada del catálogo declara de qué familia toma el patrón.
+
+**Cómo se añade un tema:** una entrada más en `01-TOOLS/bootstrap/themes/catalogo.php` (`name`, `description`,
+`inspiration`, `html`, `css`). El sembrador no cambia y es idempotente (busca por nombre; `--update` reescribe).
