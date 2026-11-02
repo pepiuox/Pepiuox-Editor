@@ -27,10 +27,13 @@ cortaba a la mitad.
 
 **Fuera, y se dice:**
 
-- `db/install/initial_database.sql` **del repositorio** sigue con los tres defectos y con 52 tablas.
-  El paquete no lo usa: genera el suyo. Corregir el del repositorio es un cambio aparte.
 - Los 14 ajustes `landing.*` no están en la base de origen. No es un fallo:
   `LandingContentService` completa sus valores con `defaults()` y la portada comercial queda apagada.
+
+**Corregido después, en el mismo día:** `db/install/initial_database.sql` del repositorio también se
+regeneró con la misma limpieza. Tenía los tres defectos y 52 tablas; ahora tiene 53, no lleva
+`DEFINER` ni `USE`, y se importa con una cuenta sin privilegios. El paquete no lo usa —genera el
+suyo— pero quien instale desde el repositorio ya no choca con la pared.
 
 ## Los tres defectos del volcado
 

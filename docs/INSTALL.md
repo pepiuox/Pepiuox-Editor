@@ -19,7 +19,9 @@ encuentras, es un error de la guía: anótalo en la deuda de la constitución
 >    `db/db-full.sql`. El segundo es el esquema de referencia del proyecto y **contiene datos de una
 >    instalación real** —cuentas con sus hashes y secretos de aplicaciones de API—, así que no debe
 >    usarse para montar un sistema limpio ni para distribuirlo. El primero trae estructura, catálogos
->    y nada más: 52 tablas, 2 vistas, 4 triggers, 5 rutinas y cero datos de personas.
+>    y nada más: 53 tablas, 2 vistas, 4 disparadores, 5 rutinas y cero datos de personas. No lleva
+>    `CREATE DATABASE` ni `USE`: rellena exactamente la base que le indiques. Y no lleva `DEFINER`, así
+>    que se importa con una cuenta normal, sin privilegios de administrador.
 > 3. **El primer administrador ya no viene sembrado.** `initial_database.sql` no incluye ninguna
 >    cuenta ni contraseña. Se crea por consola:
 >    `php 01-TOOLS/bootstrap/create-admin.php --username=admin --email=tu@dominio.com --generate`
@@ -135,7 +137,7 @@ C:\ZampGUI\mariadb\bin\mysql.exe -u pepiuox -p web_editor_db < db\db-full.sql
 > No existen `db/db.sql` ni `db/migrations.sql`. El instalador retirado los buscaba y por eso estaba
 > roto: `db/db-full.sql` es el único volcado del proyecto.
 
-Al terminar, la base tiene 52 tablas y 2 vistas (`daily_summary` y `user_activity_summary`).
+Al terminar, la base tiene 53 tablas y 2 vistas (`daily_summary` y `user_activity_summary`).
 
 ---
 

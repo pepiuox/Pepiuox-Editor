@@ -307,8 +307,10 @@ Por consola:
 mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS web_editor_db CHARACTER SET utf8mb4 COLLATE utf8mb4_uca1400_ai_ci;"
 ```
 
-> `db/install/initial_database.sql` **también crea la base si no existe**, así que este paso es
-> opcional si vas a importar ese archivo. Hacerlo aquí te permite fijar la colación a mano.
+> **Este paso ya es obligatorio.** `db/install/initial_database.sql` **no** crea la base ni cambia de
+> base: rellena exactamente la que se le indique. Hasta la revisión del 2 de noviembre de 2026 llevaba
+> `CREATE DATABASE web_editor_db` y `USE web_editor_db`, y con eso los datos acababan en esa base
+> aunque se importaran en otra. Esas dos sentencias se retiraron.
 
 ### 5.2. Comprobar que el motor es MariaDB y no MySQL
 
@@ -322,9 +324,10 @@ fallará con `Unknown collation: 'utf8mb4_uca1400_ai_ci'`.
 
 ### 5.3. Antes de importar: la base debe estar vacía
 
-HECHO OBSERVADO (cabecera del propio archivo): `initial_database.sql` crea 52 tablas con `CREATE TABLE`
-y **se detiene con error si las tablas ya existen**. La única excepción son las dos vistas, que se
-recrean con `DROP VIEW IF EXISTS`.
+HECHO OBSERVADO (comprobado importándolo con una cuenta sin privilegios): `initial_database.sql` crea 53
+tablas con `CREATE TABLE` y **se detiene con error si las tablas ya existen**. La única excepción son
+las dos vistas, que se recrean con `DROP VIEW IF EXISTS`. No lleva cláusulas `DEFINER`, así que no hace
+falta la cuenta `root` para importarlo.
 
 ```sql
 -- Debe devolver 0
@@ -1358,7 +1361,7 @@ Mientras no se unifiquen, **este manual manda** para una instalación nueva.
 | Versión de Apache | `httpd -v` | Apache/2.4.68 (Win64) |
 | Versión de Node | `node --version` | v26.5.0 |
 | Ausencia de Composer | `Test-Path composer.json`, `vendor/`, `vendor/autoload.php` | **False** en los tres |
-| Objetos de `initial_database.sql` | regex sobre el archivo | 52 `CREATE TABLE`, 2 vistas, 4 triggers, 5 rutinas, 529 `INSERT`, 11 `DEFINER`, 143 331 bytes |
+| Objetos de `initial_database.sql` | medición del 2026-11-02 · 116 KB, 53 `CREATE TABLE`, 2 vistas, 4 disparadores, 5 rutinas, **0 `DEFINER`**, 0 `CREATE DATABASE`/`USE` (antes: 143 331 bytes, 52 tablas, 11 `DEFINER`) |
 | `DEFINER` del respaldo | regex sobre `db/backup/database_backup_20261031.sql` | **14**, y 52 `CREATE TABLE`, 1 221 355 bytes |
 | Inestabilidad de `cron_token` | `php` cargando `config/config.php` dos veces | `...-dfedf883531350f2` vs `...-c8b9937bc84fcf51` → **iguales = NO** |
 | `PermissionMiddleware` en rutas | `grep` sobre el repositorio | 0 coincidencias en `config/routes.php`; solo definición y menciones en documentación |
