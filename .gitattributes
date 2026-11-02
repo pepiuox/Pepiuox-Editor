@@ -1,2 +1,9 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# El generador del paquete escribe, con heredocs, la cabecera del SQL y el
+# INSTALAR.md que viajan al servidor. Con `core.autocrlf=true` este archivo se
+# repondría con CRLF en cada clonada y esos textos saldrían con CRLF: las
+# comprobaciones que anclan al final de línea dejan de encontrarlos y el
+# documento se genera con finales de línea mezclados. Se fija en LF.
+01-TOOLS/despliegue/build-backup.php text eol=lf
