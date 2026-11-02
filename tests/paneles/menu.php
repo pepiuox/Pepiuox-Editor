@@ -447,6 +447,45 @@ comprobar(
     str_contains($cssBloques, '.gjs-block-category:not(.gjs-open)'),
     'una regla global ocultaría también las categorías abiertas'
 );
+
+// ─────────────────────────────────────────────────────────────────────
+echo "\n== Posición del botón de plegar y de la topbar ==\n";
+
+$css = (string) file_get_contents(ROOT_PATH . '/public/assets/css/maker.css');
+
+// El botón debe estar FIJADO a la ventana: si depende del flujo de la topbar,
+// desaparece cuando la cabecera sale de la vista.
+comprobar(
+    'el botón de plegar está fijado a la ventana',
+    preg_match('/\.topbar \.btn-toggle-sidebar\s*\{[^}]*position:\s*fixed/is', $css) === 1,
+    'sin position:fixed vuelve a desaparecer con la topbar'
+);
+
+comprobar(
+    'pegado al borde derecho del sidebar cuando está visible',
+    preg_match('/\.topbar \.btn-toggle-sidebar\s*\{[^}]*left:\s*calc\(var\(--sidebar-width\)/is', $css) === 1,
+    'no queda al lado del sidebar'
+);
+
+comprobar(
+    'al plegarlo pasa al borde izquierdo de la pantalla',
+    preg_match('/body\.sidebar-collapsed \.topbar \.btn-toggle-sidebar\s*\{[^}]*left:\s*0\.5rem/is', $css) === 1,
+    'con el sidebar plegado el botón quedaría fuera de alcance'
+);
+
+// El desplazamiento del sidebar tiene que estar en .main, que es quien contiene
+// la topbar; si vive solo en .main-content, la cabecera queda debajo del sidebar.
+comprobar(
+    'el desplazamiento del sidebar está en .main',
+    preg_match('/^\.main\s*\{[^}]*margin-left:\s*var\(--sidebar-width\)/ims', $css) === 1,
+    'la topbar volvería a quedar tapada por el sidebar'
+);
+
+comprobar(
+    '.main no recorta con overflow:hidden',
+    preg_match('/^\.main\s*\{[^}]*overflow:\s*visible/ims', $css) === 1,
+    'un ancestro con overflow:hidden anula el position:sticky de la topbar'
+);
 echo "\n" . str_repeat('-', 56) . "\n";
 printf("Comprobaciones: %d · Fallos: %d\n", $total, $fallos);
 exit($fallos === 0 ? 0 : 1);

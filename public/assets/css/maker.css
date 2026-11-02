@@ -177,7 +177,9 @@ hr {
     flex-direction: column;
     min-height: 100vh;
     width: 100%;
-    overflow: hidden;
+    /* Sin overflow:hidden: rompía el position:sticky de la topbar y, al hacer
+       scroll, la cabecera desaparecía. El recorte horizontal lo hace .main-content. */
+    overflow: visible;
     /* El desplazamiento del sidebar va AQUÍ, no en .main-content.
        El sidebar es `position: fixed`, así que queda fuera del flujo flex: si el
        margen solo lo llevara .main-content, la TOPBAR —que vive dentro de .main—
@@ -193,6 +195,9 @@ hr {
     flex: 1;
     /* Sin margen: ya lo aplica .main. Dejarlo aquí duplicaría el desplazamiento. */
     margin-left: 0;
+    /* Recorte horizontal aquí, que es donde vive el contenido: .main lo perdió
+       para no romper el sticky de la topbar. */
+    overflow-x: hidden;
     padding: 1.5rem 2rem;
     min-height: 100vh;
     background: var(--bg-principal);
@@ -549,6 +554,8 @@ body.sidebar-collapsed .main-content {
     display: flex;
     align-items: center;
     gap: 1rem;
+    /* Hueco para el botón flotante de plegar, que ya no ocupa sitio en el flujo. */
+    padding-left: 2.75rem;
 }
 
 .topbar-right {
@@ -564,20 +571,42 @@ body.sidebar-collapsed .main-content {
     margin: 0;
 }
 
-.btn-toggle-sidebar {
-    background: transparent;
-    border: none;
-    color: var(--text-muted);
-    font-size: 1.4rem;
-    padding: 4px 8px;
-    border-radius: var(--radius-sm);
-    transition: all var(--transition-fast);
+.topbar .btn-toggle-sidebar {
+    /* Botón FLOTANTE y siempre visible.
+       Antes vivía en el flujo de la topbar: cuando la topbar quedaba fuera de la
+       vista, el botón desaparecía con ella. Fijado a la ventana queda pegado al
+       borde derecho del sidebar cuando está visible, y al borde izquierdo de la
+       pantalla cuando se pliega —que es justo donde se busca—. */
+    position: fixed;
+    top: 10px;
+    left: calc(var(--sidebar-width) + 0.5rem);
+    z-index: 1060; /* por encima del sidebar (1040) y de la topbar (1030) */
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    background: var(--bg-card, var(--bg-hover, #161b22));
+    border: 1px solid var(--border, #30363d);
+    border-radius: 10px;
+    color: var(--text-primary);
+    font-size: 1.25rem;
+    line-height: 1;
     cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, .35);
+    transition: left var(--transition-slow), background var(--transition-fast), color var(--transition-fast);
 }
 
-.btn-toggle-sidebar:hover {
-    color: var(--text-primary);
-    background: var(--bg-hover);
+/* Con el sidebar plegado, el botón pasa a ser lo primero de la pantalla. */
+body.sidebar-collapsed .topbar .btn-toggle-sidebar {
+    left: 0.5rem;
+}
+
+.topbar .btn-toggle-sidebar:hover,
+.topbar .btn-toggle-sidebar:focus-visible {
+    color: var(--accent);
+    border-color: var(--accent);
+    outline: none;
 }
 
 /* ── Breadcrumb ── */
