@@ -383,6 +383,48 @@ comprobar(
 );
 
 // ─────────────────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────────────
+echo "\n== Saneado del contenido publicado ==\n";
+
+// El saneador elimina manejadores `on*`. El patrón debe ir anclado a un espacio
+// previo: sin el ancla, `aria-controls="x"` coincidía por dentro («on»+«trols»+«=»)
+// y quedaba mutilado a `aria-cr`, rompiendo la accesibilidad y el acordeón.
+$renderer = new \App\Services\PageRenderer();
+$metodo = new \ReflectionMethod(\App\Services\PageRenderer::class, 'sanitizeHtml');
+$metodo->setAccessible(true);
+$sanear = static fn (string $html): string => (string) $metodo->invoke($renderer, $html);
+
+$conAria = $sanear('<div aria-controls="panel1" aria-expanded="true" role="region">x</div>');
+comprobar(
+    'conserva aria-controls (no lo confunde con un manejador on*)',
+    str_contains($conAria, 'aria-controls="panel1"') && str_contains($conAria, 'aria-expanded'),
+    $conAria
+);
+
+$conEventos = $sanear('<div onclick="alert(1)">a</div><a href="#" onmouseover="x()">b</a>');
+comprobar(
+    'elimina onclick',
+    !str_contains($conEventos, 'onclick'),
+    $conEventos
+);
+comprobar(
+    'elimina onmouseover',
+    !str_contains($conEventos, 'onmouseover'),
+    $conEventos
+);
+comprobar(
+    'el texto del contenido sobrevive al saneado',
+    str_contains($conEventos, '>a<') && str_contains($conEventos, '>b<'),
+    $conEventos
+);
+
+$conBoton = $sanear('<button data-bs-toggle="collapse" data-bs-target="#p1">Abrir</button>');
+comprobar(
+    'conserva <button> y sus data-bs-* (el acordeón de Bootstrap abre)',
+    str_contains($conBoton, '<button') && str_contains($conBoton, 'data-bs-toggle'),
+    $conBoton
+);
 echo "\n" . str_repeat('-', 56) . "\n";
 printf("Comprobaciones: %d · Fallos: %d\n", $total, $fallos);
 exit($fallos === 0 ? 0 : 1);

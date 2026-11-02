@@ -356,43 +356,495 @@ HTML,
     ],
 ];
 
+// ── Contenido de la portada (página de inicio) ───────────────────────
+//
+// Se siembra como HTML + CSS de una página normal: el constructor lo carga
+// igual que cualquier otro contenido y se puede rehacer con bloques.
+//
+// Reglas que cumple:
+//   - Bootstrap 5.3 para la maqueta (container/row/col/cards/accordion).
+//   - Los colores NO van en atributos style ni en un <style> dentro del HTML:
+//     el saneador elimina el <style> al publicar. Van en `content_css`, con
+//     variables CSS dentro de `.pi-home`, para que no se escapen al resto del sitio.
+//   - Sin <script>: el layout público ya carga el bundle de Bootstrap, así que el
+//     acordeón funciona sin añadir nada.
 $inicioHtml = <<<'HTML'
-<section class="py-5">
-  <div class="row align-items-center">
-    <div class="col-lg-8">
-      <p class="text-uppercase small mb-2">Editor y gestor de contenidos</p>
-      <h1 class="display-6 mb-3">Publica, versiona y controla tu web desde un solo panel</h1>
-      <p class="lead mb-4">Contenido, diseño y seguridad en la misma herramienta, instalada en tu propio servidor y sin dependencias de terceros.</p>
-      <p class="mb-0">Esta plataforma reúne constructor visual, control de versiones, plantillas, menús y personalización visual completa. Todo se guarda en una única base de datos y cada cambio deja rastro.</p>
-    </div>
-  </div>
-</section>
+<div class="pi-home">
 
-<section class="py-4">
-  <div class="row g-4">
-    <div class="col-md-4">
-      <h3 class="h6">Contenido con historial</h3>
-      <p>Cada guardado deja una versión recuperable. Editar no es arriesgar: se puede volver atrás.</p>
+  <!-- ═══ Portada ═══ -->
+  <section class="pi-hero py-5">
+    <div class="container py-lg-4">
+      <div class="row align-items-center g-5">
+        <div class="col-lg-7">
+          <span class="pi-badge mb-3"><i class="bi bi-stars me-1"></i>Sitio en marcha</span>
+          <h1 class="display-4 fw-bold lh-sm mb-3">Tu contenido, tu diseño, tus reglas</h1>
+          <p class="lead mb-4">
+            Publica sin depender de nadie. Constructor visual, plantillas, menús, control de versiones y
+            copias de seguridad en la misma herramienta, instalada en tu propio servidor.
+          </p>
+          <div class="d-flex flex-wrap gap-3 mb-4">
+            <a class="btn btn-lg pi-btn-primary" href="/funciones">
+              <i class="bi bi-grid-1x2 me-2"></i>Ver funciones
+            </a>
+            <a class="btn btn-lg pi-btn-ghost" href="/como-funciona">
+              Cómo funciona<i class="bi bi-arrow-right ms-2"></i>
+            </a>
+          </div>
+          <div class="d-flex flex-wrap gap-4 pi-hero-facts">
+            <div><strong>100%</strong><span>en tu servidor</span></div>
+            <div><strong>0</strong><span>dependencias externas</span></div>
+            <div><strong>∞</strong><span>páginas y versiones</span></div>
+          </div>
+        </div>
+        <div class="col-lg-5">
+          <div class="pi-hero-panel">
+            <div class="pi-hero-panel__head">
+              <span class="pi-dot"></span><span class="pi-dot"></span><span class="pi-dot"></span>
+              <em>panel de administración</em>
+            </div>
+            <ul class="pi-hero-panel__list">
+              <li><i class="bi bi-check2-circle"></i>Constructor con bloques listos</li>
+              <li><i class="bi bi-check2-circle"></i>Portada y pie editables</li>
+              <li><i class="bi bi-check2-circle"></i>Versiones por página</li>
+              <li><i class="bi bi-check2-circle"></i>Copias de seguridad programadas</li>
+              <li><i class="bi bi-check2-circle"></i>Tareas automáticas con token</li>
+            </ul>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="col-md-4">
-      <h3 class="h6">Identidad sin código</h3>
-      <p>Temas, colores, logotipos y tipografía se cambian desde el panel, con el contraste calculado.</p>
-    </div>
-    <div class="col-md-4">
-      <h3 class="h6">Operación en tus manos</h3>
-      <p>Copias de seguridad, auditoría y estadísticas sin depender de servicios externos.</p>
-    </div>
-  </div>
-</section>
+  </section>
 
-<section class="py-4">
-  <div class="row g-3">
-    <div class="col-md-auto"><a class="btn btn-primary" href="/funciones">Ver todas las funciones</a></div>
-    <div class="col-md-auto"><a class="btn btn-outline-secondary" href="/seguridad">Cómo se protege</a></div>
-    <div class="col-md-auto"><a class="btn btn-outline-secondary" href="/como-funciona">Cómo funciona</a></div>
-  </div>
-</section>
+  <!-- ═══ Características ═══ -->
+  <section class="py-5">
+    <div class="container py-lg-3">
+      <div class="text-center mb-5">
+        <span class="pi-eyebrow">Lo esencial, resuelto</span>
+        <h2 class="display-6 fw-bold mb-2">Todo lo que hace falta para publicar</h2>
+        <p class="pi-muted mb-0">Sin plugins de terceros ni servicios que puedan cambiar de condiciones.</p>
+      </div>
+      <div class="row g-4">
+        <div class="col-md-4">
+          <article class="pi-card h-100">
+            <span class="pi-icon"><i class="bi bi-magic"></i></span>
+            <h3 class="h5 fw-bold mt-3 mb-2">Constructor visual</h3>
+            <p class="pi-muted mb-0">
+              Compón arrastrando bloques de Bootstrap 5, ajusta estilos y revisa el resultado en móvil,
+              tableta y escritorio.
+            </p>
+          </article>
+        </div>
+        <div class="col-md-4">
+          <article class="pi-card h-100">
+            <span class="pi-icon"><i class="bi bi-shield-check"></i></span>
+            <h3 class="h5 fw-bold mt-3 mb-2">Seguridad de serie</h3>
+            <p class="pi-muted mb-0">
+              Consultas preparadas, permisos por acción, protección CSRF, límites de peticiones y sesiones
+              con cookie segura.
+            </p>
+          </article>
+        </div>
+        <div class="col-md-4">
+          <article class="pi-card h-100">
+            <span class="pi-icon"><i class="bi bi-clock-history"></i></span>
+            <h3 class="h5 fw-bold mt-3 mb-2">Historial y copias</h3>
+            <p class="pi-muted mb-0">
+              Cada cambio queda registrado y cada página guarda versiones. Las copias se programan por cron.
+            </p>
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ Cómo funciona ═══ -->
+  <section class="pi-band py-5">
+    <div class="container py-lg-3">
+      <div class="row g-4 align-items-center">
+        <div class="col-lg-4">
+          <span class="pi-eyebrow">En tres pasos</span>
+          <h2 class="display-6 fw-bold mb-3">De la idea a la web publicada</h2>
+          <p class="pi-muted mb-4">
+            No hay que preparar entornos ni aprender un lenguaje de plantillas: se elige, se escribe y se publica.
+          </p>
+          <a class="btn pi-btn-primary" href="/como-funciona">Ver el detalle</a>
+        </div>
+        <div class="col-lg-8">
+          <ol class="pi-steps list-unstyled mb-0">
+            <li>
+              <span class="pi-step-num">1</span>
+              <div>
+                <h3 class="h6 fw-bold mb-1">Elige una plantilla</h3>
+                <p class="pi-muted mb-0">Cada página empieza con una estructura lista para editar.</p>
+              </div>
+            </li>
+            <li>
+              <span class="pi-step-num">2</span>
+              <div>
+                <h3 class="h6 fw-bold mb-1">Compón con bloques</h3>
+                <p class="pi-muted mb-0">Arrastra secciones, cambia textos, imágenes y colores.</p>
+              </div>
+            </li>
+            <li>
+              <span class="pi-step-num">3</span>
+              <div>
+                <h3 class="h6 fw-bold mb-1">Publica</h3>
+                <p class="pi-muted mb-0">Al guardar, el sitio queda actualizado y el sitemap se regenera.</p>
+              </div>
+            </li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ Bloque destacado ═══ -->
+  <section class="py-5">
+    <div class="container py-lg-3">
+      <div class="row g-5 align-items-center">
+        <div class="col-lg-6">
+          <img class="pi-shot img-fluid rounded-4" alt="Vista del panel de administración"
+               src="https://placehold.co/960x640/1B5E20/FEF08A?text=Panel+de+administraci%C3%B3n">
+        </div>
+        <div class="col-lg-6">
+          <span class="pi-eyebrow">Contenido con criterio</span>
+          <h2 class="display-6 fw-bold mb-3">Una portada que no parece una plantilla genérica</h2>
+          <p class="pi-muted mb-3">
+            Este texto es contenido de ejemplo, no una promesa de marketing. Edítalo o bórralo: la página es
+            tuya y se cambia desde el constructor, como cualquier otra.
+          </p>
+          <ul class="pi-checks list-unstyled mb-4">
+            <li><i class="bi bi-check2"></i>Secciones con jerarquía clara y contraste suficiente.</li>
+            <li><i class="bi bi-check2"></i>Colores en variables CSS: se cambian en un sitio.</li>
+            <li><i class="bi bi-check2"></i>Maqueta con la rejilla de Bootstrap 5.3.</li>
+            <li><i class="bi bi-check2"></i>Sin dependencias ni código que se ejecute solo.</li>
+          </ul>
+          <a class="btn pi-btn-outline" href="/seguridad">Cómo se protege</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ Cifras ═══ -->
+  <section class="pi-metrics py-5">
+    <div class="container">
+      <div class="row g-4 text-center">
+        <div class="col-6 col-lg-3"><div class="pi-metric"><strong>52</strong><span>tablas con integridad</span></div></div>
+        <div class="col-6 col-lg-3"><div class="pi-metric"><strong>294</strong><span>bloques disponibles</span></div></div>
+        <div class="col-6 col-lg-3"><div class="pi-metric"><strong>3</strong><span>idiomas de contenido</span></div></div>
+        <div class="col-6 col-lg-3"><div class="pi-metric"><strong>24/7</strong><span>tareas programadas</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ Cita ═══ -->
+  <section class="py-5">
+    <div class="container py-lg-3">
+      <figure class="pi-quote mx-auto text-center mb-0">
+        <i class="bi bi-quote pi-quote__mark"></i>
+        <blockquote class="mb-3">
+          Una plataforma que se puede leer, auditar y mover de servidor sin pedir permiso a nadie.
+        </blockquote>
+        <figcaption class="pi-muted">Texto de ejemplo — sustitúyelo por una opinión real cuando la tengas</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ═══ Preguntas frecuentes ═══ -->
+  <section class="pi-band py-5">
+    <div class="container py-lg-3">
+      <div class="row g-5">
+        <div class="col-lg-4">
+          <span class="pi-eyebrow">Dudas frecuentes</span>
+          <h2 class="display-6 fw-bold mb-2">Antes de empezar</h2>
+          <p class="pi-muted mb-0">Cuatro respuestas cortas. El resto, en el manual de uso.</p>
+        </div>
+        <div class="col-lg-8">
+          <div class="accordion pi-accordion" id="piFaq">
+            <div class="accordion-item">
+              <h3 class="accordion-header">
+                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#piFaq1" aria-expanded="true" aria-controls="piFaq1">
+                  ¿Necesito saber programar?
+                </button>
+              </h3>
+              <div id="piFaq1" class="accordion-collapse collapse show" data-bs-parent="#piFaq">
+                <div class="accordion-body">
+                  Para el día a día, no. El constructor cubre textos, imágenes, columnas y estilos. El editor de
+                  código está ahí por si hace falta algo puntual.
+                </div>
+              </div>
+            </div>
+            <div class="accordion-item">
+              <h3 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#piFaq2" aria-expanded="false" aria-controls="piFaq2">
+                  ¿Dónde se guarda el contenido?
+                </button>
+              </h3>
+              <div id="piFaq2" class="accordion-collapse collapse" data-bs-parent="#piFaq">
+                <div class="accordion-body">
+                  En tu base de datos, en tu servidor. Las imágenes van a <code>uploads/</code> y las copias a
+                  <code>storage/backups</code>.
+                </div>
+              </div>
+            </div>
+            <div class="accordion-item">
+              <h3 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#piFaq3" aria-expanded="false" aria-controls="piFaq3">
+                  ¿Puedo deshacer un cambio?
+                </button>
+              </h3>
+              <div id="piFaq3" class="accordion-collapse collapse" data-bs-parent="#piFaq">
+                <div class="accordion-body">
+                  Sí. Cada página conserva sus versiones anteriores y puedes volver a una de ellas desde el panel.
+                </div>
+              </div>
+            </div>
+            <div class="accordion-item">
+              <h3 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#piFaq4" aria-expanded="false" aria-controls="piFaq4">
+                  ¿Y si quiero cambiar esta portada?
+                </button>
+              </h3>
+              <div id="piFaq4" class="accordion-collapse collapse" data-bs-parent="#piFaq">
+                <div class="accordion-body">
+                  Esta página es una más: <em>Páginas → Inicio → Constructor</em>. Cambia, borra o reordena lo
+                  que quieras.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ Llamada final ═══ -->
+  <section class="pi-cta py-5">
+    <div class="container py-lg-3 text-center">
+      <h2 class="display-6 fw-bold mb-3">Ya está instalado. Ahora hazlo tuyo.</h2>
+      <p class="lead pi-muted mb-4 mx-auto pi-cta__lead">
+        Cambia este texto, sube tu logotipo y publica la primera página real.
+      </p>
+      <div class="d-flex flex-wrap gap-3 justify-content-center">
+        <a class="btn btn-lg pi-btn-primary" href="/admin">Entrar al panel</a>
+        <a class="btn btn-lg pi-btn-ghost" href="/funciones">Explorar funciones</a>
+      </div>
+    </div>
+  </section>
+
+</div>
 HTML;
+
+// ── CSS de la portada, con la paleta de la marca ─────────────────────
+//
+// Va en `content_css` y no dentro del HTML: al publicar, el saneador elimina los
+// <style> que vengan en el contenido. Todo va dentro de `.pi-home` para que estas
+// variables y estos estilos no afecten al resto del sitio.
+$inicioCss = <<<'CSS'
+.pi-home {
+  --pi-orange: #C46A00;
+  --pi-amber: #F0B429;
+  --pi-yellow: #FDE047;
+  --pi-yellow-soft: #FEF08A;
+  --pi-cream: #FFFFF0;
+  --pi-green: #4B8B5A;
+  --pi-green-dark: #1B5E20;
+  --pi-green-deep: #0D3B0D;
+  --pi-green-ink: #041A04;
+  --pi-radius: 18px;
+  background: var(--pi-cream);
+  color: var(--pi-green-ink);
+}
+
+.pi-home h1, .pi-home h2, .pi-home h3 { color: var(--pi-green-deep); letter-spacing: -.015em; }
+.pi-home .pi-muted { color: #2c3d2e; }
+.pi-home code { color: var(--pi-orange); background: rgba(196,106,0,.08); padding: .1em .35em; border-radius: 4px; }
+
+/* Portada */
+.pi-hero {
+  background:
+    radial-gradient(1100px 520px at 15% -10%, rgba(75,139,90,.55), transparent 60%),
+    linear-gradient(155deg, var(--pi-green-deep) 0%, var(--pi-green-dark) 55%, var(--pi-green) 100%);
+  color: var(--pi-cream);
+}
+.pi-hero h1 { color: #fff; }
+.pi-hero .lead { color: var(--pi-yellow-soft); }
+.pi-badge {
+  display: inline-flex; align-items: center; gap: .35rem;
+  background: rgba(253,224,71,.15);
+  color: var(--pi-yellow);
+  border: 1px solid rgba(253,224,71,.45);
+  border-radius: 999px;
+  padding: .35rem .8rem;
+  font-size: .8rem; font-weight: 600; letter-spacing: .02em; text-transform: uppercase;
+}
+.pi-hero-facts { color: var(--pi-cream); }
+.pi-hero-facts > div { display: flex; flex-direction: column; }
+.pi-hero-facts strong { color: var(--pi-yellow); font-size: 1.5rem; line-height: 1.1; }
+.pi-hero-facts span { font-size: .82rem; opacity: .85; }
+
+.pi-hero-panel {
+  background: rgba(4,26,4,.62);
+  border: 1px solid rgba(254,240,138,.25);
+  border-radius: var(--pi-radius);
+  padding: 1rem 1.15rem 1.25rem;
+  box-shadow: 0 24px 60px rgba(0,0,0,.35);
+}
+.pi-hero-panel__head {
+  display: flex; align-items: center; gap: .4rem;
+  padding-bottom: .7rem; margin-bottom: .8rem;
+  border-bottom: 1px solid rgba(254,240,138,.18);
+  color: var(--pi-yellow-soft); font-size: .78rem;
+}
+.pi-hero-panel__head em { margin-left: .4rem; font-style: normal; opacity: .8; }
+.pi-dot { width: .55rem; height: .55rem; border-radius: 50%; background: var(--pi-amber); display: inline-block; }
+.pi-dot:nth-child(2) { background: var(--pi-yellow); }
+.pi-dot:nth-child(3) { background: var(--pi-green); }
+.pi-hero-panel__list { list-style: none; margin: 0; padding: 0; }
+.pi-hero-panel__list li {
+  display: flex; align-items: center; gap: .55rem;
+  color: var(--pi-cream); font-size: .92rem;
+  padding: .38rem 0;
+}
+.pi-hero-panel__list i { color: var(--pi-yellow); }
+
+/* Botones */
+.pi-btn-primary {
+  background: var(--pi-amber);
+  border: 1px solid var(--pi-amber);
+  color: var(--pi-green-ink);
+  font-weight: 600;
+  border-radius: 999px;
+  padding: .7rem 1.5rem;
+}
+.pi-btn-primary:hover, .pi-btn-primary:focus {
+  background: var(--pi-yellow);
+  border-color: var(--pi-yellow);
+  color: var(--pi-green-ink);
+}
+.pi-btn-ghost {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,.45);
+  color: var(--pi-cream);
+  border-radius: 999px;
+  padding: .7rem 1.5rem;
+}
+.pi-btn-ghost:hover, .pi-btn-ghost:focus { background: rgba(255,255,255,.12); color: #fff; border-color: #fff; }
+.pi-btn-outline {
+  border: 1px solid var(--pi-green-dark);
+  color: var(--pi-green-deep);
+  border-radius: 999px;
+  padding: .6rem 1.35rem;
+  font-weight: 600;
+}
+.pi-btn-outline:hover { background: var(--pi-green-dark); color: var(--pi-cream); }
+
+/* Cabeceras de sección */
+.pi-eyebrow {
+  display: inline-block;
+  color: var(--pi-orange);
+  font-size: .78rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+  margin-bottom: .5rem;
+}
+
+/* Tarjetas */
+.pi-card {
+  background: #fff;
+  border: 1px solid rgba(27,94,32,.12);
+  border-radius: var(--pi-radius);
+  padding: 1.6rem 1.4rem;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.pi-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(196,106,0,.45);
+  box-shadow: 0 18px 40px rgba(13,59,13,.14);
+}
+.pi-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 46px; height: 46px;
+  border-radius: 13px;
+  background: linear-gradient(140deg, var(--pi-yellow), var(--pi-amber));
+  color: var(--pi-green-ink);
+  font-size: 1.3rem;
+}
+
+/* Franja y pasos */
+.pi-band { background: linear-gradient(180deg, #F7F7E6 0%, var(--pi-cream) 100%); }
+.pi-steps li {
+  display: flex; gap: 1rem; align-items: flex-start;
+  background: #fff;
+  border: 1px solid rgba(27,94,32,.12);
+  border-radius: 14px;
+  padding: 1rem 1.15rem;
+  margin-bottom: .75rem;
+}
+.pi-steps li:last-child { margin-bottom: 0; }
+.pi-step-num {
+  flex: 0 0 auto;
+  width: 34px; height: 34px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  background: var(--pi-green-dark); color: var(--pi-yellow);
+  font-weight: 700;
+}
+
+/* Imagen y comprobaciones */
+.pi-shot { box-shadow: 0 22px 50px rgba(13,59,13,.2); }
+.pi-checks li { display: flex; gap: .55rem; align-items: flex-start; padding: .22rem 0; }
+.pi-checks i { color: var(--pi-green); font-weight: 700; }
+
+/* Cifras */
+.pi-metrics {
+  background: linear-gradient(150deg, var(--pi-green-deep), var(--pi-green-dark) 70%, var(--pi-green));
+  color: var(--pi-cream);
+}
+.pi-metric strong { display: block; font-size: 2.1rem; line-height: 1.05; color: var(--pi-yellow); }
+.pi-metric span { font-size: .85rem; opacity: .88; }
+
+/* Cita */
+.pi-quote { max-width: 780px; }
+.pi-quote__mark { font-size: 2.6rem; color: var(--pi-amber); line-height: 1; }
+.pi-quote blockquote {
+  font-size: 1.35rem; line-height: 1.45; font-weight: 500;
+  color: var(--pi-green-deep);
+}
+.pi-quote figcaption { font-size: .9rem; }
+
+/* Acordeón */
+.pi-accordion .accordion-item {
+  border: 1px solid rgba(27,94,32,.14);
+  border-radius: 12px !important;
+  margin-bottom: .6rem;
+  overflow: hidden;
+  background: #fff;
+}
+.pi-accordion .accordion-button {
+  font-weight: 600;
+  color: var(--pi-green-deep);
+  background: #fff;
+}
+.pi-accordion .accordion-button:not(.collapsed) {
+  color: var(--pi-green-deep);
+  background: var(--pi-yellow-soft);
+  box-shadow: none;
+}
+.pi-accordion .accordion-button:focus { box-shadow: 0 0 0 .2rem rgba(240,180,41,.35); }
+.pi-accordion .accordion-body { color: #2c3d2e; }
+
+/* Llamada final */
+.pi-cta { background: linear-gradient(160deg, var(--pi-yellow-soft), var(--pi-cream) 70%); }
+.pi-cta__lead { max-width: 620px; }
+
+/* Responsive */
+@media (max-width: 991.98px) {
+  .pi-hero-facts { gap: 1.25rem !important; }
+  .pi-quote blockquote { font-size: 1.15rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pi-card, .pi-card:hover { transition: none; transform: none; }
+}
+CSS;
 
 // ── Conexión ─────────────────────────────────────────────────────────
 try {
@@ -523,8 +975,8 @@ if (!$inicio) {
     } else {
         $insInicio = $pdo->prepare(
             'INSERT INTO pages (user_id, template_id, menu_id, parent_id, title, slug, description, h1,
-                                content_html, startpage, is_published, status)
-             VALUES (?, NULL, NULL, NULL, ?, ?, ?, NULL, ?, 1, 1, ?)'
+                                content_html, content_css, startpage, is_published, status)
+             VALUES (?, NULL, NULL, NULL, ?, ?, ?, NULL, ?, ?, 1, 1, ?)'
         );
         $insInicio->execute([
             $autorId,
@@ -532,6 +984,7 @@ if (!$inicio) {
             'inicio',
             'Página de bienvenida de la instalación.',
             $inicioHtml,
+            $inicioCss,
             'published',
         ]);
         $idInicio = (int) $pdo->lastInsertId();
@@ -541,8 +994,8 @@ if (!$inicio) {
         $inicio = ['id' => $idInicio, 'slug' => 'inicio'];
     }
 } elseif ($conInicio && !$dryRun) {
-    $upd = $pdo->prepare('UPDATE pages SET content_html = ?, updated_at = NOW() WHERE id = ?');
-    $upd->execute([$inicioHtml, (int) $inicio['id']]);
+    $upd = $pdo->prepare('UPDATE pages SET content_html = ?, content_css = ?, updated_at = NOW() WHERE id = ?');
+    $upd->execute([$inicioHtml, $inicioCss, (int) $inicio['id']]);
     say('  ~ contenido de la página de inicio («' . $inicio['slug'] . '», #' . $inicio['id'] . ') reescrito');
 } elseif ($conInicio && $dryRun) {
     say('  ~ se reescribiría el contenido de la página de inicio («' . $inicio['slug'] . '», #' . $inicio['id'] . ')');

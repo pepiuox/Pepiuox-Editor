@@ -138,18 +138,29 @@ class PageRenderer
      */
     private function sanitizeHtml(string $html): string
     {
-        // Lista de tags permitidos
+        // Lista de tags permitidos.
+        //
+        // `strip_tags` no filtra atributos: conserva los que lleve el tag. Pero al
+        // eliminar un tag se lleva sus atributos con él, y por eso `button` hace
+        // falta aquí: sin él, un acordeón de Bootstrap perdía `data-bs-toggle` y
+        // dejaba de abrirse en el sitio publicado. Un `button` sin formulario que
+        // lo envíe no ejecuta nada por sí solo.
         $allowedTags = [
             'div', 'span', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
             'a', 'img', 'ul', 'ol', 'li', 'table', 'tr', 'td', 'th',
             'strong', 'em', 'b', 'i', 'u', 's', 'br', 'hr', 'blockquote',
             'pre', 'code', 'section', 'article', 'header', 'footer',
-            'main', 'nav', 'aside', 'figure', 'figcaption'
+            'main', 'nav', 'aside', 'figure', 'figcaption', 'button'
         ];
         
-        // Eliminar eventos JavaScript
-        $html = preg_replace('/on\w+="[^"]*"/', '', $html);
-        $html = preg_replace("/on\w+='[^']*'/", '', $html);
+        // Eliminar eventos JavaScript.
+        //
+        // El patrón va ANCLADO a un espacio previo: así solo coincide con un
+        // atributo que empiece por `on`. Sin ese ancla, `aria-controls="x"`
+        // coincidía por dentro —«on» + «trols» + «="»— y quedaba convertido en
+        // `aria-cr`, rompiendo el atributo y la accesibilidad del bloque.
+        $html = preg_replace('/\son\w+\s*=\s*"[^"]*"/i', '', $html);
+        $html = preg_replace("/\son\w+\s*=\s*'[^']*'/i", '', $html);
         
         // Eliminar javascript: en href
         $html = preg_replace('/href="javascript:[^"]*"/', 'href="#"', $html);
