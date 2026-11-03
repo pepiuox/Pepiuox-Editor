@@ -65,6 +65,17 @@ $userInitial = strtoupper($userInitial !== '' ? $userInitial : 'U');
     <?= $faviconTags ?>
     <?php endif; ?>
 
+    <?php
+    // Medición externa y verificaciones de propiedad (Google, Yandex, Bing…).
+    // El servicio solo emite los identificadores que pasan su patrón; si no hay
+    // ninguno configurado devuelve cadena vacía y aquí no se imprime nada.
+    $analyticsTags = \App\Services\AnalyticsProvidersService::headTags();
+    ?>
+    <?php if ($analyticsTags !== ''): ?>
+    <!-- Analítica y verificación de propiedad -->
+    <?= $analyticsTags ?>
+    <?php endif; ?>
+
     <!-- Bootstrap 5.3 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">

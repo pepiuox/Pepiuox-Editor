@@ -5,6 +5,9 @@ $fmtNum = fn($n) => number_format((int)$n, 0, ',', '.');
 
 <div class="d-flex justify-between align-center mb-3 flex-wrap gap-2">
   <h2 class="mb-0"><i class="bi bi-graph-up text-primary"></i> Métricas avanzadas</h2>
+  <a href="<?= url('admin/analytics/proveedores') ?>" class="btn btn-ghost btn-sm">
+    <i class="bi bi-broadcast"></i> Proveedores de medición
+  </a>
   <form method="get" action="<?= url('admin/analytics') ?>" class="d-flex gap-2">
     <select name="days" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
       <?php foreach ([7=>'7 días',15=>'15 días',30=>'30 días',60=>'60 días',90=>'90 días'] as $k=>$v): ?>

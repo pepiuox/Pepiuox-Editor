@@ -35,21 +35,25 @@
 
       <hr class="my-4">
       <h5 class="mb-3"><i class="bi bi-graph-up text-primary"></i> Integraciones</h5>
-      
+
       <div class="form-grid">
         <div class="form-group">
-          <label class="form-label">Google Analytics ID</label>
-          <input type="text" name="ga_tracking" class="form-control" value="<?= e($settings['ga_tracking']) ?>" placeholder="G-XXXXXXXXXX">
-          <small class="form-text">Ej: G-ABC123XYZ</small>
+          <label class="form-label" for="f-twitter">Twitter / X (handle)</label>
+          <input type="text" name="twitter_site" class="form-control" id="f-twitter"
+                 value="<?= e((string) ($settings['twitter_site'] ?? '')) ?>" placeholder="@tuusuario">
         </div>
-        <div class="form-group">
-          <label class="form-label">Google Search Console</label>
-          <input type="text" name="gsc_verification" class="form-control" value="<?= e($settings['gsc_verification']) ?>" placeholder="Código de verificación">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Twitter / X (handle)</label>
-          <input type="text" name="twitter_site" class="form-control" value="<?= e($settings['twitter_site']) ?>" placeholder="@tuusuario">
-        </div>
+      </div>
+
+      <div class="border rounded p-3 mt-3">
+        <p class="mb-2">
+          <i class="bi bi-broadcast text-primary"></i>
+          Los proveedores de medición —Google Analytics y Tag Manager, Yandex Metrica, Bing, Clarity,
+          Plausible y Umami— se configuran en su propia pantalla, para no tener los mismos campos en
+          dos sitios.
+        </p>
+        <a href="<?= url('admin/analytics/proveedores') ?>" class="btn btn-ghost btn-sm">
+          <i class="bi bi-arrow-right"></i> Ir a Proveedores de medición
+        </a>
       </div>
 
       <div class="d-flex justify-end gap-2 mt-4 pt-3 border-top">

@@ -449,6 +449,10 @@ $router->post('/admin/translations/add', [App\Controllers\TranslationsController
 $router->get('/admin/analytics', [App\Controllers\AnalyticsController::class, 'index'], $auth);
 $router->get('/admin/analytics/export', [App\Controllers\AnalyticsController::class, 'export'], $auth);
 $router->get('/admin/analytics/api', [App\Controllers\AnalyticsController::class, 'apiSummary'], $auth);
+// Proveedores de medición externa. `Router::toPattern()` ancla cada ruta con
+// `^…$`, así que `/admin/analytics` no se traga esta: el orden da igual.
+$router->get('/admin/analytics/proveedores', [App\Controllers\AnalyticsController::class, 'providers'], $auth);
+$router->post('/admin/analytics/proveedores', [App\Controllers\AnalyticsController::class, 'saveProviders'], $auth);
 
 // ── 3.22. Auditoría ──────────────────────────────────────────────
 // ORDEN IMPORTANTE. `Router::findRoute()` recorre las rutas en el orden en que

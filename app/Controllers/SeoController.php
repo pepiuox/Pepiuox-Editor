@@ -45,10 +45,9 @@ class SeoController
             'default_meta_description' => SettingService::get('seo', 'default_meta_description', ''),
             'default_robots' => SettingService::get('seo', 'default_robots', 'index, follow'),
             'default_og_image' => SettingService::get('seo', 'default_og_image', ''),
-            'ga_tracking' => SettingService::get('seo', 'ga_tracking', ''),
-            'gsc_verification' => SettingService::get('seo', 'gsc_verification', ''),
             'twitter_site' => SettingService::get('seo', 'twitter_site', ''),
         ];
+
         Response::render(View::render('seo.global', compact('settings')));
     }
 
@@ -57,11 +56,12 @@ class SeoController
         CSRF::guard();
         $fields = [
             'default_meta_title','default_meta_description','default_robots',
-            'default_og_image','ga_tracking','gsc_verification','twitter_site'
+            'default_og_image','twitter_site'
         ];
         foreach ($fields as $f) {
             SettingService::set('seo', $f, $req->post($f, ''), 'string');
         }
+
         AuditService::log(Auth::id(), 'seo_global_updated', 'SEO global actualizado', 'settings');
         Session::flash('flash.success', 'Configuración SEO global guardada.');
         Response::redirect(url('admin/seo/global'));
