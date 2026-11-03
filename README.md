@@ -1,13 +1,23 @@
 # PePiuoX Editor
 
 Editor y CMS web en **PHP 8** y **MariaDB** con panel de administración y sitio público:
-páginas, versiones, plantillas, menús, usuarios, roles, SEO, archivos y API.
+páginas, versiones, plantillas, menús, usuarios, roles, SEO, archivos, analítica y API.
 
-> **Versión:** 1.0.0 (`config/config.php` → `app_version`) · **Estado:** en desarrollo activo,
+> **Versión:** 1.1.1 (`config/config.php` → `app_version`) · **Estado:** en desarrollo activo,
 > desplegable en un servidor propio con las precauciones de la sección
 > [Limitaciones conocidas](#limitaciones-conocidas).
+>
+> El detalle de cada entrega está en [`CHANGELOG.md`](CHANGELOG.md). Cada publicación del
+> código lleva su versión escrita en el archivo `VERSION` del paquete.
 
 ---
+
+## Índice
+
+- [Qué es](#qué-es) · [Uso](#uso) · [Funcionalidades](#características-principales)
+- [Módulos](#módulos-disponibles) · [Tecnologías](#tecnologías) · [Arquitectura](#arquitectura)
+- [Instalación](#instalación-rápida) · [Desarrollo](#desarrollo) · [Publicación](#publicación-de-una-versión)
+- [Seguridad](#seguridad) · [Limitaciones](#limitaciones-conocidas) · [Licencia](#licencia)
 
 ## Qué es
 
@@ -36,14 +46,17 @@ mantener un sitio web desde un panel de administración:
 |---|---|
 | Contenido | Páginas con constructor visual, bloques reutilizables, plantillas, versiones con restauración, autoguardado, borradores y publicación |
 | Navegación | Menús jerárquicos con ítems ordenables, caché de menú y sincronización automática |
-| Presentación | Temas, 16 colores, 10 huecos de logotipo por contexto, favicon, CSS propio, contraste AA calculado |
+| Presentación | **36 temas** listos, 16 colores por tema, 10 huecos de logotipo por contexto, favicon, CSS propio, contraste AA calculado |
 | Identidad y ajustes | Nombre del sitio, descripción, idioma, zona horaria, correo saliente, SEO por defecto |
 | Personas | Usuarios, 5 roles, 64 permisos, baneos con caducidad y dispositivos de confianza |
 | Seguridad | 2FA (TOTP con códigos de recuperación), CSRF en formularios, limitador de peticiones, historial de accesos fallidos, **permisos por acción en todo el panel** |
+| Medición externa | 9 proveedores gratuitos por identificador: GA4, Tag Manager, Yandex Metrica, Clarity, Plausible, Umami y las verificaciones de Google y Bing |
+| Consentimiento | Aviso de cookies que **bloquea la medición hasta que el visitante acepta**; los scripts con cookies no se ejecutan antes |
 | Observabilidad | Auditoría, registro de actividad, analítica de visitas, estadísticas diarias |
 | Operación | Copias de seguridad programables, restauración, caché de páginas y de aplicación |
+| Publicación | Generador del paquete de producción con verificación por reimportación, archivo `VERSION` y registro de cambios dentro |
 | Integración | API `/api/v1` con aplicaciones, claves y tokens; internacionalización con traducciones |
-| Portada comercial | Página de presentación editable desde el panel, con hero, tarjetas de funciones, especificaciones, beneficios y galería
+| Portada comercial | Página de presentación editable desde el panel, con hero, tarjetas de funciones, especificaciones, beneficios y galería |
 | Pie de página | Editor visual del pie: texto de marca, columnas de enlaces, contacto y copyright con marcadores |
 | Sitemap | Generado desde el panel y regenerado al guardar páginas o cambiar el menú en uso |
 
@@ -71,12 +84,10 @@ Cada módulo tiene su ruta en `config/routes.php` y su manual de uso en
 | Copias de seguridad | `/admin/backups` |
 | API | `/admin/api` |
 | Traducciones | `/admin/translations` |
-| Analítica y auditoría | `/admin/analytics` · `/admin/audit` |
+| Analítica | `/admin/analytics` · `/admin/analytics/proveedores` |
+| Auditoría | `/admin/audit` |
 | Seguridad y 2FA | `/admin/security/dashboard` · `/admin/2fa` |
 | Sitio público | `/` y `/{slug}` |
-
-> **No operativos hoy** (desajuste entre archivo y clase, en corrección): `/admin/components*`,
-> `/lang/{code}` y `/page`, `/page/{slug}`. Ver [Limitaciones conocidas](#limitaciones-conocidas).
 
 ## Tecnologías
 
@@ -138,6 +149,8 @@ Capas fijas, por convención del proyecto:
 PePiuoX-Editor/
 ├── index.php                 Front controller de la raíz (no recibe tráfico bajo el .htaccess)
 ├── .htaccess                 Reescribe todo hacia public/ y emite cabeceras de seguridad
+├── README.md                 Este documento
+├── CHANGELOG.md              Qué cambió en cada versión
 ├── public/                   Document root recomendado
 │   ├── index.php             Front controller real
 │   ├── page.php · uploads.php · sitemap.xml
@@ -154,6 +167,7 @@ PePiuoX-Editor/
 │       └── database_backup_YYYYMMDD.sql
 ├── 01-TOOLS/                 Fuera de la raíz web — ver 01-TOOLS/*/README.md
 │   ├── bootstrap/            create-admin.php (primer Super Admin) · seed-pages.php (páginas base)
+│   ├── despliegue/           build-backup.php: genera y verifica el paquete de producción
 │   ├── mysql/                .env (ignorado por git) · .env.example · test_connection.php
 │   └── diagnostics/          Scripts retirados; se conservan por historial
 ├── docs/                     Manuales, rutas, estructura y tema público
@@ -214,6 +228,240 @@ restauración y solución de errores— está en
 - Inicio de sesión: `/login`
 - Panel: `/admin`
 
+## Uso
+
+El recorrido habitual, de cero a un sitio publicado.
+
+### 1. Primer acceso
+
+Entra en `/login` con el superadministrador que creaste al instalar y **cambia la contraseña**
+en `Perfil → Contraseña`. Después activa el segundo factor en `/admin/2fa`: te da un código QR y
+**diez códigos de recuperación** que puedes descargar o copiar. Guárdalos fuera del servidor: si
+pierdes el móvil y los códigos, no hay forma de entrar.
+
+### 2. Contenido
+
+| Paso | Dónde |
+|---|---|
+| Crear la página | `/admin/pages` → **Nueva página** |
+| Escribir el contenido | Constructor visual: arrastras bloques de Bootstrap 5 y editas en el sitio |
+| Guardar sin publicar | Queda como borrador; puedes verla en vista previa |
+| Publicar | Cambia el estado y la página aparece en `/{slug}` |
+| Volver atrás | `/admin/pages/{id}/versions`: cada guardado deja una versión restaurable |
+| Reutilizar estructura | `/admin/templates`: guardas una página como plantilla y la usas de base |
+
+El código (`<script>`) dentro del contenido se guarda tal cual y se publica sin filtrar: **la
+confianza en quien edita es total**. Si el panel va a tener más de un editor, eso hay que cambiarlo
+antes.
+
+### 3. Navegación
+
+`/admin/menus` monta el árbol de navegación. Los ítems se ordenan arrastrando. El menú marcado
+como *en uso* es el que pinta el sitio público, y al cambiarlo se regenera el sitemap.
+
+### 4. Identidad visual
+
+`/admin/settings` agrupa la identidad del sitio, por pestañas:
+
+- **General**: nombre, descripción, idioma y zona horaria.
+- **Temas**: 36 paletas listas. Al aplicar una se cargan sus 16 colores y los textos sobre
+  superficies vuelven a «automático». Puedes partir de un tema y ajustar después color a color.
+- **Colores**: los 16 colores con su contraste calculado. El panel **avisa si un par baja de
+  4,5:1**, que es el mínimo AA que exige el proyecto.
+- **Logotipos y favicon**: diez huecos por contexto (cabecera, pie, correo, redes…).
+
+### 5. Medición
+
+`/admin/analytics/proveedores`. Se configura con el **identificador** de cada proveedor, nunca
+pegando su código:
+
+| Proveedor | Qué se pega |
+|---|---|
+| Google Analytics 4 | `G-XXXXXXXXXX` |
+| Google Tag Manager | `GTM-XXXXXXX` |
+| Yandex Metrica | el número de contador |
+| Microsoft Clarity | el identificador del proyecto |
+| Plausible · Umami | el dominio · el identificador y la URL del servidor |
+| Search Console · Bing | la cadena de verificación de propiedad |
+
+Un valor con el formato equivocado **se descarta al guardar** y el panel lo dice; en la lista
+aparece marcado como *descartado* en vez de publicarse. Un identificador mal escrito no puede
+romper la página ni colar código en ella.
+
+Si activas Tag Manager, configura GA4 **dentro de GTM** y deja vacío el campo de Analytics: si no,
+se cargaría dos veces.
+
+### 6. Consentimiento de cookies
+
+No hay nada que activar: **el aviso aparece solo** cuando hay algún proveedor configurado que
+instale cookies (GA4, GTM, Yandex, Clarity). Hasta que el visitante acepta, esos scripts llegan
+al navegador en cuarentena y **no se ejecutan**. Plausible y Umami no usan cookies, así que se
+emiten siempre y no disparan el aviso.
+
+La decisión se guarda un año. El enlace a la política de cookies se configura en la misma pantalla;
+si lo dejas vacío, el aviso sale sin enlace. **El aviso cubre el consentimiento, no el contenido
+legal**: el texto de la política es responsabilidad del titular.
+
+### 7. Personas y permisos
+
+`/admin/users` para las cuentas, `/admin/roles` para roles y sus permisos, y
+`/admin/users/banned` para los baneos con caducidad. Una cuenta nueva no puede hacer nada hasta
+que su rol tenga permisos.
+
+### 8. Mantenimiento
+
+| Tarea | Dónde |
+|---|---|
+| Copia de seguridad | `/admin/backups` (o `mysqldump`, ver más abajo) |
+| Vaciar caché | `/admin/cache` tras cambiar plantillas, menús o ajustes |
+| Ver qué pasó | `/admin/audit` para auditoría, `/admin/analytics` para visitas propias |
+| Revisar el sitemap | `/admin/seo/sitemap` |
+
+---
+
+## Desarrollo
+
+Cómo se trabaja en este repositorio.
+
+### Entorno local
+
+```powershell
+php -S 127.0.0.1:8000 -t public      # sirve el sitio
+php 01-TOOLS\mysql\test_connection.php   # comprueba la conexión a MariaDB
+```
+
+No hay Composer ni `node_modules` obligatorio: el autoloader PSR-4 es propio
+(`app/` → `App\`). Las baterías de `tests/` son scripts PHP sueltos, no PHPUnit.
+
+### Dónde va cada cosa
+
+Antes de escribir, decide en qué capa cae:
+
+| Si tu código… | Va en |
+|---|---|
+| Lee la petición, valida y elige la vista | `app/Controllers` |
+| Aplica reglas de negocio, transacciones, integraciones | `app/Services` |
+| Consulta o escribe la base | `app/Models` |
+| Es infraestructura reutilizable | `app/Core` |
+| Corre antes del controlador | `app/Middleware` |
+| Es una función global de plantilla | `app/Helpers` |
+
+Un controlador **no** hace SQL: delega en el modelo. Un modelo **no** decide permisos: eso es del
+middleware y del mapa de `config/permissions.php`.
+
+### Añadir una pantalla
+
+1. **Ruta** en `config/routes.php`, con su middleware (`$auth` para el panel).
+2. **Permiso** en `config/permissions.php` para esa acción concreta. El mapa es la autoridad:
+   `tests/seguridad/check.php` **falla si aparece una acción sin clasificar**, así que no se puede
+   olvidar.
+3. **Método** en el controlador: valida, delega, elige la vista.
+4. **Vista** en `views/`, y la lógica de datos en el servicio o modelo.
+5. **Comprobación real**: pinta la vista y mira el HTML. Ver más abajo.
+
+### Convenciones que no se negocian
+
+- `declare(strict_types=1);` en todo archivo nuevo.
+- **PDO preparado siempre**. Cero concatenación de entrada en SQL.
+- **Escapar al imprimir** con `e()`, y con `htmlspecialchars(..., ENT_QUOTES, 'UTF-8')` cuando no
+  haya helper a mano.
+- **En las vistas, las clases del núcleo van con espacio de nombres completo**:
+  `\App\Core\CSRF::field()`, no `CSRF::field()`. Las vistas no declaran `namespace`, así que el
+  nombre corto se resuelve en el espacio global y PHP falla con `Class "CSRF" not found`. Este
+  fallo se coló en ocho vistas y se corrigió en la 1.1.0.
+- **CSRF en todo formulario que cambia estado**.
+- Contraseñas con `password_hash()`; nunca `md5` ni `sha1`.
+- El HTML que viaja a la base no se confía: se escapa al pintarlo.
+
+### Añadir un tema
+
+Los temas viven en `app/Services/PublicThemeService.php`, constante `THEME_PRESETS`. Cada uno es:
+
+```php
+'mi-tema' => [
+    'label'       => 'Mi tema',
+    'description' => 'Una frase que lo describa.',
+    'colors'      => [
+        'color_primary'    => '#1f6feb',
+        // … hasta 16 claves, las mismas en todos los temas
+    ],
+],
+```
+
+Reglas: **las 16 claves exactas** (el servicio las compara con `COLOR_LABELS`), HEX de seis
+dígitos, y **contraste AA 4,5:1** entre texto y fondo. Un tema que no cumpla se ve mal y rompe la
+constitución del proyecto, así que antes de darlo por bueno mide los pares de contraste.
+
+### Cómo se comprueba
+
+No hay CI. La comprobación es disciplina y se hace así:
+
+```powershell
+# 1. Sintaxis de todo el proyecto
+Get-ChildItem app,views,config,01-TOOLS -Recurse -Filter *.php | ForEach-Object { php -l $_.FullName }
+
+# 2. Baterías del proyecto
+php tests\seguridad\check.php
+php tests\rutas\check.php
+```
+
+Y para lo que las baterías no cubren, **se pinta la vista y se mira el HTML**: se incluye el archivo
+en un script con los datos que espera y se comprueba que no lanza excepción y que contiene lo que
+debe. Para lo que toca base de datos, se importa `db/install/initial_database.sql` en una base de
+usos múltiples, se ejecuta el cambio y **se borra la base al terminar**. Nunca sobre una base con
+datos que importen.
+
+> **Un error de sintaxis no es un error lógico.** Que `php -l` pase solo significa que el archivo se
+> puede leer. La 1.1.0 arregló cinco fallos que llevaban tiempo ahí y todos pasaban el análisis de
+> sintaxis.
+
+### Git
+
+Mensajes en **Conventional Commits con gitmoji**, en español:
+
+```
+🐛 fix(2fa): activar deja de fallar por una transacción anidada
+✨ feat(analytics): view de proveedores de medición externa
+📄 docs(licencias): corrige el nombre del titular en la LAMC
+```
+
+Un commit, un motivo. Si el mensaje necesita un «y», probablemente son dos.
+
+## Publicación de una versión
+
+Cada entrega es un paquete de producción versionado en `backup/`.
+
+```powershell
+# 1. Sube la versión en config/config.php → app_version
+# 2. Confirma ese cambio  ← hazlo ANTES de compilar
+# 3. Anota el cambio en CHANGELOG.md
+# 4. Genera el paquete
+php 01-TOOLS\despliegue\build-backup.php --yes --desde-base=<base>
+```
+
+El generador **verifica lo que produce**: importa el SQL en una base aislada y comprueba que salen
+las tablas, páginas y menús esperados; si no cuadra, falla en lugar de dejar un paquete roto.
+
+Qué deja en el paquete:
+
+| Archivo | Qué contiene |
+|---|---|
+| `VERSION` | Versión, fecha de compilación, commit, origen de datos y contenido |
+| `INSTALAR.md` | Pasos de instalación y la contraseña temporal del superadmin |
+| `CHANGELOG.md` | El registro de cambios de esa publicación |
+| `db/install/initial_database.sql` | Estructura y catálogos, sin `DEFINER` |
+
+Opciones: `--desde-base=<base>` se lleva el sitio ya montado, `--destino=<carpeta>` cambia el
+destino, `--sin-db` omite la base y `--dry-run` no escribe nada.
+
+**El orden importa**: confirmar la subida de versión y compilar después. Si compilas antes, el
+`VERSION` apunta a un commit que todavía no dice esa versión.
+
+**La contraseña del superadmin cambia en cada compilación.** Anótala antes de cada prueba y no
+vuelvas a compilar con un paquete que ya estés usando.
+
+---
+
 ## Seguridad
 
 Implementado y comprobable en el código:
@@ -230,6 +478,13 @@ Implementado y comprobable en el código:
   emitidas por `.htaccess`.
 - Credenciales fuera del repositorio; la aplicación usa una cuenta de base de datos con solo
   `SELECT, INSERT, UPDATE, DELETE`.
+- **Los identificadores de medición se validan contra un patrón** antes de publicarse y se escapan
+  al imprimirse. Un valor con comillas o etiquetas no se guarda: se descarta con aviso. Es lo que
+  impide que la pantalla de proveedores sirva para inyectar código en todas las páginas.
+- **La medición con cookies no arranca sin consentimiento.** Los scripts salen como
+  `type="text/plain"` y el navegador no los ejecuta hasta que el visitante acepta.
+- La pantalla de proveedores exige el permiso `settings.manage`: configurar la medición es
+  configuración del sitio, no una consulta de métricas.
 
 **Pendiente y conocido:** no hay `Content-Security-Policy` ni `Strict-Transport-Security`, y los CDN
 no llevan `integrity` (ver [Limitaciones conocidas](#limitaciones-conocidas)).
@@ -257,6 +512,7 @@ en el manual de instalación.
 
 | Documento | Qué es |
 |---|---|
+| [`CHANGELOG.md`](CHANGELOG.md) | Qué cambió en cada versión y qué queda pendiente |
 | [`docs/MANUAL_DE_INSTALACION.md`](docs/MANUAL_DE_INSTALACION.md) | Instalación, despliegue, respaldo y restauración |
 | [`docs/MANUAL_DE_USUARIO.md`](docs/MANUAL_DE_USUARIO.md) | Uso del panel, módulo a módulo, con procedimientos |
 | [`docs/ESPECIFICACIONES_TECNICAS.md`](docs/ESPECIFICACIONES_TECNICAS.md) | Arquitectura, modelo de datos, contratos, deuda y riesgos |
@@ -268,6 +524,8 @@ en el manual de instalación.
 | [`docs/PUBLIC_THEME.md`](docs/PUBLIC_THEME.md) | Personalización visual del sitio público |
 | [`docs/BLOCK_LIBRARY.md`](docs/BLOCK_LIBRARY.md) | Biblioteca de bloques del constructor |
 | [`docs/INSTALL.md`](docs/INSTALL.md) | Guía breve de instalación y endurecimiento |
+| [`docs/LICENCIA DE USO LIBRE Y ATRIBUCIÓN (LULA) v1.0.md`](docs/LICENCIA%20DE%20USO%20LIBRE%20Y%20ATRIBUCI%C3%93N%20%28LULA%29%20v1.0.md) | Licencia de uso y atribución |
+| [`docs/LAMC PEPIUOX v1.0.md`](docs/LAMC%20PEPIUOX%20v1.0.md) | Licencia de atribución, mejora continua y responsabilidad |
 
 ## Limitaciones conocidas
 
@@ -297,6 +555,8 @@ Resueltas el 2026-10-31 y verificadas: ① el middleware de permisos ya está en
 
 | Fecha | Versión | Cambio |
 |---|---|---|
+| 2026-11-03 | 1.1.1 | El paquete de producción viaja con su registro de cambios dentro |
+| 2026-11-03 | 1.1.0 | 36 temas (25 paletas de Bootswatch ajustadas a AA) · proveedores de medición externa · aviso de cookies con bloqueo real · generador del paquete con verificación y versionado · 2FA, CSRF y enlaces de notificación corregidos |
 | 2026-10-31 | — | Paquete de instalación (`db/install/initial_database.sql`), respaldo verificado por restauración y `01-TOOLS/bootstrap/create-admin.php` |
 | 2026-10-31 | — | Inventario técnico verificado de la plataforma |
 | 2026-10-17 | 1.0.0 | Constitución ratificada; credenciales fuera de git; scripts de diagnóstico fuera de la raíz web; guía de instalación reescrita |
@@ -306,6 +566,19 @@ El historial completo y las decisiones están en [`02-DOCS/wiki/`](02-DOCS/wiki/
 
 ## Licencia
 
-El repositorio **no incluye ningún archivo de licencia**, así que no hay licencia declarada. Hasta que
-se añada una, los derechos quedan reservados por quien es titular del código. Si se va a distribuir o
-publicar, hay que elegir y añadir una licencia explícitamente.
+El proyecto se publica bajo **dos textos propios**, ambos en `docs/`:
+
+| Documento | Qué regula |
+|---|---|
+| [Licencia de Uso Libre y Atribución (LULA) v1.0](docs/LICENCIA%20DE%20USO%20LIBRE%20Y%20ATRIBUCI%C3%93N%20%28LULA%29%20v1.0.md) | Uso, copia, modificación y distribución, con la atribución que exige |
+| [Licencia de Atribución, Mejora Continua y Exención de Responsabilidad (LAMC) PePiuoX v1.0](docs/LAMC%20PEPIUOX%20v1.0.md) | Atribución, aportación de mejoras y límites de responsabilidad |
+
+Ambas exigen **atribución al titular**: `Jose Ricardo Mantilla Mantilla (PePiuoX)`.
+
+Si vas a redistribuir el código o publicar una versión modificada, lee los dos textos antes. Y si
+el proyecto va a usarse de forma comercial, conviene que un abogado los revise: son textos propios,
+no licencias estándar reconocidas como MIT o GPL.
+
+Las dependencias de terceros conservan su licencia. Las paletas de color de los temas proceden de
+[Bootswatch](https://bootswatch.com) (licencia MIT); de ellas se usan solo los valores HEX, sin
+copiar su CSS ni su código.
