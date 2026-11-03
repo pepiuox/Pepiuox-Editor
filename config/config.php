@@ -12,7 +12,7 @@ load_env_file(__DIR__ . '/../01-TOOLS/mysql/.env');
 
 return [
     'app_name'      => 'PePiuoX Editor',
-    'app_version'   => '1.1.0',
+    'app_version'   => '1.1.1',
     // URL pública del sitio, sin barra final y sin /public.
     //
     // Se toma de APP_URL (en 01-TOOLS/mysql/.env o en el entorno del proceso), y

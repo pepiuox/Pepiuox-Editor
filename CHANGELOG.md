@@ -6,6 +6,18 @@ El número de versión vive en `config/config.php` (`app_version`) y lo estampa
 
 ---
 
+## [1.1.1] · 2026-11-03
+
+### Cambiado
+
+- **El paquete de producción incluye `CHANGELOG.md`**: quien recibe el código
+  sabe qué cambió sin abrir el repositorio. Lo añade `build-backup.php` a los
+  archivos sueltos de cada compilación.
+
+Sin cambios de comportamiento respecto a la 1.1.0.
+
+---
+
 ## [1.1.0] · 2026-11-03
 
 Primera publicación con registro de cambios. La 1.0.0 es el estado anterior.
