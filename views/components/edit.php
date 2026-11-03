@@ -6,7 +6,7 @@ $c = $component ?? ['id'=>null,'name'=>'','category'=>'general','html'=>'','css'
   <div class="card-header"><h3><i class="bi bi-puzzle"></i> <?= e($pageTitle) ?></h3></div>
   <div class="card-body">
     <form method="post" action="<?= url($component ? "admin/components/{$c['id']}" : 'admin/components') ?>">
-      <?= CSRF::field() ?>
+      <?= \App\Core\CSRF::field() ?>
       <div class="form-grid">
         <div class="form-group">
           <label class="form-label">Nombre</label>

@@ -36,7 +36,7 @@ $newRefresh = \App\Core\Session::get('new_api_refresh');
     <?php endif; ?>
 
     <form method="post" action="<?= url("admin/api/{$app['id']}") ?>">
-      <?= CSRF::field() ?>
+      <?= \App\Core\CSRF::field() ?>
       <div class="form-grid">
         <div class="form-group"><label class="form-label">App name</label><input type="text" name="app_name" class="form-control" value="<?= e($app['app_name']) ?>" required></div>
         <div class="form-group"><label class="form-label">Status</label>
@@ -56,7 +56,7 @@ $newRefresh = \App\Core\Session::get('new_api_refresh');
     <hr>
     <h4><i class="bi bi-key"></i> Tokens</h4>
     <form method="post" action="<?= url("admin/api/{$app['id']}/tokens") ?>" class="form-grid mb-3">
-      <?= CSRF::field() ?>
+      <?= \App\Core\CSRF::field() ?>
       <div class="form-group">
         <label class="form-label">Scopes</label>
         <input type="text" name="scopes[]" class="form-control" value="*" placeholder="* or pages:read,menus:read">
@@ -78,7 +78,7 @@ $newRefresh = \App\Core\Session::get('new_api_refresh');
           <td><?= e($t['expires_at']) ?></td>
           <td><?= $t['revoked'] ? '<span class="badge badge-archived">Revoked</span>' : '<span class="badge badge-published">Active</span>' ?></td>
           <td><?= e($t['created_at']) ?></td>
-          <td><?php if (!$t['revoked']): ?><form method="post" action="<?= url("admin/api/{$app['id']}/tokens/{$t['id']}/revoke") ?>" style="display:inline"><?= CSRF::field() ?><button class="btn btn-ghost btn-sm text-danger"><i class="bi bi-x-circle"></i></button></form><?php endif; ?></td>
+          <td><?php if (!$t['revoked']): ?><form method="post" action="<?= url("admin/api/{$app['id']}/tokens/{$t['id']}/revoke") ?>" style="display:inline"><?= \App\Core\CSRF::field() ?><button class="btn btn-ghost btn-sm text-danger"><i class="bi bi-x-circle"></i></button></form><?php endif; ?></td>
         </tr>
       <?php endforeach; ?>
       </tbody>

@@ -1477,7 +1477,7 @@ function saveVersion() {
     if (!CONFIG.versionsUrl) return;
     if (!window.confirm('¿Guardar una versión del estado actual?')) return;
 
-    // FormData con _csrf_token: CSRF::guard() lee $_POST, no cabeceras.
+    // FormData con _csrf_token: \App\Core\CSRF::guard() lee $_POST, no cabeceras.
     const fd = new FormData();
     fd.set('_csrf_token', CONFIG.csrfToken);
     fd.set('content_html', cmHtml ? cmHtml.getValue() : '');

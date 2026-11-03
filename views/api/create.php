@@ -3,7 +3,7 @@
   <div class="card-header"><h3><i class="bi bi-plus-circle"></i> New API Application</h3></div>
   <div class="card-body">
     <form method="post" action="<?= url('admin/api') ?>">
-      <?= CSRF::field() ?>
+      <?= \App\Core\CSRF::field() ?>
       <div class="form-grid">
         <div class="form-group full-width">
           <label class="form-label">Application name</label>

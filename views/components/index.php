@@ -26,7 +26,7 @@
               </div>
               <div class="d-flex gap-1">
                 <a class="btn btn-ghost btn-sm" href="<?= url("admin/components/{$c['id']}/edit") ?>"><i class="bi bi-pencil"></i> Editar</a>
-                <form method="post" action="<?= url("admin/components/{$c['id']}/delete") ?>" style="display:inline" onsubmit="return confirm('¿Eliminar?')"><?= CSRF::field() ?><button class="btn btn-ghost btn-sm text-danger"><i class="bi bi-trash"></i></button></form>
+                <form method="post" action="<?= url("admin/components/{$c['id']}/delete") ?>" style="display:inline" onsubmit="return confirm('¿Eliminar?')"><?= \App\Core\CSRF::field() ?><button class="btn btn-ghost btn-sm text-danger"><i class="bi bi-trash"></i></button></form>
               </div>
             </div>
           </div>

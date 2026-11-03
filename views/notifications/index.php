@@ -3,8 +3,8 @@
   <div class="card-header">
     <h3><i class="bi bi-bell"></i> <?= t('notifications') ?></h3>
     <div class="d-flex gap-2">
-      <form method="post" action="<?= url('admin/notifications/mark-all') ?>" class="d-inline"><?= CSRF::field() ?><button class="btn btn-ghost btn-sm"><i class="bi bi-check2-all"></i> <?= t('mark_all_read') ?></button></form>
-      <form method="post" action="<?= url('admin/notifications/clear') ?>" class="d-inline" onsubmit="return confirm('<?= t('confirm_delete_all') ?>')"><?= CSRF::field() ?><button class="btn btn-danger btn-sm"><i class="bi bi-trash"></i> <?= t('clear_all') ?></button></form>
+      <form method="post" action="<?= url('admin/notifications/mark-all') ?>" class="d-inline"><?= \App\Core\CSRF::field() ?><button class="btn btn-ghost btn-sm"><i class="bi bi-check2-all"></i> <?= t('mark_all_read') ?></button></form>
+      <form method="post" action="<?= url('admin/notifications/clear') ?>" class="d-inline" onsubmit="return confirm('<?= t('confirm_delete_all') ?>')"><?= \App\Core\CSRF::field() ?><button class="btn btn-danger btn-sm"><i class="bi bi-trash"></i> <?= t('clear_all') ?></button></form>
     </div>
   </div>
   <div class="card-body p-0">
@@ -26,9 +26,9 @@
           </div>
           <div class="d-flex gap-1">
             <?php if (!$n['is_read']): ?>
-              <form method="post" action="<?= url("admin/notifications/{$n['id']}/read") ?>"><?= CSRF::field() ?><button class="btn btn-ghost btn-sm" title="<?= t('mark_read') ?>"><i class="bi bi-check"></i></button></form>
+              <form method="post" action="<?= url("admin/notifications/{$n['id']}/read") ?>"><?= \App\Core\CSRF::field() ?><button class="btn btn-ghost btn-sm" title="<?= t('mark_read') ?>"><i class="bi bi-check"></i></button></form>
             <?php endif; ?>
-            <form method="post" action="<?= url("admin/notifications/{$n['id']}/delete") ?>" onsubmit="return confirm('<?= t('confirm_delete') ?>')"><?= CSRF::field() ?><button class="btn btn-ghost btn-sm text-danger"><i class="bi bi-trash"></i></button></form>
+            <form method="post" action="<?= url("admin/notifications/{$n['id']}/delete") ?>" onsubmit="return confirm('<?= t('confirm_delete') ?>')"><?= \App\Core\CSRF::field() ?><button class="btn btn-ghost btn-sm text-danger"><i class="bi bi-trash"></i></button></form>
           </div>
         </div>
       <?php endforeach; ?>

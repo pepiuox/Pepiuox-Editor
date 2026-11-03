@@ -31,7 +31,7 @@
     </form>
 
     <form method="post" action="<?= url('admin/translations/save') ?>">
-      <?= CSRF::field() ?>
+      <?= \App\Core\CSRF::field() ?>
       <input type="hidden" name="lang" value="<?= e($lang) ?>">
       <input type="hidden" name="group" value="<?= e($group) ?>">
       <table class="table">
@@ -51,7 +51,7 @@
     <hr>
     <h5>Añadir nueva clave</h5>
     <form method="post" action="<?= url('admin/translations/add') ?>" class="form-grid">
-      <?= CSRF::field() ?>
+      <?= \App\Core\CSRF::field() ?>
       <input type="hidden" name="lang" value="<?= e($lang) ?>">
       <input type="hidden" name="group" value="<?= e($group) ?>">
       <div class="form-group"><label class="form-label">Key</label><input type="text" name="key" class="form-control" required></div>

@@ -17,7 +17,7 @@
           <td><?= e($a['last_used_at'] ?? '—') ?></td>
           <td class="text-end">
             <a class="btn btn-ghost btn-sm" href="<?= url("admin/api/{$a['id']}") ?>"><i class="bi bi-gear"></i></a>
-            <form method="post" action="<?= url("admin/api/{$a['id']}/delete") ?>" style="display:inline" onsubmit="return confirm('Delete?')"><?= CSRF::field() ?><button class="btn btn-ghost btn-sm text-danger"><i class="bi bi-trash"></i></button></form>
+            <form method="post" action="<?= url("admin/api/{$a['id']}/delete") ?>" style="display:inline" onsubmit="return confirm('Delete?')"><?= \App\Core\CSRF::field() ?><button class="btn btn-ghost btn-sm text-danger"><i class="bi bi-trash"></i></button></form>
           </td>
         </tr>
       <?php endforeach; ?>
