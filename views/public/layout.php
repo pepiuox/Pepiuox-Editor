@@ -1002,5 +1002,12 @@ $userInitial = strtoupper($userInitial !== '' ? $userInitial : 'U');
             }
         });
     </script>
+
+    <?php
+    // Aviso de cookies. El parcial decide solo si hace falta: únicamente se
+    // pinta cuando hay proveedores de medición con cookies y el visitante aún
+    // no ha decidido.
+    include VIEWS_PATH . '/partials/cookie-banner.php';
+    ?>
 </body>
 </html>

@@ -32,6 +32,30 @@ final class AnalyticsProvidersService
     public const GROUP = 'seo';
 
     /**
+     * Nombre de la cookie donde se guarda la decisión del visitante.
+     *
+     * Valores: `todas` (acepta la medición) o `esenciales` (solo lo necesario).
+     */
+    public const CONSENT_COOKIE = 'pep_cookie_consent';
+
+    /**
+     * Proveedores que instalan cookies en el navegador.
+     *
+     * Plausible y Umami no las usan, así que quedan fuera de esta lista y se
+     * emiten siempre. Los de aquí **no se cargan** hasta que el visitante
+     * acepta: sin consentimiento el `<script>` sale como `type="text/plain"` y
+     * no se ejecuta.
+     *
+     * @var list<string>
+     */
+    private const REQUIEREN_CONSENTIMIENTO = [
+        'ga_tracking',
+        'analytics_gtm',
+        'analytics_yandex',
+        'analytics_clarity',
+    ];
+
+    /**
      * Proveedores soportados.
      *
      * `patron` se aplica al valor guardado. Si no casa, el proveedor no se emite:
@@ -131,22 +155,23 @@ final class AnalyticsProvidersService
     public static function headTags(): string
     {
         $v = self::vigentes();
-        $html = '';
+        $siempre    = '';  // metadatos y proveedores que no usan cookies
+        $conCookies = '';  // requieren consentimiento del visitante
 
         // ── Verificación de propiedad (metadatos) ───────────────────
         if (isset($v['gsc_verification'])) {
-            $html .= '    <meta name="google-site-verification" content="'
+            $siempre .= '    <meta name="google-site-verification" content="'
                 . htmlspecialchars($v['gsc_verification'], ENT_QUOTES, 'UTF-8') . '">' . "\n";
         }
         if (isset($v['analytics_bing'])) {
-            $html .= '    <meta name="msvalidate.01" content="'
+            $siempre .= '    <meta name="msvalidate.01" content="'
                 . htmlspecialchars($v['analytics_bing'], ENT_QUOTES, 'UTF-8') . '">' . "\n";
         }
 
         // ── Google Analytics 4 ──────────────────────────────────────
         if (isset($v['ga_tracking'])) {
             $id = htmlspecialchars($v['ga_tracking'], ENT_QUOTES, 'UTF-8');
-            $html .= <<<HTML
+            $conCookies .= <<<HTML
     <script async src="https://www.googletagmanager.com/gtag/js?id={$id}"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
@@ -161,7 +186,7 @@ HTML;
         // ── Google Tag Manager ──────────────────────────────────────
         if (isset($v['analytics_gtm'])) {
             $id = htmlspecialchars($v['analytics_gtm'], ENT_QUOTES, 'UTF-8');
-            $html .= <<<HTML
+            $conCookies .= <<<HTML
     <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
     new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
     j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
@@ -174,7 +199,7 @@ HTML;
         // ── Yandex Metrica ──────────────────────────────────────────
         if (isset($v['analytics_yandex'])) {
             $id = htmlspecialchars($v['analytics_yandex'], ENT_QUOTES, 'UTF-8');
-            $html .= <<<HTML
+            $conCookies .= <<<HTML
     <script>
       (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
       m[i].l=1*new Date();
@@ -190,7 +215,7 @@ HTML;
         // ── Microsoft Clarity ───────────────────────────────────────
         if (isset($v['analytics_clarity'])) {
             $id = htmlspecialchars($v['analytics_clarity'], ENT_QUOTES, 'UTF-8');
-            $html .= <<<HTML
+            $conCookies .= <<<HTML
     <script>
       (function(c,l,a,r,i,t,y){
         c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
@@ -205,7 +230,7 @@ HTML;
         // ── Plausible (sin cookies) ─────────────────────────────────
         if (isset($v['analytics_plausible'])) {
             $dominio = htmlspecialchars($v['analytics_plausible'], ENT_QUOTES, 'UTF-8');
-            $html .= '    <script defer data-domain="' . $dominio
+            $siempre .= '    <script defer data-domain="' . $dominio
                 . '" src="https://plausible.io/js/script.js"></script>' . "\n";
         }
 
@@ -213,11 +238,62 @@ HTML;
         if (isset($v['analytics_umami_id'], $v['analytics_umami_host'])) {
             $id = htmlspecialchars($v['analytics_umami_id'], ENT_QUOTES, 'UTF-8');
             $servidor = htmlspecialchars(rtrim($v['analytics_umami_host'], '/'), ENT_QUOTES, 'UTF-8');
-            $html .= '    <script defer data-website-id="' . $id . '" src="'
+            $siempre .= '    <script defer data-website-id="' . $id . '" src="'
                 . $servidor . '/script.js"></script>' . "\n";
         }
 
-        return $html;
+        // Sin consentimiento, los scripts que instalan cookies salen como
+        // `type="text/plain"`: el navegador los guarda pero **no los ejecuta**.
+        // El aviso los reactiva si el visitante acepta.
+        if ($conCookies !== '' && !self::consentimientoDado()) {
+            $conCookies = (string) preg_replace(
+                '/<script(?=[\s>])/',
+                '<script type="text/plain" data-cookie-consent="analytics"',
+                $conCookies
+            );
+        }
+
+        return $siempre . $conCookies;
+    }
+
+    /**
+     * ¿Hay algún proveedor configurado que instale cookies?
+     *
+     * Plausible y Umami no las usan, así que no cuentan aquí.
+     *
+     * @return bool True si alguno de los que requieren consentimiento está activo.
+     */
+    public static function requiereConsentimiento(): bool
+    {
+        $v = self::vigentes();
+
+        foreach (self::REQUIEREN_CONSENTIMIENTO as $clave) {
+            if (isset($v[$clave])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * ¿El visitante ya aceptó la medición?
+     *
+     * @return bool True si la cookie de consentimiento vale «todas».
+     */
+    public static function consentimientoDado(): bool
+    {
+        return ($_COOKIE[self::CONSENT_COOKIE] ?? '') === 'todas';
+    }
+
+    /**
+     * ¿Hay que enseñar el aviso en esta visita?
+     *
+     * @return bool True si hay proveedores con cookies y aún no hay decisión.
+     */
+    public static function necesitaAviso(): bool
+    {
+        return self::requiereConsentimiento() && !self::consentimientoDado();
     }
 
     /**
