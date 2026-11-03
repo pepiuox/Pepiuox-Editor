@@ -395,8 +395,27 @@ if ($sinDb) {
     say('  ' . $resultado['tablas'] . ' tablas volcadas y verificadas.');
 }
 
-// ── 5. INSTALAR.md ───────────────────────────────────────────────────
-seccion('5. INSTALAR.md');
+// ── 5. Versión de la publicación ─────────────────────────────────────
+seccion('5. Versión de la publicación');
+
+// Cada compilación es una publicación del código. El paquete lleva su versión
+// escrita: el número de la aplicación, cuándo se compiló y sobre qué commit, de
+// modo que un paquete suelto en un servidor se pueda identificar sin adivinar.
+
+$version = versionAplicacion($raiz);
+$commit = commitActual($raiz);
+$meta['version'] = $version;
+$meta['commit'] = $commit;
+
+if ($dryRun) {
+    say('  versión ' . $version . ' · commit ' . $commit);
+} else {
+    file_put_contents($paqueteReal . '/VERSION', textoVersion($meta, $sinDb));
+    say('  escrito VERSION: ' . $version . ' · commit ' . $commit);
+}
+
+// ── 6. INSTALAR.md ───────────────────────────────────────────────────
+seccion('6. INSTALAR.md');
 
 if ($dryRun) {
     say('  se escribiría INSTALAR.md con la contraseña temporal y los pasos.');
@@ -405,8 +424,8 @@ if ($dryRun) {
     say('  escrito: ' . ($sinDb ? 'sin contraseña (no hay base)' : 'con la contraseña temporal del superadmin.'));
 }
 
-// ── 6. Manifiesto ────────────────────────────────────────────────────
-seccion('6. Manifiesto del paquete');
+// ── 7. Manifiesto ────────────────────────────────────────────────────
+seccion('7. Manifiesto del paquete');
 
 if (!$dryRun) {
     // El paquete no se versiona (el `.gitignore` del repositorio ya excluye
@@ -463,6 +482,89 @@ exit(0);
 // ═════════════════════════════════════════════════════════════════════
 // Funciones
 // ═════════════════════════════════════════════════════════════════════
+
+/**
+ * Lee la versión de la aplicación desde `config/config.php`.
+ *
+ * Se lee con una expresión regular en lugar de incluir el archivo: incluirlo
+ * cargaría el entorno y tendría efectos que aquí no hacen falta.
+ *
+ * @param string $raiz Raíz del proyecto.
+ * @return string Versión, o «0.0.0» si no se puede leer.
+ */
+function versionAplicacion(string $raiz): string
+{
+    $config = @file_get_contents($raiz . '/config/config.php');
+    if (is_string($config) && preg_match("/'app_version'\s*=>\s*'([^']+)'/", $config, $m) === 1) {
+        return $m[1];
+    }
+
+    return '0.0.0';
+}
+
+/**
+ * Devuelve el commit sobre el que se compila, si git está disponible.
+ *
+ * @param string $raiz Raíz del proyecto.
+ * @return string Hash corto, o «sin-git» si no se puede averiguar.
+ */
+function commitActual(string $raiz): string
+{
+    $git = buscarBinario('git');
+    $comando = $git !== null
+        ? [$git, '-C', $raiz, 'rev-parse', '--short', 'HEAD']
+        : ['git', '-C', $raiz, 'rev-parse', '--short', 'HEAD'];
+
+    $r = ejecutar($comando);
+    if ($r['codigo'] !== 0) {
+        return 'sin-git';
+    }
+
+    $hash = trim(explode("\n", $r['salida'])[0]);
+
+    return preg_match('/^[0-9a-f]{7,40}$/i', $hash) === 1 ? $hash : 'sin-git';
+}
+
+/**
+ * Compone el contenido del archivo `VERSION` del paquete.
+ *
+ * Un paquete suelto en un servidor tiene que poder identificarse sin adivinar
+ * de qué publicación salió.
+ *
+ * @param array<string, mixed> $meta  Datos de la compilación.
+ * @param bool                 $sinDb Si la compilación no incluyó base de datos.
+ * @return string Contenido del archivo.
+ */
+function textoVersion(array $meta, bool $sinDb): string
+{
+    $version = (string) ($meta['version'] ?? '0.0.0');
+    $commit = (string) ($meta['commit'] ?? 'sin-git');
+    $origen = (string) ($meta['origen'] ?? '');
+    $dominio = (string) ($meta['dominio'] ?? '');
+    $fecha = date('Y-m-d H:i:s');
+
+    $lineas = [
+        'PePiuoX Editor ' . $version,
+        'Compilado:        ' . $fecha,
+        'Commit:           ' . $commit,
+        'Dominio destino:  ' . $dominio,
+        'Origen de datos:  ' . ($origen !== '' ? 'base «' . $origen . '»' : 'instalación limpia'),
+    ];
+
+    if ($sinDb) {
+        $lineas[] = 'Base de datos:    no incluida en este paquete';
+    } else {
+        $lineas[] = 'Base de datos:    db/install/initial_database.sql';
+        $lineas[] = 'Contenido:        ' . (int) ($meta['tablas'] ?? 0) . ' tablas · '
+            . (int) ($meta['paginas'] ?? 0) . ' páginas · ' . (int) ($meta['menus'] ?? 0) . ' menús';
+    }
+
+    $lineas[] = '';
+    $lineas[] = 'Este archivo identifica la publicación. No se edita a mano: lo escribe';
+    $lineas[] = '01-TOOLS/despliegue/build-backup.php en cada compilación.';
+
+    return implode(PHP_EOL, $lineas) . PHP_EOL;
+}
 
 /**
  * Copia un archivo al paquete, saltándolo si está en la lista negra.
@@ -1548,6 +1650,11 @@ function construirInstalar(array $meta, bool $sinDb): string
     $password = (string) $meta['password'];
     $tablas = (int) $meta['tablas'];
     $fecha = date('Y-m-d');
+    $version = (string) ($meta['version'] ?? '0.0.0');
+    $commit = (string) ($meta['commit'] ?? 'sin-git');
+    $origenTexto = ((string) ($meta['origen'] ?? '')) !== ''
+        ? 'base «' . $meta['origen'] . '»'
+        : 'instalación limpia';
 
     $bloqueCredenciales = $sinDb
         ? "> **La base de datos no se generó en este paquete.** Vuelve a construir con\n> `php 01-TOOLS/despliegue/build-backup.php --yes`."
@@ -1575,6 +1682,14 @@ TXT;
 # Instalación en {$host}
 
 Paquete de producción generado el **{$fecha}** para **{$dominio}**.
+
+| | |
+|---|---|
+| Versión | **{$version}** |
+| Commit | `{$commit}` |
+| Origen de datos | {$origenTexto} |
+
+La versión y el commit están también en el archivo `VERSION` de la raíz del paquete.
 
 No incluye tests, documentación interna del desarrollo, respaldos, volcados con
 datos, residuos de código ni credenciales de ninguna otra máquina.
