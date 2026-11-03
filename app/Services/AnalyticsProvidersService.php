@@ -39,6 +39,22 @@ final class AnalyticsProvidersService
     public const CONSENT_COOKIE = 'pep_cookie_consent';
 
     /**
+     * Ajuste con el enlace a la política de cookies.
+     *
+     * Vive en el grupo `cookies` porque no es un proveedor de medición, pero se
+     * edita en la misma pantalla: es el enlace que aparece dentro del aviso.
+     */
+    public const POLICY_SETTING = 'policy_url';
+
+    /**
+     * Formatos aceptados para ese enlace: ruta del sitio o URL https completa.
+     *
+     * Se valida por el mismo motivo que los identificadores: el valor se
+     * imprime dentro de un atributo `href` en todas las páginas.
+     */
+    public const PATRON_POLITICA = '#^(https://[a-z0-9.-]{3,120}(/[^\s"\'<>]*)?|/[^\s"\'<>]*)$#i';
+
+    /**
      * Proveedores que instalan cookies en el navegador.
      *
      * Plausible y Umami no las usan, así que quedan fuera de esta lista y se

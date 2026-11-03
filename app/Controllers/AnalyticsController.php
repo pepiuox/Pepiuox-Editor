@@ -31,6 +31,7 @@ class AnalyticsController
         Response::render(View::render('analytics.providers', [
             'ajustes'  => $ajustes,
             'vigentes' => AnalyticsProvidersService::vigentes(),
+            'politica' => (string) SettingService::get('cookies', AnalyticsProvidersService::POLICY_SETTING, ''),
         ]));
     }
 
@@ -51,6 +52,23 @@ class AnalyticsController
 
         foreach ($resultado['valores'] as $clave => $valor) {
             SettingService::set(AnalyticsProvidersService::GROUP, $clave, $valor, 'string');
+        }
+
+        // Enlace del aviso de cookies. Mismo criterio: si no encaja con el
+        // formato, no se guarda y se avisa; se imprime en un `href`.
+        $politica = trim((string) ($_POST['cookies_policy_url'] ?? ''));
+        $politicaValida = $politica === ''
+            || preg_match(AnalyticsProvidersService::PATRON_POLITICA, $politica) === 1;
+
+        SettingService::set(
+            'cookies',
+            AnalyticsProvidersService::POLICY_SETTING,
+            $politicaValida ? $politica : '',
+            'string'
+        );
+
+        if (!$politicaValida) {
+            $resultado['descartados'][] = 'Enlace a la política de cookies';
         }
 
         AuditService::log(

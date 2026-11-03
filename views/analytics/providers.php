@@ -6,6 +6,7 @@
  *
  * @var array<string,string> $ajustes  Valor guardado de cada proveedor.
  * @var array<string,string> $vigentes Valores que pasan su patrón y se emiten.
+ * @var string               $politica Enlace a la política de cookies (puede ir vacío).
  *
  * Se configura con identificadores, no pegando código: un campo de texto que
  * acaba dentro de un `<script>` en todas las páginas es una puerta abierta.
@@ -16,6 +17,7 @@ use App\Services\AnalyticsProvidersService;
 $pageTitle = 'Analytics · Proveedores';
 $ajustes = $ajustes ?? [];
 $vigentes = $vigentes ?? [];
+$politica = $politica ?? '';
 $activos = count($vigentes);
 ?>
 
@@ -78,6 +80,28 @@ $activos = count($vigentes);
             <small class="form-text"><?= e($prov['ayuda']) ?></small>
           </div>
         <?php endforeach; ?>
+      </div>
+
+      <hr class="my-4">
+      <h4 class="mb-2"><i class="bi bi-info-square"></i> Aviso de cookies</h4>
+      <p class="form-text mb-3">
+        El aviso aparece solo cuando hay algún proveedor con cookies configurado. Desde aquí puedes
+        enlazar tu política de cookies en el propio aviso.
+      </p>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label" for="cookiesPolicy">Enlace a la política de cookies</label>
+          <input type="text" class="form-control" id="cookiesPolicy"
+                 name="cookies_policy_url"
+                 value="<?= e($politica) ?>"
+                 placeholder="/privacidad o https://tu-dominio.com/cookies"
+                 autocomplete="off" spellcheck="false">
+          <small class="form-text">
+            Ruta del sitio (<code>/privacidad</code>) o URL completa con <code>https://</code>. Vacío = el
+            aviso sale sin enlace.
+          </small>
+        </div>
       </div>
 
       <div class="d-flex justify-end gap-2 mt-4 pt-3 border-top">
