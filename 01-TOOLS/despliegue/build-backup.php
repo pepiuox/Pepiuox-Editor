@@ -142,6 +142,9 @@ $sueltos = [
     'index.php',
     '.htaccess',
     'install.php',
+    // El registro de cambios viaja con la publicación: quien recibe el paquete
+    // sabe qué cambió sin abrir el repositorio.
+    'CHANGELOG.md',
     '01-TOOLS/.gitignore',
     '01-TOOLS/mysql/.env.example',
     '01-TOOLS/mysql/README.md',
